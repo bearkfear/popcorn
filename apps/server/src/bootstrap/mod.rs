@@ -154,6 +154,11 @@ impl Backend {
             rpc,
             media,
         );
+        let media = self.media.clone();
+        let shutdown = async move {
+            shutdown.await;
+            media.shutdown().await;
+        };
         let result = server::serve(self.listener, app, shutdown).await;
         self.media.shutdown().await;
         self.storage.close().await;

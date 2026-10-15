@@ -1,6 +1,7 @@
 import { copyFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { copyMediaTools, stageMediaTools } from "./media-tools";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const release = Bun.argv.includes("--release");
@@ -14,6 +15,8 @@ if (!target) {
   console.error("Could not determine the Rust target triple.");
   process.exit(1);
 }
+// Fail before the Rust build if the required distribution cannot be staged.
+await stageMediaTools(target);
 
 const args = [
   "cargo",
@@ -55,4 +58,6 @@ const destination = join(
 );
 await mkdir(dirname(destination), { recursive: true });
 await copyFile(executable, destination);
+// Also support invoking the Cargo-built backend directly (outside the shell).
+await copyMediaTools(target, dirname(executable));
 console.info(`Prepared sidecar for ${target}.`);

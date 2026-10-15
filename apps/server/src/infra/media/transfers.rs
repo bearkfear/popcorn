@@ -8,11 +8,13 @@ use uuid::Uuid;
 
 use crate::{
     application::media::{
-        AccessError, MediaAccess, MediaError, PlaybackFile, ResolvedSource, StartPlayback,
-        Transfers,
+        AccessError, ConvertedAccess, MediaAccess, MediaError, PlaybackFile, ResolvedSource,
+        StartPlayback, Transfers,
     },
     core::media::{Playback, SourceInput},
 };
+
+use super::preparation::Processing;
 
 pub(super) struct ActivePlayback {
     pub(super) source_id: String,
@@ -21,6 +23,13 @@ pub(super) struct ActivePlayback {
     pub(super) file_name: String,
     pub(super) size: u64,
     pub(super) credential: String,
+    pub(super) processing: Arc<Processing>,
+}
+
+impl Drop for ActivePlayback {
+    fn drop(&mut self) {
+        self.processing.cancel.cancel();
+    }
 }
 
 pub(crate) struct TorrentEngine {
@@ -133,7 +142,17 @@ impl Transfers for TorrentEngine {
     }
 
     async fn shutdown(&self) {
-        self.playbacks.lock().await.clear();
+        let active: Vec<_> = self
+            .playbacks
+            .lock()
+            .await
+            .drain()
+            .map(|(_, active)| active)
+            .collect();
+        self.idempotency.lock().await.clear();
+        for playback in active {
+            playback.processing.stop().await;
+        }
         let session = self.session.lock().await.take();
         if let Some(session) = session {
             session.stop().await;
@@ -142,5 +161,15 @@ impl Transfers for TorrentEngine {
 
     async fn open(&self, id: Uuid, credential: &str) -> Result<MediaAccess, AccessError> {
         self.open_stream(id, credential).await
+    }
+
+    async fn converted(
+        &self,
+        id: Uuid,
+        credential: &str,
+        start: f64,
+        generation: u64,
+    ) -> Result<ConvertedAccess, AccessError> {
+        self.open_converted(id, credential, start, generation).await
     }
 }

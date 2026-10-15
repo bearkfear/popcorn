@@ -1,6 +1,9 @@
 {
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg"]
+    "targets": ["app", "dmg"],
+    "resources": {
+      "binaries/media-tools/aarch64-apple-darwin/": "licenses/media-tools/"
+    }
   }
 }

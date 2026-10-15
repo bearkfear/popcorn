@@ -1,6 +1,9 @@
 {
   "bundle": {
     "active": true,
-    "targets": ["nsis"]
+    "targets": ["nsis"],
+    "resources": {
+      "binaries/media-tools/x86_64-pc-windows-msvc/": "licenses/media-tools/"
+    }
   }
 }

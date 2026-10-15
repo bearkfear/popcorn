@@ -646,6 +646,169 @@ impl ::buffa::Enumeration for PlaybackState {
         ]
     }
 }
+/// Maximum output resolution; smaller sources are never upscaled.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[repr(i32)]
+pub enum PlaybackQuality {
+    PLAYBACK_QUALITY_UNSPECIFIED = 0i32,
+    PLAYBACK_QUALITY_AUTO = 1i32,
+    PLAYBACK_QUALITY_FULL_HD = 2i32,
+    PLAYBACK_QUALITY_HD = 3i32,
+}
+impl PlaybackQuality {
+    ///Idiomatic alias for [`Self::PLAYBACK_QUALITY_UNSPECIFIED`]; `Debug` prints the variant name.
+    #[allow(non_upper_case_globals)]
+    pub const Unspecified: Self = Self::PLAYBACK_QUALITY_UNSPECIFIED;
+    ///Idiomatic alias for [`Self::PLAYBACK_QUALITY_AUTO`]; `Debug` prints the variant name.
+    #[allow(non_upper_case_globals)]
+    pub const Auto: Self = Self::PLAYBACK_QUALITY_AUTO;
+    ///Idiomatic alias for [`Self::PLAYBACK_QUALITY_FULL_HD`]; `Debug` prints the variant name.
+    #[allow(non_upper_case_globals)]
+    pub const FullHd: Self = Self::PLAYBACK_QUALITY_FULL_HD;
+    ///Idiomatic alias for [`Self::PLAYBACK_QUALITY_HD`]; `Debug` prints the variant name.
+    #[allow(non_upper_case_globals)]
+    pub const Hd: Self = Self::PLAYBACK_QUALITY_HD;
+}
+impl ::core::default::Default for PlaybackQuality {
+    fn default() -> Self {
+        Self::PLAYBACK_QUALITY_UNSPECIFIED
+    }
+}
+impl ::serde::Serialize for PlaybackQuality {
+    fn serialize<S: ::serde::Serializer>(
+        &self,
+        s: S,
+    ) -> ::core::result::Result<S::Ok, S::Error> {
+        s.serialize_str(::buffa::Enumeration::proto_name(self))
+    }
+}
+impl<'de> ::serde::Deserialize<'de> for PlaybackQuality {
+    fn deserialize<D: ::serde::Deserializer<'de>>(
+        d: D,
+    ) -> ::core::result::Result<Self, D::Error> {
+        struct _V;
+        impl ::serde::de::Visitor<'_> for _V {
+            type Value = PlaybackQuality;
+            fn expecting(
+                &self,
+                f: &mut ::core::fmt::Formatter<'_>,
+            ) -> ::core::fmt::Result {
+                f.write_str(
+                    concat!(
+                        "a string, integer, or null for ", stringify!(PlaybackQuality)
+                    ),
+                )
+            }
+            fn visit_str<E: ::serde::de::Error>(
+                self,
+                v: &str,
+            ) -> ::core::result::Result<PlaybackQuality, E> {
+                <PlaybackQuality as ::buffa::Enumeration>::from_proto_name(v)
+                    .ok_or_else(|| { ::serde::de::Error::unknown_variant(v, &[]) })
+            }
+            fn visit_i64<E: ::serde::de::Error>(
+                self,
+                v: i64,
+            ) -> ::core::result::Result<PlaybackQuality, E> {
+                let v32 = i32::try_from(v)
+                    .map_err(|_| {
+                        ::serde::de::Error::custom(
+                            ::buffa::alloc::format!("enum value {v} out of i32 range"),
+                        )
+                    })?;
+                <PlaybackQuality as ::buffa::Enumeration>::from_i32(v32)
+                    .ok_or_else(|| {
+                        ::serde::de::Error::custom(
+                            ::buffa::alloc::format!("unknown enum value {v32}"),
+                        )
+                    })
+            }
+            fn visit_u64<E: ::serde::de::Error>(
+                self,
+                v: u64,
+            ) -> ::core::result::Result<PlaybackQuality, E> {
+                let v32 = i32::try_from(v)
+                    .map_err(|_| {
+                        ::serde::de::Error::custom(
+                            ::buffa::alloc::format!("enum value {v} out of i32 range"),
+                        )
+                    })?;
+                <PlaybackQuality as ::buffa::Enumeration>::from_i32(v32)
+                    .ok_or_else(|| {
+                        ::serde::de::Error::custom(
+                            ::buffa::alloc::format!("unknown enum value {v32}"),
+                        )
+                    })
+            }
+            fn visit_unit<E: ::serde::de::Error>(
+                self,
+            ) -> ::core::result::Result<PlaybackQuality, E> {
+                ::core::result::Result::Ok(::core::default::Default::default())
+            }
+        }
+        d.deserialize_any(_V)
+    }
+}
+impl ::buffa::json_helpers::ProtoElemJson for PlaybackQuality {
+    fn serialize_proto_json<S: ::serde::Serializer>(
+        v: &Self,
+        s: S,
+    ) -> ::core::result::Result<S::Ok, S::Error> {
+        ::serde::Serialize::serialize(v, s)
+    }
+    fn deserialize_proto_json<'de, D: ::serde::Deserializer<'de>>(
+        d: D,
+    ) -> ::core::result::Result<Self, D::Error> {
+        <Self as ::serde::Deserialize>::deserialize(d)
+    }
+}
+impl ::buffa::Enumeration for PlaybackQuality {
+    fn from_i32(value: i32) -> ::core::option::Option<Self> {
+        match value {
+            0i32 => ::core::option::Option::Some(Self::PLAYBACK_QUALITY_UNSPECIFIED),
+            1i32 => ::core::option::Option::Some(Self::PLAYBACK_QUALITY_AUTO),
+            2i32 => ::core::option::Option::Some(Self::PLAYBACK_QUALITY_FULL_HD),
+            3i32 => ::core::option::Option::Some(Self::PLAYBACK_QUALITY_HD),
+            _ => ::core::option::Option::None,
+        }
+    }
+    fn to_i32(&self) -> i32 {
+        *self as i32
+    }
+    fn proto_name(&self) -> &'static str {
+        match self {
+            Self::PLAYBACK_QUALITY_UNSPECIFIED => "PLAYBACK_QUALITY_UNSPECIFIED",
+            Self::PLAYBACK_QUALITY_AUTO => "PLAYBACK_QUALITY_AUTO",
+            Self::PLAYBACK_QUALITY_FULL_HD => "PLAYBACK_QUALITY_FULL_HD",
+            Self::PLAYBACK_QUALITY_HD => "PLAYBACK_QUALITY_HD",
+        }
+    }
+    fn from_proto_name(name: &str) -> ::core::option::Option<Self> {
+        match name {
+            "PLAYBACK_QUALITY_UNSPECIFIED" => {
+                ::core::option::Option::Some(Self::PLAYBACK_QUALITY_UNSPECIFIED)
+            }
+            "PLAYBACK_QUALITY_AUTO" => {
+                ::core::option::Option::Some(Self::PLAYBACK_QUALITY_AUTO)
+            }
+            "PLAYBACK_QUALITY_FULL_HD" => {
+                ::core::option::Option::Some(Self::PLAYBACK_QUALITY_FULL_HD)
+            }
+            "PLAYBACK_QUALITY_HD" => {
+                ::core::option::Option::Some(Self::PLAYBACK_QUALITY_HD)
+            }
+            _ => ::core::option::Option::None,
+        }
+    }
+    fn values() -> &'static [Self] {
+        &[
+            Self::PLAYBACK_QUALITY_UNSPECIFIED,
+            Self::PLAYBACK_QUALITY_AUTO,
+            Self::PLAYBACK_QUALITY_FULL_HD,
+            Self::PLAYBACK_QUALITY_HD,
+        ]
+    }
+}
 /// Stable content identity; episode coordinates are absent for top-level titles.
 #[derive(Clone, PartialEq, Default)]
 #[derive(::serde::Serialize, ::serde::Deserialize)]
@@ -6784,6 +6947,61 @@ pub struct Playback {
         skip_serializing_if = "::buffa::json_helpers::skip_if::is_zero_u32"
     )]
     pub peers: u32,
+    /// Field 10: `duration_seconds`
+    #[serde(
+        rename = "durationSeconds",
+        alias = "duration_seconds",
+        with = "::buffa::json_helpers::double",
+        skip_serializing_if = "::buffa::json_helpers::skip_if::is_zero_f64"
+    )]
+    pub duration_seconds: f64,
+    /// "direct" uses HTTP Range; "mse" uses a time-addressed fragmented MP4 stream.
+    ///
+    /// Field 11: `delivery`
+    #[serde(
+        rename = "delivery",
+        with = "::buffa::json_helpers::proto_string",
+        skip_serializing_if = "::buffa::json_helpers::skip_if::is_empty_str"
+    )]
+    pub delivery: ::buffa::alloc::string::String,
+    /// Direct, remux, audio conversion, or full video transcode.
+    ///
+    /// Field 12: `conversion`
+    #[serde(
+        rename = "conversion",
+        with = "::buffa::json_helpers::proto_string",
+        skip_serializing_if = "::buffa::json_helpers::skip_if::is_empty_str"
+    )]
+    pub conversion: ::buffa::alloc::string::String,
+    /// SourceBuffer codec declaration for transformed media.
+    ///
+    /// Field 13: `stream_type`
+    #[serde(
+        rename = "streamType",
+        alias = "stream_type",
+        with = "::buffa::json_helpers::proto_string",
+        skip_serializing_if = "::buffa::json_helpers::skip_if::is_empty_str"
+    )]
+    pub stream_type: ::buffa::alloc::string::String,
+    /// Safe, fixed diagnostic for preparation failures, never process output.
+    ///
+    /// Field 14: `error`
+    #[serde(
+        rename = "error",
+        with = "::buffa::json_helpers::proto_string",
+        skip_serializing_if = "::buffa::json_helpers::skip_if::is_empty_str"
+    )]
+    pub error: ::buffa::alloc::string::String,
+    /// Fixed transport timestamp bias removed by MSE, identical for every seek.
+    ///
+    /// Field 15: `timestamp_offset_seconds`
+    #[serde(
+        rename = "timestampOffsetSeconds",
+        alias = "timestamp_offset_seconds",
+        with = "::buffa::json_helpers::double",
+        skip_serializing_if = "::buffa::json_helpers::skip_if::is_zero_f64"
+    )]
+    pub timestamp_offset_seconds: f64,
     #[serde(skip)]
     #[doc(hidden)]
     pub __buffa_unknown_fields: ::buffa::UnknownFields,
@@ -6800,6 +7018,12 @@ impl ::core::fmt::Debug for Playback {
             .field("total_bytes", &self.total_bytes)
             .field("download_bytes_per_second", &self.download_bytes_per_second)
             .field("peers", &self.peers)
+            .field("duration_seconds", &self.duration_seconds)
+            .field("delivery", &self.delivery)
+            .field("conversion", &self.conversion)
+            .field("stream_type", &self.stream_type)
+            .field("error", &self.error)
+            .field("timestamp_offset_seconds", &self.timestamp_offset_seconds)
             .finish()
     }
 }
@@ -6865,6 +7089,24 @@ impl ::buffa::Message for Playback {
         if self.peers != 0u32 {
             size += 1u64 + ::buffa::types::uint32_encoded_len(self.peers) as u64;
         }
+        if self.duration_seconds.to_bits() != 0u64 {
+            size += 1u64 + ::buffa::types::FIXED64_ENCODED_LEN as u64;
+        }
+        if !self.delivery.is_empty() {
+            size += 1u64 + ::buffa::types::string_encoded_len(&self.delivery) as u64;
+        }
+        if !self.conversion.is_empty() {
+            size += 1u64 + ::buffa::types::string_encoded_len(&self.conversion) as u64;
+        }
+        if !self.stream_type.is_empty() {
+            size += 1u64 + ::buffa::types::string_encoded_len(&self.stream_type) as u64;
+        }
+        if !self.error.is_empty() {
+            size += 1u64 + ::buffa::types::string_encoded_len(&self.error) as u64;
+        }
+        if self.timestamp_offset_seconds.to_bits() != 0u64 {
+            size += 1u64 + ::buffa::types::FIXED64_ENCODED_LEN as u64;
+        }
         size += self.__buffa_unknown_fields.encoded_len() as u64;
         ::buffa::saturate_size(size)
     }
@@ -6904,6 +7146,24 @@ impl ::buffa::Message for Playback {
         }
         if self.peers != 0u32 {
             ::buffa::types::put_uint32_field(9u32, self.peers, buf);
+        }
+        if self.duration_seconds.to_bits() != 0u64 {
+            ::buffa::types::put_double_field(10u32, self.duration_seconds, buf);
+        }
+        if !self.delivery.is_empty() {
+            ::buffa::types::put_string_field(11u32, &self.delivery, buf);
+        }
+        if !self.conversion.is_empty() {
+            ::buffa::types::put_string_field(12u32, &self.conversion, buf);
+        }
+        if !self.stream_type.is_empty() {
+            ::buffa::types::put_string_field(13u32, &self.stream_type, buf);
+        }
+        if !self.error.is_empty() {
+            ::buffa::types::put_string_field(14u32, &self.error, buf);
+        }
+        if self.timestamp_offset_seconds.to_bits() != 0u64 {
+            ::buffa::types::put_double_field(15u32, self.timestamp_offset_seconds, buf);
         }
         self.__buffa_unknown_fields.write_to(buf);
     }
@@ -6983,6 +7243,48 @@ impl ::buffa::Message for Playback {
                 )?;
                 self.peers = ::buffa::types::decode_uint32(buf)?;
             }
+            10u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::Fixed64,
+                )?;
+                self.duration_seconds = ::buffa::types::decode_double(buf)?;
+            }
+            11u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                ::buffa::types::merge_string(&mut self.delivery, buf)?;
+            }
+            12u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                ::buffa::types::merge_string(&mut self.conversion, buf)?;
+            }
+            13u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                ::buffa::types::merge_string(&mut self.stream_type, buf)?;
+            }
+            14u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                ::buffa::types::merge_string(&mut self.error, buf)?;
+            }
+            15u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::Fixed64,
+                )?;
+                self.timestamp_offset_seconds = ::buffa::types::decode_double(buf)?;
+            }
             _ => {
                 self.__buffa_unknown_fields
                     .push(::buffa::encoding::decode_unknown_field(tag, buf, ctx)?);
@@ -7000,6 +7302,12 @@ impl ::buffa::Message for Playback {
         self.total_bytes = 0u64;
         self.download_bytes_per_second = 0u64;
         self.peers = 0u32;
+        self.duration_seconds = 0f64;
+        self.delivery.clear();
+        self.conversion.clear();
+        self.stream_type.clear();
+        self.error.clear();
+        self.timestamp_offset_seconds = 0f64;
         self.__buffa_unknown_fields.clear();
     }
 }
@@ -7060,6 +7368,13 @@ pub struct StartPlaybackRequest {
         skip_serializing_if = "::buffa::json_helpers::skip_if::is_empty_str"
     )]
     pub idempotency_key: ::buffa::alloc::string::String,
+    /// Field 4: `quality`
+    #[serde(
+        rename = "quality",
+        with = "::buffa::json_helpers::proto_enum",
+        skip_serializing_if = "::buffa::json_helpers::skip_if::is_default_enum_value"
+    )]
+    pub quality: ::buffa::EnumValue<PlaybackQuality>,
     #[serde(skip)]
     #[doc(hidden)]
     pub __buffa_unknown_fields: ::buffa::UnknownFields,
@@ -7070,6 +7385,7 @@ impl ::core::fmt::Debug for StartPlaybackRequest {
             .field("source_id", &self.source_id)
             .field("file_index", &self.file_index)
             .field("idempotency_key", &self.idempotency_key)
+            .field("quality", &self.quality)
             .finish()
     }
 }
@@ -7111,6 +7427,12 @@ impl ::buffa::Message for StartPlaybackRequest {
                 += 1u64
                     + ::buffa::types::string_encoded_len(&self.idempotency_key) as u64;
         }
+        {
+            let val = self.quality.to_i32();
+            if val != 0 {
+                size += 1u64 + ::buffa::types::int32_encoded_len(val) as u64;
+            }
+        }
         size += self.__buffa_unknown_fields.encoded_len() as u64;
         ::buffa::saturate_size(size)
     }
@@ -7129,6 +7451,12 @@ impl ::buffa::Message for StartPlaybackRequest {
         }
         if !self.idempotency_key.is_empty() {
             ::buffa::types::put_string_field(3u32, &self.idempotency_key, buf);
+        }
+        {
+            let val = self.quality.to_i32();
+            if val != 0 {
+                ::buffa::types::put_int32_field(4u32, val, buf);
+            }
         }
         self.__buffa_unknown_fields.write_to(buf);
     }
@@ -7164,6 +7492,15 @@ impl ::buffa::Message for StartPlaybackRequest {
                 )?;
                 ::buffa::types::merge_string(&mut self.idempotency_key, buf)?;
             }
+            4u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::Varint,
+                )?;
+                self.quality = ::buffa::EnumValue::from(
+                    ::buffa::types::decode_int32(buf)?,
+                );
+            }
             _ => {
                 self.__buffa_unknown_fields
                     .push(::buffa::encoding::decode_unknown_field(tag, buf, ctx)?);
@@ -7175,6 +7512,7 @@ impl ::buffa::Message for StartPlaybackRequest {
         self.source_id.clear();
         self.file_index = 0u32;
         self.idempotency_key.clear();
+        self.quality = ::buffa::EnumValue::from(0);
         self.__buffa_unknown_fields.clear();
     }
 }

@@ -8,6 +8,7 @@ import {
   createSourceClient,
   createStorageClient,
   MediaType,
+  PlaybackQuality,
   PlaybackState,
   type ContentRef,
   type CacheSettings,
@@ -20,6 +21,7 @@ import {
   type TmdbStatus,
 } from "@popcorn/sdk";
 import { artworkUrl, catalogErrorText, needsConfiguration } from "./catalog-ui";
+import { MediaPlayer, PlayerOverlay } from "./media-player";
 import tmdbLogo from "./assets/tmdb.svg";
 
 type Bootstrap = {
@@ -35,6 +37,11 @@ type SourceClient = ReturnType<typeof createSourceClient>;
 type StorageClient = ReturnType<typeof createStorageClient>;
 type Connection = "connecting" | "ready" | "error" | "browser";
 type CatalogOrigin = "online" | "local";
+const playbackQualities = [
+  { value: PlaybackQuality.AUTO, label: "Auto (até 1080p)" },
+  { value: PlaybackQuality.FULL_HD, label: "1080p" },
+  { value: PlaybackQuality.HD, label: "720p" },
+] as const;
 
 function Artwork(props: { readonly url: string; readonly title: string; readonly wide?: boolean }) {
   const [failed, setFailed] = createSignal("");
@@ -95,6 +102,9 @@ export function App() {
   const [playback, setPlayback] = createSignal<Playback>();
   const [playbackBusy, setPlaybackBusy] = createSignal(false);
   const [playbackError, setPlaybackError] = createSignal("");
+  const [mediaError, setMediaError] = createSignal("");
+  const [playbackMonitorError, setPlaybackMonitorError] = createSignal("");
+  const [playbackQuality, setPlaybackQuality] = createSignal(PlaybackQuality.AUTO);
   const [cacheOpen, setCacheOpen] = createSignal(false);
   const [cacheSettings, setCacheSettings] = createSignal<CacheSettings>();
   const [cacheLimitGb, setCacheLimitGb] = createSignal("20");
@@ -118,6 +128,9 @@ export function App() {
   let detailController: AbortController | undefined;
   let episodeController: AbortController | undefined;
   let playbackPoll: number | undefined;
+  let playbackGeneration = 0;
+  let playbackController: AbortController | undefined;
+  let lastPlaybackFile: { readonly sourceId: string; readonly fileIndex: number } | undefined;
   const setupVisible = () => source() === "online" && (settingsOpen() || status()?.configured === false);
   const hasMore = () => source() === "local" ? Boolean(nextLocalPage()) : page() < Math.min(totalPages(), 500);
   const connectionLabel = () => ({ connecting: "Conectando", ready: "Conectado", error: "Serviço indisponível", browser: "Modo navegador" })[connection()];
@@ -126,6 +139,23 @@ export function App() {
     const current = playback();
     if (!current || current.totalBytes <= 0n) return 0;
     return Math.min(100, Number(current.downloadedBytes * 10_000n / current.totalBytes) / 100);
+  };
+  const mediaReady = () => {
+    const current = playback();
+    return Boolean(current?.mediaUrl && (current.state === PlaybackState.READY || current.state === PlaybackState.PAUSED));
+  };
+  const preparationError = () => playback()?.state === PlaybackState.FAILED
+    ? playback()?.error || "Não foi possível preparar este vídeo. Tente novamente."
+    : "";
+  const playerError = () => preparationError() || mediaError() || playbackError();
+  const conversionLabel = () => {
+    switch (playback()?.conversion) {
+      case "direct": return "Reprodução direta";
+      case "remux": return "Conversão de contêiner · vídeo e áudio originais";
+      case "audio": return "Conversão de áudio · vídeo original";
+      case "transcode": return "Conversão de vídeo";
+      default: return "Analisando o formato do vídeo";
+    }
   };
 
   function bytesLabel(bytes: bigint) {
@@ -154,10 +184,15 @@ export function App() {
 
   function clearPlayback(stop = true) {
     const current = playback();
+    playbackGeneration++;
+    playbackController?.abort();
+    playbackController = undefined;
     if (playbackPoll !== undefined) window.clearInterval(playbackPoll);
     playbackPoll = undefined;
     setPlayback(undefined);
     setPlaybackError("");
+    setMediaError("");
+    setPlaybackMonitorError("");
     setPlaybackBusy(false);
     if (stop && current && playbackClient) {
       void playbackClient.stopPlayback({ playbackId: current.playbackId }).catch(() => undefined);
@@ -173,9 +208,14 @@ export function App() {
         .then((response) => {
           if (!disposed && response.playback && playback()?.playbackId === playbackId) {
             setPlayback(response.playback);
+            setPlaybackMonitorError("");
           }
         })
-        .catch(() => undefined);
+        .catch(() => {
+          if (!disposed && playback()?.playbackId === playbackId) {
+            setPlaybackMonitorError("Não foi possível atualizar o estado da reprodução. Tentando reconectar ao serviço.");
+          }
+        });
     }, 1_000);
   }
 
@@ -650,22 +690,26 @@ export function App() {
     const activeClient = playbackClient;
     if (!activeClient || playbackBusy()) return;
     clearPlayback();
+    const generation = playbackGeneration;
+    const controller = new AbortController();
+    playbackController = controller;
+    lastPlaybackFile = { sourceId, fileIndex };
     setPlaybackBusy(true);
     setPlaybackError("");
     try {
       const response = await activeClient.startPlayback(
-        { sourceId, fileIndex, idempotencyKey: crypto.randomUUID() },
-        { timeoutMs: 60_000 },
+        { sourceId, fileIndex, quality: playbackQuality(), idempotencyKey: crypto.randomUUID() },
+        { signal: controller.signal, timeoutMs: 60_000 },
       );
       if (!response.playback) throw new Error("playback missing");
-      if (!disposed) {
+      if (!disposed && generation === playbackGeneration) {
         setPlayback(response.playback);
         monitorPlayback(response.playback.playbackId);
       }
     } catch {
-      if (!disposed) setPlaybackError("Não foi possível preparar o vídeo. A fonte pode estar indisponível.");
+      if (!disposed && generation === playbackGeneration) setPlaybackError("Não foi possível preparar o vídeo. A fonte pode estar indisponível.");
     } finally {
-      if (!disposed) setPlaybackBusy(false);
+      if (!disposed && generation === playbackGeneration) setPlaybackBusy(false);
     }
   }
 
@@ -680,11 +724,11 @@ export function App() {
         ? await activeClient.resumePlayback({ playbackId: current.playbackId }, { timeoutMs: 10_000 })
         : await activeClient.pausePlayback({ playbackId: current.playbackId }, { timeoutMs: 10_000 });
       if (!response.playback) throw new Error("playback missing");
-      if (!disposed) setPlayback(response.playback);
+      if (!disposed && playback()?.playbackId === current.playbackId) setPlayback(response.playback);
     } catch {
-      if (!disposed) setPlaybackError("Não foi possível alterar o estado do download.");
+      if (!disposed && playback()?.playbackId === current.playbackId) setPlaybackError("Não foi possível alterar o estado do download.");
     } finally {
-      if (!disposed) setPlaybackBusy(false);
+      if (!disposed && playback()?.playbackId === current.playbackId) setPlaybackBusy(false);
     }
   }
 
@@ -858,6 +902,10 @@ export function App() {
                 <div class="torrent-import"><span>ou</span><label class={`button secondary ${sourcesBusy() ? "disabled" : ""}`}>Importar .torrent<input type="file" accept=".torrent,application/x-bittorrent" disabled={sourcesBusy()} onChange={(event) => { void importTorrent(event); }} /></label></div>
                 <Show when={sourcesError()}><p class="error-text" role="alert">{sourcesError()}</p></Show>
                 <Show when={!sourcesBusy() && !mediaSources().length && !sourcesError()}><p class="muted empty-source">Nenhuma fonte vinculada a este {sourceContent()?.episodeNumber ? "episódio" : "título"}.</p></Show>
+                <div class="playback-quality"><label for="playback-quality">Qualidade inicial</label><select id="playback-quality" value={playbackQuality()} disabled={playbackBusy()} onChange={(event) => {
+                  const choice = playbackQualities.find((quality) => String(quality.value) === event.currentTarget.value);
+                  if (choice) setPlaybackQuality(choice.value);
+                }}><For each={playbackQualities}>{(quality) => <option value={quality.value}>{quality.label}</option>}</For></select></div>
                 <ul class="source-list"><For each={mediaSources()}>{(mediaSource) => <li>
                   <div class="source-row"><span>{mediaSource.files.length} arquivo(s)</span><button class="text-button" type="button" disabled={sourcesBusy()} onClick={() => { void removeMediaSource(mediaSource.sourceId); }}>Remover</button></div>
                   <ul class="file-list"><For each={mediaSource.files}>{(file) => <li><div><strong>{file.name}</strong><span>{bytesLabel(file.sizeBytes)}</span></div><Show when={file.likelyMedia}><button class="button play-button" type="button" disabled={playbackBusy()} onClick={() => { void playFile(mediaSource.sourceId, file.fileIndex); }}>{playbackBusy() ? "Abrindo..." : "▶ Assistir"}</button></Show></li>}</For></ul>
@@ -896,9 +944,16 @@ export function App() {
         <div class="attribution"><img src={tmdbLogo} width="80" height="11" alt="TMDB" /><p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p></div>
       </footer>
     </main>
-    <Show when={playback()}>{(active) => <div class="player-overlay" role="dialog" aria-modal="true" aria-label="Reprodutor de vídeo">
-      <div class="player-toolbar"><div class="player-download"><strong>{detail()?.title || selected()?.title || "Reprodução"}</strong><span>{bytesLabel(active().sizeBytes)} · {playbackProgress().toFixed(1)}% recebido · {rateLabel(active().downloadBytesPerSecond)} · {active().peers} peer(s)</span><progress max="100" value={playbackProgress()} aria-label="Progresso do download">{playbackProgress()}%</progress></div><div class="player-actions"><button class="button secondary" type="button" disabled={playbackBusy()} onClick={() => { void toggleDownload(); }}>{active().state === PlaybackState.PAUSED ? "Retomar download" : "Pausar download"}</button><button class="player-close" type="button" aria-label="Fechar reprodutor" onClick={() => clearPlayback()}>×</button></div></div>
-      <video class="video-player" src={active().mediaUrl} controls autoplay playsinline onEnded={() => clearPlayback()} onError={() => setPlaybackError("O formato deste vídeo não é compatível com o reprodutor do sistema.")} />
-    </div>}</Show>
+    <Show when={playback()}>{(active) => <PlayerOverlay onClose={() => clearPlayback()}>
+      <div class="player-toolbar"><div class="player-download"><strong>{detail()?.title || selected()?.title || "Reprodução"}</strong><span>{bytesLabel(active().sizeBytes)} · {playbackProgress().toFixed(1)}% recebido · {rateLabel(active().downloadBytesPerSecond)} · {active().peers} peer(s)</span><progress max="100" value={playbackProgress()} aria-label="Progresso do download">{playbackProgress()}%</progress></div><div class="player-actions"><button class="button secondary" type="button" disabled={playbackBusy() || !mediaReady()} onClick={() => { void toggleDownload(); }}>{active().state === PlaybackState.PAUSED ? "Retomar download" : "Pausar download"}</button><button class="player-close" type="button" aria-label="Fechar reprodutor" onClick={() => clearPlayback()}>×</button></div></div>
+      <div class="player-status-area">
+        <p class="player-conversion" role="status">{conversionLabel()}</p>
+        <Show when={!mediaReady() && !preparationError()}><p role="status">{active().state === PlaybackState.STOPPED ? "Reprodução encerrada. Feche ou tente novamente." : "Preparando vídeo para reprodução..."}</p></Show>
+        <Show when={playbackMonitorError()}><p class="error-text" role="alert">{playbackMonitorError()}</p></Show>
+        <Show when={playerError()}><p class="error-text" role="alert">{playerError()}</p></Show>
+        <Show when={playerError() || active().state === PlaybackState.STOPPED}><button class="button secondary" type="button" disabled={playbackBusy()} onClick={() => { if (lastPlaybackFile) void playFile(lastPlaybackFile.sourceId, lastPlaybackFile.fileIndex); }}>Tentar reprodução novamente</button></Show>
+      </div>
+      <div class="player-stage"><Show when={mediaReady()}><MediaPlayer playback={active()} onError={setMediaError} onEnded={() => clearPlayback()} /></Show></div>
+    </PlayerOverlay>}</Show>
   </div>;
 }

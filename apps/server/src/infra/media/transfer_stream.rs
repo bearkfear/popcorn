@@ -8,7 +8,7 @@ use crate::{
     core::media::mime_type,
 };
 
-use super::TorrentEngine;
+use super::{TorrentEngine, reader::PlaybackReader};
 
 impl TorrentEngine {
     pub(super) async fn open_stream(
@@ -16,7 +16,7 @@ impl TorrentEngine {
         id: Uuid,
         credential: &str,
     ) -> Result<MediaAccess, AccessError> {
-        let (handle, file_index, file_name, expected_size) = {
+        let (handle, file_index, file_name, expected_size, cancel) = {
             let playbacks = self.playbacks.lock().await;
             let active = playbacks.get(&id).ok_or(AccessError::Gone)?;
             if active
@@ -33,6 +33,7 @@ impl TorrentEngine {
                 active.file_index,
                 active.file_name.clone(),
                 active.size,
+                active.processing.cancel.clone(),
             );
             drop(playbacks);
             values
@@ -47,7 +48,7 @@ impl TorrentEngine {
                 }
                 Ok(MediaAccess {
                     size: expected_size,
-                    reader: Box::new(stream),
+                    reader: Box::new(PlaybackReader::new(stream, cancel)),
                     mime_type: mime_type(&file_name),
                 })
             })

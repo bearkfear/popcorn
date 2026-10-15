@@ -1,0 +1,40 @@
+Popcorn includes separate FFmpeg and ffprobe executables, renamed only to
+popcorn-ffmpeg and popcorn-ffprobe. Popcorn does not link libav* libraries.
+FFmpeg is a trademark of Fabrice Bellard.
+
+FFmpeg 9.0.2, copyright FFmpeg developers, is provided WITHOUT ANY WARRANTY
+under GPL version 3 or later in this distribution. See COPYING.GPLv3 and
+FFmpeg-LICENSE.md. You may copy, modify and redistribute it under those terms.
+This software is based in part on the work of the Independent JPEG Group.
+Popcorn has not modified FFmpeg's source code.
+
+Binary providers:
+macOS arm64: Martin Riedl, build 1789931890_9.0.2
+https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/
+Windows x64: Gyan, 9.0.2 essentials_build
+https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2
+
+The accompanying provider-build.txt records the configuration, third-party
+libraries and versions used by this platform's provider. The full FFmpeg GPLv3
+license and original license notice are included. FFmpeg's LGPL-only parts
+retain their LGPL notices (see COPYING.LGPLv2.1).
+
+Upstream source and build locations:
+FFmpeg n9.0.2: https://git.ffmpeg.org/ffmpeg.git
+macOS build scripts: https://git.martin-riedl.de/ffmpeg/build-script
+Windows build information: https://www.gyan.dev/ffmpeg/builds/
+Windows FFmpeg source commit: 946fcce07b (also in provider-build.txt).
+The provider's FFmpeg license covers its GPL-enabled executable, not an
+LGPL-only build; libx264 and libx265 are included as static GPL dependencies.
+
+Release publishers must provide equivalent access to the complete corresponding
+source (including all static dependencies, their copyright/license notices,
+patches and build scripts) alongside the binary download. Upstream pointers
+identify inputs; they do not replace the publisher's GPL section 6 obligation.
+Archive and publish the source and all dependency notices before a public
+release. This packaging preparation is not a claim that public-release source
+distribution obligations have already been fulfilled.
+
+Preserve this notice and accompanying licenses when repackaging. Binary and
+archive SHA256 values, download URLs and platform provenance are recorded in
+provenance.json.

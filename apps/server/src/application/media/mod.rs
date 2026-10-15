@@ -6,7 +6,8 @@ pub mod queries;
 
 pub(crate) use commands::{AddSource, StartPlayback};
 pub(crate) use ports::{
-    AccessError, Cache, MediaAccess, PlaybackFile, ResolvedSource, Sources, Transfers,
+    AccessError, Cache, ConvertedAccess, MediaAccess, PlaybackFile, ResolvedSource, Sources,
+    Transfers,
 };
 
 use tokio::sync::Mutex;

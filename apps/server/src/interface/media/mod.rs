@@ -1,5 +1,7 @@
 //! HTTP byte-range delivery through the application media reader contract.
 
+mod converted;
+
 use std::sync::Arc;
 
 use axum::{
@@ -31,6 +33,10 @@ pub(crate) fn router<R: Sources + 'static, T: Transfers + 'static, C: Cache + 's
 ) -> Router {
     Router::new()
         .route("/media/{playback_id}", get(media::<R, T, C>))
+        .route(
+            "/media/{playback_id}/stream",
+            get(converted::media::<R, T, C>),
+        )
         .with_state(Arc::new(MediaState { service, origin }))
 }
 
@@ -93,6 +99,7 @@ async fn media_response<R: Sources + 'static, T: Transfers + 'static, C: Cache +
             AccessError::Gone => StatusCode::GONE,
             AccessError::Forbidden => StatusCode::FORBIDDEN,
             AccessError::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
+            AccessError::InvalidPosition => StatusCode::BAD_REQUEST,
         })?;
     stream_response(access, method, headers).await
 }

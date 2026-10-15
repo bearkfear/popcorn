@@ -193,6 +193,8 @@ a { color: inherit; }
 .file-list strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .file-list span { color: var(--muted); font-size: 11px; }
 .play-button { min-height: 36px; padding: 6px 10px; flex: 0 0 auto; }
+.playback-quality { display: grid; gap: var(--space-2); margin-top: var(--space-4); }
+.playback-quality label { color: var(--muted); font-size: 12px; font-weight: 700; }
 .episodes-section { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--line); }
 .episodes-section select { margin-bottom: var(--space-3); }
 .season-overview { color: var(--muted); font-size: 13px; }
@@ -204,8 +206,8 @@ a { color: inherit; }
 .episode-source-button { min-height: 36px; margin-top: var(--space-3); padding: 6px 10px; }
 .episode-source-button[aria-pressed="true"] { border-color: var(--accent); color: white; }
 
-.player-overlay { position: fixed; z-index: 100; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); background: #050607; }
-.player-toolbar { display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: var(--space-4); padding: 10px clamp(16px, 4vw, 48px); border-bottom: 1px solid #282b31; background: #111318; }
+.player-overlay { position: fixed; z-index: 100; inset: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); overflow-y: auto; background: #050607; }
+.player-toolbar { display: flex; flex-wrap: wrap; min-height: 64px; align-items: center; justify-content: space-between; gap: var(--space-4); padding: 10px clamp(16px, 4vw, 48px); border-bottom: 1px solid #282b31; background: #111318; }
 .player-download { min-width: 0; }
 .player-toolbar strong, .player-toolbar span { display: block; }
 .player-toolbar strong { font-size: 15px; }
@@ -213,6 +215,10 @@ a { color: inherit; }
 .player-toolbar progress { display: block; width: min(320px, 55vw); height: 4px; margin-top: 6px; border: 0; accent-color: var(--accent); }
 .player-actions { display: flex; align-items: center; gap: var(--space-3); flex: 0 0 auto; }
 .player-close { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: #202329; color: white; font-size: 27px; }
+.player-status-area { min-width: 0; max-height: 40vh; overflow-y: auto; padding: var(--space-3) var(--space-4); background: var(--surface); font-size: 13px; overflow-wrap: anywhere; }
+.player-status-area .error-text { padding: var(--space-3); border-radius: var(--radius-control); background: var(--negative-bg); }
+.player-conversion { color: var(--muted); font-size: 12px; }
+.player-stage { min-width: 0; min-height: 0; }
 .video-player { width: 100%; height: 100%; background: black; object-fit: contain; }
 
 .page-footer { display: grid; grid-template-columns: 1fr auto; gap: var(--space-6); align-items: end; margin-top: var(--space-12); padding: var(--space-6) 0; border-top: 1px solid var(--line); color: #858b94; font-size: 11px; }

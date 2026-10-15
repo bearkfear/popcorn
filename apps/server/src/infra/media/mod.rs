@@ -1,9 +1,16 @@
 //! Concrete `SQLite`, torrent and disk adapters for media use cases.
 
 pub mod cache;
+mod conversion_reader;
+mod encoding;
+mod preparation;
+mod probe;
+mod reader;
 pub mod source_write;
 pub mod sources;
+mod tools;
 pub mod transfer_control;
+mod transfer_conversion;
 pub mod transfer_playback;
 pub mod transfer_source;
 pub mod transfer_stream;

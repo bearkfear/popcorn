@@ -1,5 +1,17 @@
 # Popcorn - TMDB catalog
 
+## Progressive playback extension contract (October 15, 2026)
+
+This narrow extension supersedes older paper/ink and no-playback restrictions. The current `apps/desktop/src/styles.css` is the visual authority: preserve the dark cinema canvas (`--canvas: #17191d`, `--canvas-deep: #101216`), charcoal surfaces, red action accent, sans-serif UI, existing spacing, radii, and responsive catalog. No redesign, dependencies, or Lighthouse expansion.
+
+- Before Assistir, a labelled native quality select offers Auto (até 1080p), 1080p, and 720p; Auto is the initial choice. Quality applies to a newly started playback, not a running session.
+- Retain the full-screen cinema overlay, download statistics, close action, and native video controls for seeking, volume, pause/play, and fullscreen. A wrapping toolbar and independently scrollable status area must remain usable on narrow or short windows. Overlay focus is contained and returns to the invoking control on close; Escape closes outside native fullscreen.
+- Preparing has immediate Portuguese status and does not load an empty URL. Only READY or PAUSED sessions with a URL mount media. Conversion status distinguishes direct playback, remux, audio conversion, and video conversion without promising a completed download.
+- Preparation, transport, decoder, and control failures appear inside the overlay using the existing negative tokens and `role="alert"`. Backend diagnostics are safe fixed copy. Failed sessions retain close and explicit retry actions; retry starts the same file with the selected quality.
+- Direct playback uses the original HTTP Range URL and browser controls. MSE uses the supplied codec declaration, segment mode, and backend `timestampOffsetSeconds` to map the stream onto the source timeline. Preserve preceding keyframe preroll: never offset by the seek position or set an append window there. Set the full duration and restore the seek position only once that time is buffered. Maintain approximately 30 seconds of lookahead and retained history; unbuffered seeks create a fresh cancellable MediaSource with `start` and a monotonically increasing positive `generation` query. Statistics updates do not recreate media.
+- New quality/status primitives reuse `--muted`, `--ink`, `--surface`, `--line`, `--negative-bg`, `--negative`, `--space-2/3/4/6`, existing 12/13px secondary type, and 44px native field targets. Status is textual, not color-only; no new animation.
+- Validation scope: strict desktop typecheck here; the parent owns production build and real browser/native playback, including codec support, progressive MKV conversion, seek races, and source disposal. No mocks or UI test harness are shipped.
+
 ## TMDB extension contract (October 14, 2026)
 
 This extension supersedes the I1-only restrictions below. Preserve the warm paper/ink palette, editorial serif, restrained native controls, and document-owned scrolling. The catalog now supplies real artwork; no placeholder posters or fabricated titles are shipped.

@@ -69,6 +69,76 @@ de bundle usa NSIS no Windows e app/DMG no macOS. Assinatura, notarização, ins
 e atualização nesses sistemas ainda precisam de homologação; compilar não comprova
 esses gates. Linux é ambiente adicional de desenvolvimento, com bundling desativado.
 
+### Empacotamento de FFmpeg e ffprobe
+
+`prepare:sidecar` prepara também as duas ferramentas internas. Não é necessário
+instalar FFmpeg, codecs ou ferramentas de extração, e o aplicativo não procura
+FFmpeg no `PATH`. A preparação baixa builds estáticas de FFmpeg 9.0.2,
+fixadas no macOS em Martin Riedl `1789931890_9.0.2` e no Windows em Gyan
+`9.0.2-essentials_build`, verifica SHA256 dos ZIPs e dos executáveis antes de executá-los e
+preserva licenças, avisos e proveniência. Os inputs revisados estão em
+`apps/desktop/scripts/media-tools.lock.ts`; nenhuma URL `latest` é usada.
+
+Para preparar ou verificar somente os inputs do bundle:
+
+```sh
+bun apps/desktop/scripts/prepare-media-tools.ts
+bun apps/desktop/scripts/prepare-media-tools.ts --check
+bun apps/desktop/scripts/prepare-media-tools.ts --target x86_64-pc-windows-msvc
+# Backend executado diretamente por cargo run (sem o hook Tauri):
+bun apps/desktop/scripts/prepare-media-tools.ts --server-dir "$PWD/target/debug"
+```
+
+O target padrão é `TAURI_ENV_TARGET_TRIPLE` ou a plataforma/arquitetura do Bun;
+o hook `prepare:sidecar` usa o target Rust escolhido para o servidor.
+São aceitos `aarch64-apple-darwin` e `x86_64-pc-windows-msvc`; Linux precisa de
+uma distribuição revisada antes de poder usar este preparo. Preparar um target
+estrangeiro verifica hash e arquitetura, mas não equivale à execução nesse SO.
+No host nativo, o preparo executa `-version` sem `PATH`, valida versão/licença e
+confere os encoders `libx264`/`aac` e filtros `zscale`/`tonemap`;
+no macOS também recusa dependências fora de `/usr/lib` e `/System/Library`.
+
+Os arquivos ficam em `apps/desktop/src-tauri/binaries/`, já ignorado pelo Git:
+`popcorn-ffmpeg-<target>` e `popcorn-ffprobe-<target>` (com `.exe` no Windows).
+O Tauri remove o sufixo do target e instala `popcorn-ffmpeg`, `popcorn-ffprobe`
+e `popcorn-server` como executáveis irmãos: `Contents/MacOS` no app macOS e
+o diretório do aplicativo no Windows. O backend resolve os nomes irmãos a partir
+de `current_exe`, nunca do diretório de trabalho. O preparo também copia os nomes
+sem sufixo ao lado do servidor em `binaries/` e no diretório produzido pelo Cargo,
+para execução direta de desenvolvimento.
+Para outro `CARGO_TARGET_DIR`, use `--server-dir` com o diretório real do
+executável. Alternativamente, `POPCORN_MEDIA_BIN_DIR` no backend pode indicar
+explicitamente `apps/desktop/src-tauri/binaries/`, que contém os nomes irmãos.
+
+É possível fornecer cópias locais **da mesma build fixada**, com caminhos
+absolutos em `POPCORN_FFMPEG_PATH` e `POPCORN_FFPROBE_PATH` (ambas obrigatórias
+quando usadas). Seus hashes também são conferidos; não é uma permissão para
+empacotar builds arbitrárias com avisos de licença incorretos. Em uma preparação
+sem rede, preserve também `binaries/media-tools/<target>/` de uma preparação verificada.
+Um arquivo existente com hash incorreto causa erro, sem substituição silenciosa:
+remova deliberadamente o arquivo inválido para permitir novo download.
+O modo `--check` não baixa nem repara arquivos. Qualquer ferramenta ou licença
+ausente/inválida falha; o hook de release interrompe o build se o preparo falhar.
+`beforeBundleCommand` repete a verificação sem downloads, inclusive quando
+`tauri bundle` é executado separadamente de `tauri build`.
+Nenhuma mudança em `package.json` é necessária.
+
+Os recursos `licenses/media-tools/` do bundle contêm o GPLv3 integral, o aviso
+original de licença do FFmpeg, LGPLv2.1, informações da build do fornecedor,
+`NOTICE.txt` e `provenance.json`.
+A build escolhida é **GPL-3.0-or-later**, com dependências estáticas; não é uma
+build LGPL-only. FFmpeg e ffprobe são processos separados, não bibliotecas ligadas
+ao Popcorn. Antes de distribuir publicamente, o responsável pelo release deve
+disponibilizar o código-fonte correspondente completo, incluindo dependências e
+scripts de build, com acesso equivalente junto ao download, conforme GPL seção 6.
+As versões estão no arquivo do fornecedor; o aviso indica os repositórios e
+scripts de build. Arquive também os avisos/licenças de todas as dependências
+estáticas junto aos fontes antes de publicar: links upstream e avisos não
+substituem essa obrigação. O preparo não certifica o cumprimento desse gate.
+Assinatura/notarização e instalação macOS/Windows
+ainda precisam de validação própria; executar as ferramentas não homologa o
+instalador nem a política de codecs.
+
 Para inspecionar somente a interface em um navegador:
 
 ```sh

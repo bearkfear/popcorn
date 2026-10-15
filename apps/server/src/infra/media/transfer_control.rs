@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 use crate::application::media::{MediaError, PlaybackFile, StartPlayback};
 
+use super::preparation::Processing;
 use super::{TorrentEngine, transfers::ActivePlayback};
 
 impl TorrentEngine {
@@ -24,13 +25,21 @@ impl TorrentEngine {
             .map(|(_, playback)| playback)
             .collect();
         self.idempotency.lock().await.clear();
+        for active in &previous {
+            active.processing.stop().await;
+        }
         if let Some(session) = self.active_session().await {
             for active in previous {
                 pause_if_live(&session, &active.handle).await?;
             }
+            resume_if_paused(&session, &handle).await?;
         }
         let id = Uuid::new_v4();
         let credential = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
+        let processing = Arc::new(Processing::start(
+            format!("http://{}/media/{id}?token={credential}", self.address),
+            command.quality,
+        ));
         self.playbacks.lock().await.insert(
             id,
             ActivePlayback {
@@ -40,6 +49,7 @@ impl TorrentEngine {
                 file_name: file.name,
                 size: file.size,
                 credential,
+                processing,
             },
         );
         self.idempotency
@@ -67,16 +77,7 @@ impl TorrentEngine {
     pub(super) async fn resume_playback(&self, id: Uuid) -> Result<(), MediaError> {
         let handle = self.playback_handle(id).await?;
         let session = self.active_session().await.ok_or(MediaError::Unavailable)?;
-        if matches!(
-            handle.stats().state,
-            TorrentStatsState::Paused | TorrentStatsState::Initializing { paused: true }
-        ) {
-            session
-                .unpause(&handle)
-                .await
-                .map_err(|_| MediaError::Unavailable)?;
-        }
-        Ok(())
+        resume_if_paused(&session, &handle).await
     }
 
     pub(super) async fn stop_playback(&self, id: Uuid) -> Result<(), MediaError> {
@@ -90,6 +91,7 @@ impl TorrentEngine {
             .lock()
             .await
             .retain(|_, value| *value != id);
+        active.processing.stop().await;
         if let Some(session) = self.active_session().await {
             pause_if_live(&session, &active.handle).await?;
         }
@@ -104,6 +106,22 @@ async fn pause_if_live(session: &Session, handle: &Arc<ManagedTorrent>) -> Resul
     ) {
         session
             .pause(handle)
+            .await
+            .map_err(|_| MediaError::Unavailable)?;
+    }
+    Ok(())
+}
+
+async fn resume_if_paused(
+    session: &Arc<Session>,
+    handle: &Arc<ManagedTorrent>,
+) -> Result<(), MediaError> {
+    if matches!(
+        handle.stats().state,
+        TorrentStatsState::Paused | TorrentStatsState::Initializing { paused: true }
+    ) {
+        session
+            .unpause(handle)
             .await
             .map_err(|_| MediaError::Unavailable)?;
     }

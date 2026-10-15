@@ -4,7 +4,9 @@ use uuid::Uuid;
 
 use crate::core::media::{CacheSettings, Content, Playback, Source};
 
-use super::{AccessError, Cache, MediaAccess, MediaError, MediaService, Sources, Transfers};
+use super::{
+    AccessError, Cache, ConvertedAccess, MediaAccess, MediaError, MediaService, Sources, Transfers,
+};
 
 impl<R: Sources, T: Transfers, C: Cache> MediaService<R, T, C> {
     pub(crate) async fn list(&self, content: &Content) -> Result<Vec<Source>, MediaError> {
@@ -25,5 +27,17 @@ impl<R: Sources, T: Transfers, C: Cache> MediaService<R, T, C> {
         credential: &str,
     ) -> Result<MediaAccess, AccessError> {
         self.transfers.open(id, credential).await
+    }
+
+    pub(crate) async fn converted_media(
+        &self,
+        id: Uuid,
+        credential: &str,
+        start: f64,
+        generation: u64,
+    ) -> Result<ConvertedAccess, AccessError> {
+        self.transfers
+            .converted(id, credential, start, generation)
+            .await
     }
 }

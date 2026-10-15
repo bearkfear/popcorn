@@ -10852,6 +10852,28 @@ pub struct PlaybackView<'a> {
     pub download_bytes_per_second: u64,
     /// Field 9: `peers`
     pub peers: u32,
+    /// Field 10: `duration_seconds`
+    pub duration_seconds: f64,
+    /// "direct" uses HTTP Range; "mse" uses a time-addressed fragmented MP4 stream.
+    ///
+    /// Field 11: `delivery`
+    pub delivery: &'a str,
+    /// Direct, remux, audio conversion, or full video transcode.
+    ///
+    /// Field 12: `conversion`
+    pub conversion: &'a str,
+    /// SourceBuffer codec declaration for transformed media.
+    ///
+    /// Field 13: `stream_type`
+    pub stream_type: &'a str,
+    /// Safe, fixed diagnostic for preparation failures, never process output.
+    ///
+    /// Field 14: `error`
+    pub error: &'a str,
+    /// Fixed transport timestamp bias removed by MSE, identical for every seek.
+    ///
+    /// Field 15: `timestamp_offset_seconds`
+    pub timestamp_offset_seconds: f64,
     pub __buffa_unknown_fields: ::buffa::UnknownFieldsView<'a>,
 }
 impl<'a> ::buffa::MessageView<'a> for PlaybackView<'a> {
@@ -10949,6 +10971,48 @@ impl<'a> ::buffa::MessageView<'a> for PlaybackView<'a> {
                 )?;
                 view.peers = ::buffa::types::decode_uint32(&mut cur)?;
             }
+            10u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::Fixed64,
+                )?;
+                view.duration_seconds = ::buffa::types::decode_double(&mut cur)?;
+            }
+            11u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                view.delivery = ::buffa::types::borrow_str(&mut cur)?;
+            }
+            12u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                view.conversion = ::buffa::types::borrow_str(&mut cur)?;
+            }
+            13u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                view.stream_type = ::buffa::types::borrow_str(&mut cur)?;
+            }
+            14u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                view.error = ::buffa::types::borrow_str(&mut cur)?;
+            }
+            15u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::Fixed64,
+                )?;
+                view.timestamp_offset_seconds = ::buffa::types::decode_double(&mut cur)?;
+            }
             _ => {
                 ::buffa::encoding::skip_field_depth(tag, &mut cur, ctx.depth())?;
                 let span_len = before_tag.len() - cur.len();
@@ -10980,6 +11044,12 @@ impl<'a> ::buffa::MessageView<'a> for PlaybackView<'a> {
             total_bytes: self.total_bytes,
             download_bytes_per_second: self.download_bytes_per_second,
             peers: self.peers,
+            duration_seconds: self.duration_seconds,
+            delivery: self.delivery.to_string(),
+            conversion: self.conversion.to_string(),
+            stream_type: self.stream_type.to_string(),
+            error: self.error.to_string(),
+            timestamp_offset_seconds: self.timestamp_offset_seconds,
             __buffa_unknown_fields: self.__buffa_unknown_fields.to_owned()?.into(),
             ..::core::default::Default::default()
         })
@@ -11026,6 +11096,24 @@ impl<'a> ::buffa::ViewEncode<'a> for PlaybackView<'a> {
         if self.peers != 0u32 {
             size += 1u64 + ::buffa::types::uint32_encoded_len(self.peers) as u64;
         }
+        if self.duration_seconds.to_bits() != 0u64 {
+            size += 1u64 + ::buffa::types::FIXED64_ENCODED_LEN as u64;
+        }
+        if !self.delivery.is_empty() {
+            size += 1u64 + ::buffa::types::string_encoded_len(&self.delivery) as u64;
+        }
+        if !self.conversion.is_empty() {
+            size += 1u64 + ::buffa::types::string_encoded_len(&self.conversion) as u64;
+        }
+        if !self.stream_type.is_empty() {
+            size += 1u64 + ::buffa::types::string_encoded_len(&self.stream_type) as u64;
+        }
+        if !self.error.is_empty() {
+            size += 1u64 + ::buffa::types::string_encoded_len(&self.error) as u64;
+        }
+        if self.timestamp_offset_seconds.to_bits() != 0u64 {
+            size += 1u64 + ::buffa::types::FIXED64_ENCODED_LEN as u64;
+        }
         size += self.__buffa_unknown_fields.encoded_len() as u64;
         ::buffa::saturate_size(size)
     }
@@ -11066,6 +11154,24 @@ impl<'a> ::buffa::ViewEncode<'a> for PlaybackView<'a> {
         }
         if self.peers != 0u32 {
             ::buffa::types::put_uint32_field(9u32, self.peers, buf);
+        }
+        if self.duration_seconds.to_bits() != 0u64 {
+            ::buffa::types::put_double_field(10u32, self.duration_seconds, buf);
+        }
+        if !self.delivery.is_empty() {
+            ::buffa::types::put_string_field(11u32, &self.delivery, buf);
+        }
+        if !self.conversion.is_empty() {
+            ::buffa::types::put_string_field(12u32, &self.conversion, buf);
+        }
+        if !self.stream_type.is_empty() {
+            ::buffa::types::put_string_field(13u32, &self.stream_type, buf);
+        }
+        if !self.error.is_empty() {
+            ::buffa::types::put_string_field(14u32, &self.error, buf);
+        }
+        if self.timestamp_offset_seconds.to_bits() != 0u64 {
+            ::buffa::types::put_double_field(15u32, self.timestamp_offset_seconds, buf);
         }
         self.__buffa_unknown_fields.write_to(buf);
     }
@@ -11135,6 +11241,32 @@ impl<'__a> ::serde::Serialize for PlaybackView<'__a> {
                 .serialize_entry(
                     "peers",
                     &::buffa::json_helpers::ProtoJson(&self.peers),
+                )?;
+        }
+        if !::buffa::json_helpers::skip_if::is_zero_f64(&self.duration_seconds) {
+            __map
+                .serialize_entry(
+                    "durationSeconds",
+                    &::buffa::json_helpers::ProtoJson(&self.duration_seconds),
+                )?;
+        }
+        if !::buffa::json_helpers::skip_if::is_empty_str(self.delivery) {
+            __map.serialize_entry("delivery", self.delivery)?;
+        }
+        if !::buffa::json_helpers::skip_if::is_empty_str(self.conversion) {
+            __map.serialize_entry("conversion", self.conversion)?;
+        }
+        if !::buffa::json_helpers::skip_if::is_empty_str(self.stream_type) {
+            __map.serialize_entry("streamType", self.stream_type)?;
+        }
+        if !::buffa::json_helpers::skip_if::is_empty_str(self.error) {
+            __map.serialize_entry("error", self.error)?;
+        }
+        if !::buffa::json_helpers::skip_if::is_zero_f64(&self.timestamp_offset_seconds) {
+            __map
+                .serialize_entry(
+                    "timestampOffsetSeconds",
+                    &::buffa::json_helpers::ProtoJson(&self.timestamp_offset_seconds),
                 )?;
         }
         __map.end()
@@ -11271,6 +11403,46 @@ impl PlaybackOwnedView {
     pub fn peers(&self) -> u32 {
         self.0.reborrow().peers
     }
+    /// Field 10: `duration_seconds`
+    #[must_use]
+    pub fn duration_seconds(&self) -> f64 {
+        self.0.reborrow().duration_seconds
+    }
+    /// "direct" uses HTTP Range; "mse" uses a time-addressed fragmented MP4 stream.
+    ///
+    /// Field 11: `delivery`
+    #[must_use]
+    pub fn delivery(&self) -> &'_ str {
+        self.0.reborrow().delivery
+    }
+    /// Direct, remux, audio conversion, or full video transcode.
+    ///
+    /// Field 12: `conversion`
+    #[must_use]
+    pub fn conversion(&self) -> &'_ str {
+        self.0.reborrow().conversion
+    }
+    /// SourceBuffer codec declaration for transformed media.
+    ///
+    /// Field 13: `stream_type`
+    #[must_use]
+    pub fn stream_type(&self) -> &'_ str {
+        self.0.reborrow().stream_type
+    }
+    /// Safe, fixed diagnostic for preparation failures, never process output.
+    ///
+    /// Field 14: `error`
+    #[must_use]
+    pub fn error(&self) -> &'_ str {
+        self.0.reborrow().error
+    }
+    /// Fixed transport timestamp bias removed by MSE, identical for every seek.
+    ///
+    /// Field 15: `timestamp_offset_seconds`
+    #[must_use]
+    pub fn timestamp_offset_seconds(&self) -> f64 {
+        self.0.reborrow().timestamp_offset_seconds
+    }
 }
 impl ::core::convert::From<::buffa::OwnedView<PlaybackView<'static>>>
 for PlaybackOwnedView {
@@ -11310,6 +11482,8 @@ pub struct StartPlaybackRequestView<'a> {
     pub file_index: u32,
     /// Field 3: `idempotency_key`
     pub idempotency_key: &'a str,
+    /// Field 4: `quality`
+    pub quality: ::buffa::EnumValue<super::super::PlaybackQuality>,
     pub __buffa_unknown_fields: ::buffa::UnknownFieldsView<'a>,
 }
 impl<'a> ::buffa::MessageView<'a> for StartPlaybackRequestView<'a> {
@@ -11361,6 +11535,15 @@ impl<'a> ::buffa::MessageView<'a> for StartPlaybackRequestView<'a> {
                 )?;
                 view.idempotency_key = ::buffa::types::borrow_str(&mut cur)?;
             }
+            4u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::Varint,
+                )?;
+                view.quality = ::buffa::EnumValue::from(
+                    ::buffa::types::decode_int32(&mut cur)?,
+                );
+            }
             _ => {
                 ::buffa::encoding::skip_field_depth(tag, &mut cur, ctx.depth())?;
                 let span_len = before_tag.len() - cur.len();
@@ -11392,6 +11575,7 @@ impl<'a> ::buffa::MessageView<'a> for StartPlaybackRequestView<'a> {
             source_id: self.source_id.to_string(),
             file_index: self.file_index,
             idempotency_key: self.idempotency_key.to_string(),
+            quality: self.quality,
             __buffa_unknown_fields: self.__buffa_unknown_fields.to_owned()?.into(),
             ..::core::default::Default::default()
         })
@@ -11414,6 +11598,12 @@ impl<'a> ::buffa::ViewEncode<'a> for StartPlaybackRequestView<'a> {
                 += 1u64
                     + ::buffa::types::string_encoded_len(&self.idempotency_key) as u64;
         }
+        {
+            let val = self.quality.to_i32();
+            if val != 0 {
+                size += 1u64 + ::buffa::types::int32_encoded_len(val) as u64;
+            }
+        }
         size += self.__buffa_unknown_fields.encoded_len() as u64;
         ::buffa::saturate_size(size)
     }
@@ -11433,6 +11623,12 @@ impl<'a> ::buffa::ViewEncode<'a> for StartPlaybackRequestView<'a> {
         }
         if !self.idempotency_key.is_empty() {
             ::buffa::types::put_string_field(3u32, &self.idempotency_key, buf);
+        }
+        {
+            let val = self.quality.to_i32();
+            if val != 0 {
+                ::buffa::types::put_int32_field(4u32, val, buf);
+            }
         }
         self.__buffa_unknown_fields.write_to(buf);
     }
@@ -11467,6 +11663,9 @@ impl<'__a> ::serde::Serialize for StartPlaybackRequestView<'__a> {
         }
         if !::buffa::json_helpers::skip_if::is_empty_str(self.idempotency_key) {
             __map.serialize_entry("idempotencyKey", self.idempotency_key)?;
+        }
+        if !::buffa::json_helpers::skip_if::is_default_enum_value(&self.quality) {
+            __map.serialize_entry("quality", &self.quality)?;
         }
         __map.end()
     }
@@ -11577,6 +11776,11 @@ impl StartPlaybackRequestOwnedView {
     #[must_use]
     pub fn idempotency_key(&self) -> &'_ str {
         self.0.reborrow().idempotency_key
+    }
+    /// Field 4: `quality`
+    #[must_use]
+    pub fn quality(&self) -> ::buffa::EnumValue<super::super::PlaybackQuality> {
+        self.0.reborrow().quality
     }
 }
 impl ::core::convert::From<::buffa::OwnedView<StartPlaybackRequestView<'static>>>

@@ -9,6 +9,7 @@ use popcorn_proto::proto::popcorn::v1::{
 };
 use uuid::Uuid;
 
+use crate::core::media::profile::Quality;
 use crate::{
     application::media::{Cache, Sources, StartPlayback, Transfers},
     core::media::{Playback, PlaybackState},
@@ -33,6 +34,12 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> PlaybackS
                 source_id: request.source_id.to_owned(),
                 file_index: request.file_index,
                 idempotency_key: request.idempotency_key.to_owned(),
+                quality: match request.quality.to_i32() {
+                    0 | 1 => Quality::Auto,
+                    2 => Quality::FullHd,
+                    3 => Quality::Hd,
+                    _ => return Err(invalid("valid playback quality is required")),
+                },
             })
             .await
             .map_err(source_error)?;
@@ -113,6 +120,12 @@ fn encode_playback(value: Playback) -> proto::Playback {
         total_bytes: value.total_bytes,
         download_bytes_per_second: value.download_bytes_per_second,
         peers: value.peers,
+        duration_seconds: value.duration_seconds,
+        delivery: value.delivery.into(),
+        conversion: value.conversion.into(),
+        stream_type: value.stream_type.into(),
+        error: value.error.into(),
+        timestamp_offset_seconds: value.timestamp_offset_seconds,
         ..Default::default()
     }
 }

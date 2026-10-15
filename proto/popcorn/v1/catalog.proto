@@ -218,6 +218,14 @@ enum PlaybackState {
   PLAYBACK_STATE_PAUSED = 5;
 }
 
+// Maximum output resolution; smaller sources are never upscaled.
+enum PlaybackQuality {
+  PLAYBACK_QUALITY_UNSPECIFIED = 0;
+  PLAYBACK_QUALITY_AUTO = 1;
+  PLAYBACK_QUALITY_FULL_HD = 2;
+  PLAYBACK_QUALITY_HD = 3;
+}
+
 message Playback {
   string playback_id = 1;
   PlaybackState state = 2;
@@ -228,12 +236,24 @@ message Playback {
   uint64 total_bytes = 7;
   uint64 download_bytes_per_second = 8;
   uint32 peers = 9;
+  double duration_seconds = 10;
+  // "direct" uses HTTP Range; "mse" uses a time-addressed fragmented MP4 stream.
+  string delivery = 11;
+  // Direct, remux, audio conversion, or full video transcode.
+  string conversion = 12;
+  // SourceBuffer codec declaration for transformed media.
+  string stream_type = 13;
+  // Safe, fixed diagnostic for preparation failures, never process output.
+  string error = 14;
+  // Fixed transport timestamp bias removed by MSE, identical for every seek.
+  double timestamp_offset_seconds = 15;
 }
 
 message StartPlaybackRequest {
   string source_id = 1;
   uint32 file_index = 2;
   string idempotency_key = 3;
+  PlaybackQuality quality = 4;
 }
 message StartPlaybackResponse { Playback playback = 1; }
 message GetPlaybackRequest { string playback_id = 1; }

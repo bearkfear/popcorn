@@ -1,6 +1,7 @@
 //! Transport-independent media identities, source metadata and playback rules.
 
 pub mod content;
+pub mod profile;
 pub mod range;
 
 pub(crate) use content::{Content, Coordinates, MediaKind};
@@ -60,6 +61,12 @@ pub(crate) struct Playback {
     pub(crate) total_bytes: u64,
     pub(crate) download_bytes_per_second: u64,
     pub(crate) peers: u32,
+    pub(crate) duration_seconds: f64,
+    pub(crate) delivery: &'static str,
+    pub(crate) conversion: &'static str,
+    pub(crate) stream_type: &'static str,
+    pub(crate) error: &'static str,
+    pub(crate) timestamp_offset_seconds: f64,
 }
 
 #[derive(Debug)]

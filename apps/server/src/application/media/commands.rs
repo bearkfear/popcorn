@@ -2,6 +2,7 @@
 
 use uuid::Uuid;
 
+use crate::core::media::profile::Quality;
 use crate::core::media::{
     CacheSettings, Content, Playback, Source, SourceInput, validate_cache_limit,
 };
@@ -17,6 +18,7 @@ pub(crate) struct StartPlayback {
     pub(crate) source_id: String,
     pub(crate) file_index: u32,
     pub(crate) idempotency_key: String,
+    pub(crate) quality: Quality,
 }
 
 impl<R: Sources, T: Transfers, C: Cache> MediaService<R, T, C> {

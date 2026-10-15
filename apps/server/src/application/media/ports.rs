@@ -69,6 +69,13 @@ pub(crate) trait Transfers: Send + Sync {
         id: Uuid,
         credential: &str,
     ) -> impl Future<Output = Result<MediaAccess, AccessError>> + Send;
+    fn converted(
+        &self,
+        id: Uuid,
+        credential: &str,
+        start: f64,
+        generation: u64,
+    ) -> impl Future<Output = Result<ConvertedAccess, AccessError>> + Send;
 }
 
 pub(crate) trait Cache: Send + Sync {
@@ -87,8 +94,13 @@ pub(crate) struct MediaAccess {
     pub(crate) mime_type: &'static str,
 }
 
+pub(crate) struct ConvertedAccess {
+    pub(crate) reader: Box<dyn AsyncRead + Unpin + Send>,
+}
+
 pub(crate) enum AccessError {
     Gone,
     Forbidden,
     Unavailable,
+    InvalidPosition,
 }
