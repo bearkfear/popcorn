@@ -7,7 +7,7 @@ use sqlx::{
 
 use crate::Error;
 
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
 
 pub(super) async fn open(path: &Path) -> Result<(SqlitePool, String), Error> {
     let pool = SqlitePoolOptions::new()
@@ -42,6 +42,12 @@ async fn validate(pool: &SqlitePool) -> Result<String, Error> {
     if integrity != "ok" {
         return Err(Error::InvalidCatalog);
     }
+    sqlx::query(
+        "SELECT media_type, tmdb_id, title, overview, release_year
+         FROM catalog_contents LIMIT 0",
+    )
+    .execute(pool)
+    .await?;
     let rows: Vec<(i64, String)> =
         sqlx::query_as("SELECT schema_version, catalog_version FROM catalog_metadata LIMIT 2")
             .fetch_all(pool)
@@ -56,7 +62,7 @@ async fn validate(pool: &SqlitePool) -> Result<String, Error> {
 
 /// Creates an empty, versioned bootstrap catalog without overwriting a file.
 ///
-/// The snapshot contains metadata only; content and source ingestion are later increments.
+/// The snapshot has the catalog schema and version metadata but no content rows.
 ///
 /// # Errors
 ///

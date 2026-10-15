@@ -1,0 +1,291 @@
+syntax = "proto3";
+
+package popcorn.v1;
+
+// TMDB's top-level content categories.
+enum MediaType {
+  MEDIA_TYPE_UNSPECIFIED = 0;
+  MEDIA_TYPE_MOVIE = 1;
+  MEDIA_TYPE_TV = 2;
+}
+
+// Stable content identity; episode coordinates are absent for top-level titles.
+message ContentRef {
+  MediaType media_type = 1;
+  uint32 tmdb_id = 2;
+  optional uint32 season_number = 3;
+  optional uint32 episode_number = 4;
+}
+
+// Presentation metadata published in the installed, read-only snapshot.
+message Title {
+  ContentRef content = 1;
+  string title = 2;
+  string overview = 3;
+  uint32 release_year = 4;
+  string poster_url = 5;
+  string backdrop_url = 6;
+  double vote_average = 7;
+  repeated Genre genres = 8;
+  repeated CastMember cast = 9;
+  uint32 runtime_minutes = 10;
+  repeated Season seasons = 11;
+}
+
+message Genre {
+  uint32 id = 1;
+  string name = 2;
+}
+
+message CastMember {
+  string name = 1;
+  string character = 2;
+  string profile_url = 3;
+}
+
+message Season {
+  uint32 season_number = 1;
+  string name = 2;
+  string overview = 3;
+  string poster_url = 4;
+  uint32 episode_count = 5;
+}
+
+message Episode {
+  ContentRef content = 1;
+  string name = 2;
+  string overview = 3;
+  string still_url = 4;
+  string air_date = 5;
+  uint32 runtime_minutes = 6;
+}
+
+enum CatalogCategory {
+  CATALOG_CATEGORY_UNSPECIFIED = 0;
+  CATALOG_CATEGORY_POPULAR = 1;
+  CATALOG_CATEGORY_UPCOMING = 2;
+  CATALOG_CATEGORY_TOP_RATED = 3;
+}
+
+message ListTitlesRequest {
+  // Zero selects the default of 20. The maximum is 100.
+  uint32 page_size = 1;
+  // Opaque continuation from the preceding response.
+  string page_token = 2;
+}
+
+message ListTitlesResponse {
+  repeated Title titles = 1;
+  string next_page_token = 2;
+}
+
+message GetTitleRequest {
+  ContentRef content = 1;
+  // False preserves read-only installed snapshot access, without network.
+  bool use_tmdb = 2;
+}
+
+message GetTitleResponse {
+  Title title = 1;
+  bool stale = 2;
+}
+
+message BrowseTitlesRequest {
+  MediaType media_type = 1;
+  CatalogCategory category = 2;
+  // Zero selects page one. TMDB exposes at most 500 pages.
+  uint32 page = 3;
+  // Genre filtering applies to popular discovery.
+  uint32 genre_id = 4;
+}
+
+message SearchTitlesRequest {
+  MediaType media_type = 1;
+  string query = 2;
+  uint32 page = 3;
+}
+
+message BrowseTitlesResponse {
+  repeated Title titles = 1;
+  uint32 page = 2;
+  uint32 total_pages = 3;
+  bool stale = 4;
+}
+
+message SearchTitlesResponse {
+  repeated Title titles = 1;
+  uint32 page = 2;
+  uint32 total_pages = 3;
+  bool stale = 4;
+}
+
+message ListGenresRequest {
+  MediaType media_type = 1;
+}
+
+message ListGenresResponse {
+  repeated Genre genres = 1;
+  bool stale = 2;
+}
+
+message ListSeasonsRequest {
+  uint32 series_id = 1;
+}
+
+message ListSeasonsResponse {
+  repeated Season seasons = 1;
+  bool stale = 2;
+}
+
+message ListEpisodesRequest {
+  uint32 series_id = 1;
+  uint32 season_number = 2;
+}
+
+message ListEpisodesResponse {
+  repeated Episode episodes = 1;
+  bool stale = 2;
+}
+
+message GetTmdbStatusRequest {}
+
+message TmdbStatus {
+  bool configured = 1;
+  bool remembered = 2;
+}
+
+message ConfigureTmdbRequest {
+  // Write-only credential; never returned by status or catalog methods.
+  string read_access_token = 1;
+  bool remember = 2;
+}
+
+message ClearTmdbConfigurationRequest {}
+
+message GetTmdbStatusResponse {
+  TmdbStatus status = 1;
+}
+
+message ConfigureTmdbResponse {
+  TmdbStatus status = 1;
+}
+
+message ClearTmdbConfigurationResponse {
+  TmdbStatus status = 1;
+}
+
+enum SourceState {
+  SOURCE_STATE_UNSPECIFIED = 0;
+  SOURCE_STATE_READY = 1;
+  SOURCE_STATE_RESOLVING = 2;
+  SOURCE_STATE_FAILED = 3;
+}
+
+message SourceFile {
+  uint32 file_index = 1;
+  string name = 2;
+  uint64 size_bytes = 3;
+  bool likely_media = 4;
+}
+
+message Source {
+  string source_id = 1;
+  ContentRef content = 2;
+  SourceState state = 3;
+  repeated SourceFile files = 4;
+}
+
+message AddSourceRequest {
+  ContentRef content = 1;
+  oneof input {
+    string magnet = 2;
+    bytes torrent_file = 3;
+  }
+}
+
+message AddSourceResponse { Source source = 1; }
+message ListSourcesRequest { ContentRef content = 1; }
+message ListSourcesResponse { repeated Source sources = 1; }
+message RemoveSourceRequest { string source_id = 1; }
+message RemoveSourceResponse {}
+
+enum PlaybackState {
+  PLAYBACK_STATE_UNSPECIFIED = 0;
+  PLAYBACK_STATE_PREPARING = 1;
+  PLAYBACK_STATE_READY = 2;
+  PLAYBACK_STATE_STOPPED = 3;
+  PLAYBACK_STATE_FAILED = 4;
+  PLAYBACK_STATE_PAUSED = 5;
+}
+
+message Playback {
+  string playback_id = 1;
+  PlaybackState state = 2;
+  string media_url = 3;
+  uint64 size_bytes = 4;
+  string mime_type = 5;
+  uint64 downloaded_bytes = 6;
+  uint64 total_bytes = 7;
+  uint64 download_bytes_per_second = 8;
+  uint32 peers = 9;
+}
+
+message StartPlaybackRequest {
+  string source_id = 1;
+  uint32 file_index = 2;
+  string idempotency_key = 3;
+}
+message StartPlaybackResponse { Playback playback = 1; }
+message GetPlaybackRequest { string playback_id = 1; }
+message GetPlaybackResponse { Playback playback = 1; }
+message StopPlaybackRequest { string playback_id = 1; }
+message StopPlaybackResponse {}
+message PausePlaybackRequest { string playback_id = 1; }
+message PausePlaybackResponse { Playback playback = 1; }
+message ResumePlaybackRequest { string playback_id = 1; }
+message ResumePlaybackResponse { Playback playback = 1; }
+
+message CacheSettings {
+  string directory = 1;
+  uint64 limit_bytes = 2;
+  uint64 used_bytes = 3;
+}
+message GetCacheSettingsRequest {}
+message GetCacheSettingsResponse { CacheSettings settings = 1; }
+message SetCacheLimitRequest { uint64 limit_bytes = 1; }
+message SetCacheLimitResponse { CacheSettings settings = 1; }
+message ClearCacheRequest {}
+message ClearCacheResponse { CacheSettings settings = 1; }
+
+service CatalogService {
+  rpc ListTitles(ListTitlesRequest) returns (ListTitlesResponse);
+  rpc GetTitle(GetTitleRequest) returns (GetTitleResponse);
+  rpc BrowseTitles(BrowseTitlesRequest) returns (BrowseTitlesResponse);
+  rpc SearchTitles(SearchTitlesRequest) returns (SearchTitlesResponse);
+  rpc ListGenres(ListGenresRequest) returns (ListGenresResponse);
+  rpc ListSeasons(ListSeasonsRequest) returns (ListSeasonsResponse);
+  rpc ListEpisodes(ListEpisodesRequest) returns (ListEpisodesResponse);
+  rpc GetTmdbStatus(GetTmdbStatusRequest) returns (GetTmdbStatusResponse);
+  rpc ConfigureTmdb(ConfigureTmdbRequest) returns (ConfigureTmdbResponse);
+  rpc ClearTmdbConfiguration(ClearTmdbConfigurationRequest) returns (ClearTmdbConfigurationResponse);
+}
+
+service SourceService {
+  rpc AddSource(AddSourceRequest) returns (AddSourceResponse);
+  rpc ListSources(ListSourcesRequest) returns (ListSourcesResponse);
+  rpc RemoveSource(RemoveSourceRequest) returns (RemoveSourceResponse);
+}
+
+service PlaybackService {
+  rpc StartPlayback(StartPlaybackRequest) returns (StartPlaybackResponse);
+  rpc GetPlayback(GetPlaybackRequest) returns (GetPlaybackResponse);
+  rpc StopPlayback(StopPlaybackRequest) returns (StopPlaybackResponse);
+  rpc PausePlayback(PausePlaybackRequest) returns (PausePlaybackResponse);
+  rpc ResumePlayback(ResumePlaybackRequest) returns (ResumePlaybackResponse);
+}
+
+service StorageService {
+  rpc GetCacheSettings(GetCacheSettingsRequest) returns (GetCacheSettingsResponse);
+  rpc SetCacheLimit(SetCacheLimitRequest) returns (SetCacheLimitResponse);
+  rpc ClearCache(ClearCacheRequest) returns (ClearCacheResponse);
+}

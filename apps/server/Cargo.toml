@@ -8,7 +8,11 @@ default-run = "popcorn-server"
 
 [dependencies]
 axum.workspace = true
+connectrpc.workspace = true
+popcorn-proto = { path = "src/generated" }
 clap.workspace = true
+librqbit.workspace = true
+reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 same-file.workspace = true
@@ -17,9 +21,13 @@ subtle.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+tokio-util.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 uuid.workspace = true
+
+[dev-dependencies]
+popcorn-desktop = { path = "../desktop/src-tauri" }
 
 [lints]
 workspace = true

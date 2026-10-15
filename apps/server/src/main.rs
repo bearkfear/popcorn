@@ -8,6 +8,8 @@ use std::{
 
 use clap::{Parser, Subcommand};
 use popcorn_server::{Backend, Error, ServerConfig, create_catalog};
+use serde::Deserialize;
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, BufReader};
 
 #[derive(Debug, Parser)]
 #[command(version, about = "Local Popcorn backend foundation")]
@@ -18,9 +20,11 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Run under a desktop shell using a private, newline-delimited JSON stdin pipe.
+    Sidecar,
     /// Create an empty versioned catalog snapshot without replacing an existing file.
     InitCatalog {
-        /// Output SQLite snapshot.
+        /// Output `SQLite` snapshot.
         #[arg(long)]
         output: PathBuf,
     },
@@ -59,6 +63,7 @@ async fn main() -> ExitCode {
 
 async fn execute(cli: Cli) -> Result<(), Error> {
     match cli.command {
+        Command::Sidecar => run_sidecar().await?,
         Command::InitCatalog { output } => {
             create_catalog(&output).await?;
             tracing::info!("bootstrap catalog created");
@@ -69,9 +74,8 @@ async fn execute(cli: Cli) -> Result<(), Error> {
             token_file,
             port,
         } => {
-            let backend =
-                Backend::prepare(ServerConfig::new(catalog, data_dir, token_file).with_port(port))
-                    .await?;
+            let config = ServerConfig::new(catalog, data_dir, token_file).with_port(port);
+            let backend = Backend::prepare(with_tmdb_environment(config)?).await?;
             #[cfg(unix)]
             let mut interrupt =
                 tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
@@ -103,4 +107,85 @@ async fn execute(cli: Cli) -> Result<(), Error> {
         }
     }
     Ok(())
+}
+
+fn with_tmdb_environment(config: ServerConfig) -> Result<ServerConfig, Error> {
+    match std::env::var("TMDB_READ_ACCESS_TOKEN") {
+        Ok(token) => Ok(config.with_tmdb_token(token)),
+        Err(std::env::VarError::NotPresent) => Ok(config),
+        Err(std::env::VarError::NotUnicode(_)) => Err(Error::TmdbConfiguration),
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "event", rename_all = "snake_case", deny_unknown_fields)]
+enum Control {
+    Initialize {
+        catalog: PathBuf,
+        data_dir: PathBuf,
+        token: String,
+        origin: String,
+    },
+    Shutdown,
+}
+
+async fn read_control(reader: &mut (impl AsyncBufRead + Unpin)) -> Result<Option<Control>, Error> {
+    let mut frame = Vec::new();
+    let length = reader.take(16_385).read_until(b'\n', &mut frame).await?;
+    if length == 0 {
+        return Ok(None);
+    }
+    if length > 16_384 || !frame.ends_with(b"\n") {
+        return Err(Error::InvalidControlMessage);
+    }
+    // Do not propagate parser diagnostics: the input contains the session secret.
+    serde_json::from_slice(&frame)
+        .map(Some)
+        .map_err(|_| Error::InvalidControlMessage)
+}
+
+async fn run_sidecar() -> Result<(), Error> {
+    let mut control = BufReader::new(tokio::io::stdin());
+    let initialization = tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        read_control(&mut control),
+    )
+    .await
+    .map_err(|_| Error::InitializationTimeout)??;
+    let Some(Control::Initialize {
+        catalog,
+        data_dir,
+        token,
+        origin,
+    }) = initialization
+    else {
+        return Err(Error::InvalidControlMessage);
+    };
+    let config = ServerConfig::from_private_channel(catalog, data_dir, token.as_bytes(), origin)?;
+    let backend = Backend::prepare(with_tmdb_environment(config)?).await?;
+    {
+        let mut stdout = io::stdout().lock();
+        serde_json::to_writer(&mut stdout, backend.ready())?;
+        writeln!(stdout)?;
+        stdout.flush()?;
+    }
+    backend
+        .run(async move {
+            match read_control(&mut control).await {
+                Ok(Some(Control::Shutdown) | None) => {}
+                Ok(Some(Control::Initialize { .. })) | Err(_) => {
+                    tracing::warn!("invalid control frame; shutting down sidecar");
+                }
+            }
+        })
+        .await?;
+    let mut stdout = io::stdout().lock();
+    match writeln!(stdout, "{{\"event\":\"stopped\"}}").and_then(|()| stdout.flush()) {
+        Err(error) if error.kind() == io::ErrorKind::BrokenPipe => {
+            // A lost shell closes both pipes; storage has already shut down.
+            tracing::debug!("sidecar control consumer closed before shutdown acknowledgement");
+            Ok(())
+        }
+        result => result.map_err(Error::Io),
+    }
 }

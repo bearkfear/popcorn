@@ -4,3 +4,7 @@
 *.sqlite-shm
 *.sqlite-journal
 .DS_Store
+node_modules/
+dist/
+/apps/desktop/src-tauri/binaries/
+/apps/desktop/src-tauri/gen/

@@ -86,6 +86,8 @@ async fn request(address: SocketAddr, headers: &str) -> TestResult<String> {
     .await??;
     Ok(String::from_utf8(response)?)
 }
+#[path = "integration/catalog.rs"]
+mod catalog;
 #[path = "integration/health.rs"]
 mod health;
 #[cfg(unix)]

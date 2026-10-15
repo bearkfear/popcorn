@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "ESNext.Disposable", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

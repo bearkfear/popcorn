@@ -1,0 +1,18 @@
+[package]
+name = "popcorn-proto"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+buffa.workspace = true
+connectrpc.workspace = true
+serde.workspace = true
+
+# This public contract crate contains official, reproducibly generated code.
+# It uses Rust/Clippy defaults, not the application's bespoke source-style lints.
+# Generator output is never hand-edited to conform to application conventions.

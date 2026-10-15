@@ -1,0 +1,26 @@
+{
+  "name": "@popcorn/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare:sidecar": "bun ./scripts/prepare-sidecar.ts",
+    "dev": "bun --bun vite",
+    "check": "bun --bun tsc --noEmit",
+    "typecheck": "bun run check",
+    "build": "bun run check && bun --bun vite build",
+    "preview": "bun --bun vite preview"
+  },
+  "dependencies": {
+    "@popcorn/sdk": "workspace:*",
+    "@tauri-apps/api": "2.12.4",
+    "solid-js": "1.9.17"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vite-plugin-solid": "2.11.14"
+  }
+}

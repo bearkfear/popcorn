@@ -4,6 +4,9 @@ use std::io;
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum Error {
+    /// Local TMDB configuration or HTTP client initialization failed.
+    #[error("could not initialize TMDB configuration")]
+    TmdbConfiguration,
     /// A filesystem, listener or signal operation failed.
     #[error("local I/O failed")]
     Io(#[from] io::Error),
@@ -34,6 +37,12 @@ pub enum Error {
     /// The token file does not contain a 64-character hexadecimal secret.
     #[error("token file must contain 64 hexadecimal characters")]
     InvalidToken,
+    /// The private sidecar pipe contains an invalid or oversized message.
+    #[error("invalid sidecar control message")]
+    InvalidControlMessage,
+    /// The shell did not initialize the sidecar before its deadline.
+    #[error("sidecar initialization exceeded its deadline")]
+    InitializationTimeout,
     /// The shutdown deadline elapsed while draining HTTP connections.
     #[error("backend shutdown exceeded its deadline")]
     ShutdownTimeout,

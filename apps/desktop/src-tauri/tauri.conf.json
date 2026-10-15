@@ -1,0 +1,37 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Popcorn",
+  "version": "0.1.0",
+  "identifier": "app.popcorn.desktop",
+  "build": {
+    "beforeDevCommand": "bun run prepare:sidecar && bun run dev",
+    "beforeBuildCommand": "bun run prepare:sidecar --release && bun run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist",
+    "features": ["desktop"]
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Popcorn",
+        "width": 1120,
+        "height": 760,
+        "minWidth": 360,
+        "minHeight": 500
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://image.tmdb.org; connect-src ipc: http://ipc.localhost http://127.0.0.1:*; media-src http://127.0.0.1:*; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://image.tmdb.org; connect-src ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1420 http://127.0.0.1:*; media-src http://127.0.0.1:*; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+    }
+  },
+  "bundle": {
+    "active": false,
+    "externalBin": ["binaries/popcorn-server"],
+    "resources": {
+      "../../../resources/catalog.sqlite": "catalog.sqlite"
+    },
+    "icon": ["icons/icon.png", "icons/icon.ico", "icons/icon.icns"]
+  }
+}
