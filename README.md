@@ -31,9 +31,9 @@ de exploração do catálogo:
 - interface escura orientada por pôsteres, inspirada no fluxo clássico de catálogo,
   detalhe e reprodução sem reutilizar marca ou assets proprietários.
 
-O snapshot distribuído é intencionalmente vazio. Os testes usam metadados sintéticos
-e um servidor TMDB simulado somente em bancos e portas locais temporários; a suíte
-não depende do serviço ao vivo. O usuário deve fornecer somente fontes que tem
+O snapshot distribuído é intencionalmente vazio. Os testes do servidor cobrem
+somente regras puras do core, sem rede ou bancos temporários.
+O usuário deve fornecer somente fontes que tem
 autorização para acessar; o aplicativo não procura nem distribui conteúdo.
 
 A reprodução atual é direta e depende dos codecs aceitos pelo WebView da plataforma.
@@ -172,15 +172,19 @@ bun run generate:check
 bun run check:sdk
 bun run check:desktop
 bun run --filter @popcorn/desktop build
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
+bun run lint:server
+cargo test -p popcorn-server --lib core::
 ```
 
-Os testes de integração RPC executam o SDK oficial em Bun contra o backend real,
-em Protobuf binário e JSON. Instale as dependências JavaScript antes de rodar
-`cargo test`. O supervisor pode ser testado sem GTK/WebKit: a feature `desktop`
-é habilitada pelo CLI Tauri somente para compilar o shell nativo.
+O servidor mantém poucos testes de domínio em `src/core`. Não há suíte de
+integração do servidor. O linter limita arquivos manuais a 250 linhas e funções
+a 60 linhas, exige um comentário inicial e verifica as fronteiras das camadas.
+O código gerado não entra nesses limites.
+
+O servidor se organiza em `core` (entidades e regras), `application` (comandos,
+consultas e contratos), `infra` (SQLite, TMDB, torrents e disco), `interface`
+(RPC, HTTP e CLI) e `bootstrap` (composição e ciclo de vida). Comandos e consultas
+compartilham processo e banco; não há barramento nem event sourcing.
 
 Os gates G2–G5 permanecem parciais: o caminho direto foi implementado, mas ainda
 precisa do seeder controlado, da matriz de runtimes WebView de Windows/macOS, de

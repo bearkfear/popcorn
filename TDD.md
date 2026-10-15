@@ -41,17 +41,20 @@ O backend é um monólito modular com fronteiras hexagonais leves: regras e serv
 | `apps/server/` | Composição, listener, adaptadores RPC/HTTP e encerramento |
 | `packages/sdk/` | Tipos e cliente TypeScript gerados; configuração do transporte |
 | `packages/ui/` | Componentes compartilhados, sem lógica do backend |
-| `apps/server/src/catalog/` | Catálogo distribuído, consulta TMDB, paginação e cache de metadados |
-| `apps/server/src/sources/` | Vínculos, fontes publicadas/manuais, deduplicação e ocultações |
-| `apps/server/src/downloads/` | Propriedade do motor `librqbit`, arquivos selecionados e transferências |
-| `apps/server/src/playback/` | Sessões, leitura progressiva, modos de mídia e processos FFmpeg |
-| `apps/server/src/library/` | Favoritos e histórico P1 |
-| `apps/server/src/storage/` | Migrações, acesso SQLite, diretórios, quota e exclusão autorizada |
+| `apps/server/src/core/` | Entidades, valores e regras puras de catálogo e mídia |
+| `apps/server/src/application/` | Casos de uso, comandos, consultas e contratos externos |
+| `apps/server/src/infra/` | SQLite, TMDB, motor torrent, arquivos e migrações |
+| `apps/server/src/interface/` | Adaptação RPC, HTTP e CLI, incluindo conversões Protobuf |
+| `apps/server/src/bootstrap/` | Configuração, composição, prontidão e encerramento |
 | `proto/popcorn/v1/` | Serviços, mensagens e enums públicos versionados |
 
 O backend começa como um único crate com `main.rs` para bootstrap e `lib.rs` para composição dos serviços testáveis. Separar crates somente quando houver reutilização ou necessidade real de isolamento; não criar um crate por módulo no início.
 
-`api/` converte Protobuf/HTTP em entradas dos serviços e traduz erros. `catalog` consulta o snapshot/TMDB. `sources` resolve origem e associações. `playback` solicita a `sources` uma fonte resolvida e a `downloads` seu acesso progressivo. `downloads` recebe IDs e dados resolvidos, sem consultar catálogo nem depender de reprodução. `storage` fornece operações de persistência e disco, sem decidir o que reproduzir. `library` usa referências de conteúdo e repositórios, não handles do motor.
+Decisão de 15/10/2026: a estrutura física segue camadas, com conceitos de catálogo e mídia dentro delas. `core` não depende das camadas externas nem de SQL, HTTP ou Protobuf. `application` coordena casos de uso por contratos de fronteira; `infra` implementa integrações; `interface` traduz entradas e saídas; `bootstrap` compõe os serviços concretos.
+
+DDD é aplicado de forma leve, sem repositórios genéricos nem uma interface por struct. Comandos e consultas são separados no código, mas usam o mesmo processo e banco: sem barramento, event sourcing ou infraestrutura CQRS adicional.
+
+Arquivos Rust manuais do servidor têm no máximo 250 linhas, funções têm limite de 60 linhas pelo Clippy, e todo arquivo começa com um comentário sobre sua finalidade. O código gerado é excluído. A suíte automatizada do servidor se limita a poucos testes das regras puras em `core`; essa decisão substitui a abrangência de testes do servidor proposta na seção 12.
 
 Tipos `librqbit`, processos FFmpeg e conexões SQL não atravessam os contratos RPC. Introduzir interfaces somente nas fronteiras externas que precisem de substituição/testes, sem repositório genérico ou camada obrigatória para cada struct.
 

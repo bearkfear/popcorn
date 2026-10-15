@@ -9,6 +9,7 @@
     "catalog:generate": "bash scripts/generate-catalog.sh",
     "desktop:dev": "cd apps/desktop && bun --bun tauri dev",
     "desktop:build": "cd apps/desktop && bun --bun tauri build",
+    "lint:server": "bun scripts/lint-server.ts && cargo fmt --manifest-path apps/server/Cargo.toml -p popcorn-server --check && CLIPPY_CONF_DIR=\"$PWD/apps/server\" cargo clippy -p popcorn-server --lib --bins -- -D warnings",
     "check:desktop": "bun run --filter @popcorn/desktop check",
     "check:sdk": "bun run --filter @popcorn/sdk check"
   },

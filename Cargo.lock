@@ -3985,7 +3985,6 @@ dependencies = [
  "clap",
  "connectrpc",
  "librqbit",
- "popcorn-desktop",
  "popcorn-proto",
  "reqwest",
  "same-file",
