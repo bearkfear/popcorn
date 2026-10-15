@@ -8,7 +8,8 @@
     "dev": "bun --bun vite",
     "check": "bun --bun tsc --noEmit",
     "typecheck": "bun run check",
-    "build": "bun run check && bun --bun vite build",
+    "lint": "bun --bun biome lint src/",
+    "build": "bun run check && bun run lint && bun --bun vite build",
     "preview": "bun --bun vite preview"
   },
   "dependencies": {
@@ -17,6 +18,7 @@
     "solid-js": "1.9.17"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
     "@tailwindcss/vite": "4.3.3",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",

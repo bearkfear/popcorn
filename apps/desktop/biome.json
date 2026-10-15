@@ -1,0 +1,38 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "files": {
+    "includes": ["src/**/*.ts", "src/**/*.tsx"]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "a11y": {
+        "useMediaCaption": "off",
+        "useButtonType": "warn"
+      },
+      "complexity": {
+        "useMaxParams": {
+          "level": "error",
+          "options": {
+            "max": 4
+          }
+        },
+        "noExcessiveLinesPerFunction": {
+          "level": "error",
+          "options": {
+            "maxLines": 60
+          }
+        }
+      },
+      "style": {
+        "noExcessiveLinesPerFile": {
+          "level": "error",
+          "options": {
+            "maxLines": 200
+          }
+        }
+      }
+    }
+  }
+}
