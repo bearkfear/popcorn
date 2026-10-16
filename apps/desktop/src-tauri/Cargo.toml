@@ -18,6 +18,7 @@ required-features = ["desktop"]
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+popcorn-diagnostics.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 uuid.workspace = true

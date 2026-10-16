@@ -36,9 +36,19 @@ impl TorrentEngine {
         }
         let id = Uuid::new_v4();
         let credential = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
+        let stats = handle.stats();
+        popcorn_diagnostics::record(
+            "playback.activated",
+            serde_json::json!({ "playback_id": id,
+            "source_id": command.source_id, "file_index": command.file_index, "file_size": file.size,
+            "downloaded_bytes": stats.progress_bytes, "total_bytes": stats.total_bytes,
+            "quality": format!("{:?}", command.quality), "audio_stream_index": command.audio_stream_index }),
+        );
         let processing = Arc::new(Processing::start(
             format!("http://{}/media/{id}?token={credential}", self.address),
             command.quality,
+            command.audio_stream_index,
+            id,
         ));
         self.playbacks.lock().await.insert(
             id,
@@ -49,9 +59,10 @@ impl TorrentEngine {
                 file_name: file.name,
                 size: file.size,
                 credential,
-                processing,
+                processing: processing.clone(),
             },
         );
+        processing.publish();
         self.idempotency
             .lock()
             .await
@@ -69,18 +80,30 @@ impl TorrentEngine {
     }
 
     pub(super) async fn pause_playback(&self, id: Uuid) -> Result<(), MediaError> {
+        popcorn_diagnostics::record(
+            "playback.pause_requested",
+            serde_json::json!({ "playback_id": id }),
+        );
         let handle = self.playback_handle(id).await?;
         let session = self.active_session().await.ok_or(MediaError::Unavailable)?;
         pause_if_live(&session, &handle).await
     }
 
     pub(super) async fn resume_playback(&self, id: Uuid) -> Result<(), MediaError> {
+        popcorn_diagnostics::record(
+            "playback.resume_requested",
+            serde_json::json!({ "playback_id": id }),
+        );
         let handle = self.playback_handle(id).await?;
         let session = self.active_session().await.ok_or(MediaError::Unavailable)?;
         resume_if_paused(&session, &handle).await
     }
 
     pub(super) async fn stop_playback(&self, id: Uuid) -> Result<(), MediaError> {
+        popcorn_diagnostics::record(
+            "playback.stop_requested",
+            serde_json::json!({ "playback_id": id }),
+        );
         let active = self
             .playbacks
             .lock()

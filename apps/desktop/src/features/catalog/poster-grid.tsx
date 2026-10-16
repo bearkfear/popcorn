@@ -12,7 +12,6 @@ interface PosterGridProps {
 }
 
 function getCatalogHeading(vm: CatalogViewModel): string {
-  if (vm.source() === "local") return "Catálogo local";
   if (vm.query()) return `Resultados para "${vm.query()}"`;
   if (vm.genreId()) {
     const match = vm.genres().find((item) => item.id === vm.genreId());
@@ -29,7 +28,6 @@ export function PosterGrid(props: PosterGridProps) {
   const { vm, selectedTitle, onSelectTitle } = props;
   const heading = () => getCatalogHeading(vm);
   const eyebrow = () => {
-    if (vm.source() === "local") return "SEM CONSULTAS À INTERNET";
     return vm.mediaType() === MediaType.MOVIE ? "FILMES / TMDB" : "SÉRIES / TMDB";
   };
 
@@ -78,21 +76,13 @@ export function PosterGrid(props: PosterGridProps) {
             <h3>
               {vm.query() ? "Nenhum resultado para esta busca" : "Nenhum título nesta coleção"}
             </h3>
-            <p>
-              {vm.source() === "local"
-                ? "O snapshot instalado está vazio. Explore o TMDB para consultar o catálogo online."
-                : "A consulta terminou sem títulos. Experimente outra busca, gênero ou coleção."}
-            </p>
+            <p>A consulta terminou sem títulos. Experimente outra busca, gênero ou coleção.</p>
             <button
               type="button"
               class="button secondary"
-              onClick={() =>
-                vm.source() === "local"
-                  ? vm.changeSource("online")
-                  : vm.changeCategory(CatalogCategory.POPULAR)
-              }
+              onClick={() => vm.changeCategory(CatalogCategory.POPULAR)}
             >
-              {vm.source() === "local" ? "Explorar TMDB" : "Voltar aos populares"}
+              Voltar aos populares
             </button>
           </div>
         </Show>
@@ -104,7 +94,7 @@ export function PosterGrid(props: PosterGridProps) {
           </div>
         </Show>
 
-        <ul class={`poster-grid ${vm.source() === "local" ? "local-list" : ""}`}>
+        <ul class="poster-grid">
           <For each={vm.titles()}>
             {(title) => (
               <li>
@@ -116,9 +106,7 @@ export function PosterGrid(props: PosterGridProps) {
                   aria-pressed={selectedTitle() === title}
                   onClick={() => onSelectTitle(title)}
                 >
-                  <Show when={vm.source() === "online"}>
-                    <Artwork url={title.posterUrl} title={`Pôster de ${title.title}`} />
-                  </Show>
+                  <Artwork url={title.posterUrl} title={`Pôster de ${title.title}`} />
                   <span class="card-copy">
                     <strong>{title.title || "Título não informado"}</strong>
                     <span class="row-meta">

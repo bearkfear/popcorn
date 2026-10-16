@@ -30,6 +30,8 @@ message Title {
   repeated CastMember cast = 9;
   uint32 runtime_minutes = 10;
   repeated Season seasons = 11;
+  // Validated YouTube video identifier, empty when no trailer is available.
+  string trailer_key = 12;
 }
 
 message Genre {
@@ -193,6 +195,7 @@ message Source {
   ContentRef content = 2;
   SourceState state = 3;
   repeated SourceFile files = 4;
+  optional uint32 recommended_file_index = 5;
 }
 
 message AddSourceRequest {
@@ -247,6 +250,17 @@ message Playback {
   string error = 14;
   // Fixed transport timestamp bias removed by MSE, identical for every seek.
   double timestamp_offset_seconds = 15;
+  repeated PlaybackAudioTrack audio_tracks = 16;
+  optional uint32 audio_stream_index = 17;
+}
+
+message PlaybackAudioTrack {
+  uint32 stream_index = 1;
+  string language = 2;
+  string title = 3;
+  uint32 channels = 4;
+  string codec = 5;
+  bool is_default = 6;
 }
 
 message StartPlaybackRequest {
@@ -254,6 +268,7 @@ message StartPlaybackRequest {
   uint32 file_index = 2;
   string idempotency_key = 3;
   PlaybackQuality quality = 4;
+  optional uint32 audio_stream_index = 5;
 }
 message StartPlaybackResponse { Playback playback = 1; }
 message GetPlaybackRequest { string playback_id = 1; }

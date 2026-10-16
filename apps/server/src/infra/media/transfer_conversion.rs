@@ -1,7 +1,9 @@
 //! Opens one authorized conversion generation, replacing and reaping its predecessor.
 
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
+use popcorn_diagnostics::ProcessContext;
+use serde_json::json;
 use subtle::ConstantTimeEq as _;
 use uuid::Uuid;
 
@@ -9,9 +11,8 @@ use crate::application::media::{AccessError, ConvertedAccess};
 
 use super::{
     TorrentEngine,
-    conversion_reader::{ConversionJob, ConversionReader},
+    conversion_reader::ConversionReader,
     preparation::{Preparation, Processing},
-    tools::MediaTools,
 };
 
 impl TorrentEngine {
@@ -22,6 +23,12 @@ impl TorrentEngine {
         start: f64,
         generation: u64,
     ) -> Result<ConvertedAccess, AccessError> {
+        let context = ProcessContext {
+            playback_id: id,
+            generation: Some(generation),
+            tool: "ffmpeg",
+        };
+        context.record("media.stream.requested", json!({ "start_seconds": start }));
         let processing = self.authorized_processing(id, credential).await?;
         let Preparation::Ready(media) = processing.state.borrow().clone() else {
             return Err(AccessError::Unavailable);
@@ -32,6 +39,8 @@ impl TorrentEngine {
         let cancel = {
             let mut stream = processing.stream.lock().await;
             if generation <= stream.number || processing.cancel.is_cancelled() {
+                context.record("media.stream.rejected", json!({ "last_generation": stream.number,
+                    "cancelled": processing.cancel.is_cancelled(), "reason": "stale_generation_or_stopped" }));
                 return Err(AccessError::Gone);
             }
             stream.cancel.cancel();
@@ -39,45 +48,12 @@ impl TorrentEngine {
             stream.cancel = processing.cancel.child_token();
             stream.cancel.clone()
         };
-        let (reader, error) = {
-            let permit = tokio::select! {
-                () = cancel.cancelled() => return Err(AccessError::Gone),
-                permit = processing.slot.clone().acquire_owned() => permit.map_err(|_| AccessError::Gone)?,
-            };
-            let mut tasks = processing.tasks.lock().await;
-            if cancel.is_cancelled() {
-                return Err(AccessError::Gone);
-            }
-            let url = format!("http://{}/media/{id}?token={credential}", self.address);
-            let child = MediaTools::discover()
-                .map_err(|_| AccessError::Unavailable)?
-                .conversion(&media, &url, start)
-                .spawn()
-                .map_err(|_| AccessError::Unavailable)?;
-            let (reader, writer) = tokio::io::duplex(256 * 1024);
-            let error = Arc::new(OnceLock::new());
-            while let Some(result) = tasks.try_join_next() {
-                if let Err(error) = result {
-                    tracing::warn!(%error, "media worker failed");
-                }
-            }
-            tasks.spawn(
-                ConversionJob {
-                    child,
-                    writer,
-                    cancel: cancel.clone(),
-                    playback: processing.cancel.clone(),
-                    error: error.clone(),
-                    state: processing.state.clone(),
-                    _permit: permit,
-                }
-                .run(),
-            );
-            drop(tasks);
-            (reader, error)
-        };
+        let url = format!("http://{}/media/{id}?token={credential}", self.address);
+        let (reader, error) =
+            super::conversion_start::start(&processing, &media, &url, start, &cancel, context)
+                .await?;
         Ok(ConvertedAccess {
-            reader: Box::new(ConversionReader::new(reader, cancel, error)),
+            reader: Box::new(ConversionReader::new(reader, cancel, error, context)),
         })
     }
 

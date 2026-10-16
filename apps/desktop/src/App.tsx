@@ -1,5 +1,5 @@
-import type { TmdbStatus } from "@popcorn/sdk";
-import { onMount, Show } from "solid-js";
+import type { ContentRef, Title, TmdbStatus } from "@popcorn/sdk";
+import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 import tmdbLogo from "./assets/tmdb.svg";
 import { createBootstrapViewModel } from "./features/bootstrap/bootstrap.viewmodel";
 import { createCatalogViewModel } from "./features/catalog/catalog.viewmodel";
@@ -7,12 +7,18 @@ import { CatalogControls } from "./features/catalog/catalog-controls";
 import { PosterGrid } from "./features/catalog/poster-grid";
 import { createDetailsViewModel } from "./features/details/details.viewmodel";
 import { DetailsPanel } from "./features/details/details-panel";
+import { contentKey, resumePosition, type WatchEntry } from "./features/history/history.model";
+import { createHistoryViewModel } from "./features/history/history.viewmodel";
+import { HistoryShelf } from "./features/history/history-shelf";
 import { createPlayerViewModel } from "./features/player/player.viewmodel";
-import { PlayerOverlay } from "./features/player/player-overlay";
+import { PlayerPage } from "./features/player/player-page";
 import { CachePanel } from "./features/settings/cache-panel";
 import { createSettingsViewModel } from "./features/settings/settings.viewmodel";
 import { SetupPanel } from "./features/settings/setup-panel";
 import { createSourcesViewModel } from "./features/sources/sources.viewmodel";
+
+type WatchContext = Omit<WatchEntry, "key" | "status" | "position" | "duration" | "updatedAt">;
+type Page = "search" | "details";
 
 export function App() {
   const bootstrap = createBootstrapViewModel();
@@ -21,31 +27,30 @@ export function App() {
   const details = createDetailsViewModel(catalogClient);
   const sources = createSourcesViewModel(() => bootstrap.getClients().source);
   const player = createPlayerViewModel(() => bootstrap.getClients().playback);
+  const history = createHistoryViewModel();
+  const [page, setPage] = createSignal<Page>("search");
+  const [session, setSession] = createSignal<WatchContext>();
+  const [serviceOpen, setServiceOpen] = createSignal(false);
 
   function resetSelection() {
+    player.close();
     details.resetDetail();
     sources.reset();
-    player.close();
+    setPage("search");
   }
-
   const catalog = createCatalogViewModel(
     catalogClient,
     resetSelection,
     settings.handleCatalogError,
   );
-  const setupVisible = () =>
-    catalog.source() === "online" &&
-    (settings.settingsOpen() || settings.status()?.configured === false);
+  const setupVisible = () => settings.settingsOpen() || settings.status()?.configured === false;
 
-  function loadCatalog(currentStatus: TmdbStatus | undefined = settings.status()) {
-    if (catalog.source() === "local" || currentStatus?.configured) {
+  function loadCatalog(current: TmdbStatus | undefined = settings.status()) {
+    if (current?.configured) {
       void catalog.loadCatalog();
-    }
-    if (catalog.source() === "online" && currentStatus?.configured) {
       void catalog.loadGenres();
     }
   }
-
   async function connect() {
     if (settings.configurationBusy()) return;
     resetSelection();
@@ -53,228 +58,315 @@ export function App() {
       void settings.refreshStatus().then(loadCatalog);
     });
   }
-
-  function changeSource(source: "online" | "local") {
-    if (source === "online" && !settings.status()?.configured) {
-      catalog.setSource(source);
-      settings.setSettingsOpen(true);
-      resetSelection();
-      return;
-    }
-    catalog.changeSource(source);
-  }
-
   function configured() {
     settings.setSettingsOpen(false);
-    if (catalog.source() !== "online") catalog.setSource("online");
     loadCatalog();
   }
-
-  function openSettings() {
-    resetSelection();
-    catalog.setSource("online");
-    settings.setSettingsOpen(true);
+  function navigate(next: Page | "player") {
+    window.history.pushState({ page: next }, "", `#${next}`);
+    if (next !== "player") setPage(next);
+    window.scrollTo({ top: 0 });
   }
-
-  function toggleCache() {
-    if (settings.cacheOpen()) settings.setCacheOpen(false);
-    else {
-      settings.setCacheOpen(true);
-      void settings.loadCacheSettings();
+  function openTitle(title: Title, content = title.content) {
+    player.close();
+    setSession(undefined);
+    settings.setSettingsOpen(false);
+    navigate("details");
+    details.openTitle(title, true, () => {
+      if (content) sources.selectContent(content);
+    });
+  }
+  function backToSearch() {
+    player.close();
+    navigate("search");
+  }
+  function backFromPlayer() {
+    player.close();
+    navigate("details");
+  }
+  function selectContent(content: ContentRef) {
+    player.close();
+    setSession(undefined);
+    sources.selectContent(content);
+  }
+  async function prepareFile(sourceId: string, fileIndex: number) {
+    const title = details.detail() ?? details.selected();
+    const content = sources.content();
+    if (!title || !content) return;
+    player.close();
+    setSession({ title, content, sourceId, fileIndex, quality: player.quality() });
+    await player.prepareFile(sourceId, fileIndex);
+  }
+  async function launch(position: number) {
+    const context = session();
+    if (!context) return;
+    const audioStreamIndex = player.audioStreamIndex();
+    setSession({
+      ...context,
+      quality: player.quality(),
+      ...(audioStreamIndex !== undefined ? { audioStreamIndex } : {}),
+    });
+    navigate("player");
+    await player.launch(position);
+  }
+  async function resume(entry: WatchEntry) {
+    if (entry.sourceId === undefined || entry.fileIndex === undefined) {
+      openTitle(entry.title, entry.content);
+      return;
     }
+    openTitle(entry.title, entry.content);
+    player.setQuality(entry.quality);
+    player.setAudioStreamIndex(entry.audioStreamIndex);
+    setSession({
+      title: entry.title,
+      content: entry.content,
+      sourceId: entry.sourceId,
+      fileIndex: entry.fileIndex,
+      quality: entry.quality,
+      ...(entry.audioStreamIndex !== undefined ? { audioStreamIndex: entry.audioStreamIndex } : {}),
+    });
+    navigate("player");
+    await player.playFile(entry.sourceId, entry.fileIndex, true, resumePosition(entry));
   }
+  const selectedEntry = () => history.find(sources.content() ?? details.selected()?.content);
+  const resumeSeconds = () => {
+    const context = session();
+    const entry = context ? history.find(context.content) : undefined;
+    return resumePosition(entry);
+  };
 
+  // Changing episodes invalidates a prepared file from the preceding episode.
+  createEffect(() => {
+    const content = sources.content();
+    const context = session();
+    if (content && context && contentKey(content) !== contentKey(context.content)) {
+      player.close();
+      setSession(undefined);
+    }
+  });
+  createEffect(() => {
+    document.title = player.viewing()
+      ? `${session()?.title.title || "Reprodução"} · Popcorn`
+      : page() === "details"
+        ? `${details.selected()?.title || "Detalhes"} · Popcorn`
+        : "Explorar · Popcorn";
+  });
   onMount(() => {
+    window.history.replaceState({ page: "search" }, "", "#search");
+    const pop = (event: PopStateEvent) => {
+      player.close();
+      setPage(event.state?.page === "details" && details.selected() ? "details" : "search");
+    };
+    window.addEventListener("popstate", pop);
+    onCleanup(() => window.removeEventListener("popstate", pop));
     void bootstrap.listenForShutdown();
     void connect();
   });
 
   return (
-    <div class="app-shell">
-      <header class="app-header cluster">
-        <div class="brand-lockup">
-          <span class="brand-mark" aria-hidden="true">
-            P
-          </span>
-          <span class="wordmark">
-            popcorn<span class="wordmark-dot">.</span>
-          </span>
-        </div>
-        <span class="header-tagline">FILMES E SÉRIES</span>
-      </header>
-
-      <main class="page">
-        <section class="introduction" aria-labelledby="library-title">
-          <p class="eyebrow">CATÁLOGO</p>
-          <h1 id="library-title">O que você quer assistir?</h1>
-          <p class="muted">
-            Descubra filmes e séries em uma biblioteca feita para navegar sem esforço.
-          </p>
-        </section>
-
-        <section class="connection-panel cluster" aria-label="Conexão com o serviço local">
-          <div>
-            <div class="cluster">
-              <strong>Serviço local</strong>
-              <span class={`status status-${bootstrap.connection()}`} role="status">
-                {
-                  {
-                    connecting: "Conectando",
-                    ready: "Conectado",
-                    error: "Serviço indisponível",
-                    browser: "Modo navegador",
-                  }[bootstrap.connection()]
-                }
-              </span>
-            </div>
-            <p class="connection-caption muted">
-              {bootstrap.connection() === "browser"
-                ? "Abra o Popcorn no desktop para conectar seu catálogo."
-                : catalog.source() === "local"
-                  ? `Snapshot instalado: ${bootstrap.catalogVersion() || "versão não informada"}`
-                  : settings.status()?.configured
-                    ? `TMDB configurado · ${settings.status()?.remembered ? "salvo neste dispositivo" : "sessão ou ambiente"}`
-                    : "Seu acesso ao TMDB é configurado neste dispositivo."}
-            </p>
-          </div>
-          <Show when={bootstrap.connection() !== "browser"}>
-            <div class="cluster">
-              <Show when={catalogClient() && settings.status()?.configured}>
+    <Show
+      when={!player.viewing()}
+      fallback={
+        <Show when={session()} keyed>
+          {(context) => (
+            <PlayerPage
+              vm={player}
+              title={context.title.title}
+              onBack={backFromPlayer}
+              onProgress={(position, duration) => history.progress(context, position, duration)}
+              onEnded={() => {
+                history.mark(context.title, context.content, "watched");
+                backFromPlayer();
+              }}
+            />
+          )}
+        </Show>
+      }
+    >
+      <div class="app-shell">
+        <header class="app-header cluster">
+          <button
+            class="brand-lockup brand-button"
+            type="button"
+            onClick={backToSearch}
+            aria-label="Ir para pesquisa"
+          >
+            <span class="brand-mark" aria-hidden="true">
+              P
+            </span>
+            <span class="wordmark">
+              popcorn<span class="wordmark-dot">.</span>
+            </span>
+          </button>
+          <nav class="cluster" aria-label="Navegação principal">
+            <button class="text-button" type="button" onClick={backToSearch}>
+              Explorar
+            </button>
+            <button
+              class="text-button"
+              type="button"
+              aria-expanded={serviceOpen()}
+              onClick={() => setServiceOpen(!serviceOpen())}
+            >
+              Configurações
+            </button>
+          </nav>
+        </header>
+        <main class={`page ${page() === "details" ? "details-page" : "search-page"}`}>
+          <Show when={serviceOpen()}>
+            <section class="connection-panel cluster" aria-label="Configurações">
+              <div>
+                <strong>Popcorn</strong>
+                <p class="connection-caption muted">
+                  {bootstrap.connection() === "ready" ? "Conectado" : "Conectando ao aplicativo…"}
+                </p>
+              </div>
+              <div class="cluster">
                 <button
                   class="button secondary"
                   type="button"
-                  disabled={settings.configurationBusy()}
-                  onClick={openSettings}
+                  onClick={() => settings.setSettingsOpen(!settings.settingsOpen())}
                 >
                   Configurar TMDB
                 </button>
-              </Show>
-              <Show when={bootstrap.getClients().storage}>
                 <button
                   class="button secondary"
                   type="button"
                   disabled={settings.cacheBusy()}
-                  onClick={toggleCache}
+                  onClick={() => {
+                    settings.setCacheOpen(!settings.cacheOpen());
+                    if (settings.cacheOpen()) void settings.loadCacheSettings();
+                  }}
                 >
                   Armazenamento
                 </button>
-              </Show>
-              <button
-                class="button secondary"
-                type="button"
-                disabled={bootstrap.connection() === "connecting" || settings.configurationBusy()}
-                onClick={() => void connect()}
-              >
-                {bootstrap.connection() === "connecting" ? "Conectando..." : "Reconectar serviço"}
-              </button>
-            </div>
+                <button
+                  class="button secondary"
+                  type="button"
+                  disabled={bootstrap.connection() === "connecting"}
+                  onClick={() => void connect()}
+                >
+                  Reconectar
+                </button>
+              </div>
+            </section>
           </Show>
-        </section>
-
-        <Show when={settings.cacheOpen()}>
-          <CachePanel vm={settings} playbackActive={Boolean(player.playback())} />
-        </Show>
-        <Show when={bootstrap.connectionError()}>
-          <p class="service-error" role="alert">
-            {bootstrap.connectionError()}
-          </p>
-        </Show>
-
-        <nav class="source-tabs cluster" aria-label="Origem do catálogo">
-          <button
-            class="button secondary"
-            type="button"
-            aria-pressed={catalog.source() === "online"}
-            disabled={settings.configurationBusy()}
-            onClick={() => changeSource("online")}
-          >
-            Explorar TMDB{catalog.source() === "online" ? " ✓" : ""}
-          </button>
-          <button
-            class="button secondary"
-            type="button"
-            aria-pressed={catalog.source() === "local"}
-            disabled={settings.configurationBusy()}
-            onClick={() => changeSource("local")}
-          >
-            Offline / local{catalog.source() === "local" ? " ✓" : ""}
-          </button>
-        </nav>
-
-        <Show when={bootstrap.connection() === "browser"}>
-          <section class="state-message catalog-panel">
-            <h2>Seu catálogo está no desktop</h2>
-            <p>
-              Esta página não inicia o serviço local. Abra o aplicativo Popcorn para configurar o
-              TMDB ou consultar o catálogo instalado.
+          <Show when={settings.cacheOpen()}>
+            <CachePanel vm={settings} playbackActive={Boolean(player.playback())} />
+          </Show>
+          <Show when={bootstrap.connectionError()}>
+            <p class="service-error" role="alert">
+              {bootstrap.connectionError()}
             </p>
-          </section>
-        </Show>
-        <Show when={bootstrap.connection() === "connecting"}>
-          <p class="state-message" role="status">
-            Iniciando o serviço e verificando a configuração...
-          </p>
-        </Show>
-        <Show when={setupVisible() && bootstrap.connection() !== "browser"}>
-          <SetupPanel
-            vm={settings}
-            onConfigured={configured}
-            onRemoved={() => {
-              resetSelection();
-              catalog.resetCatalog();
-            }}
-          />
-        </Show>
-
-        <Show
-          when={
-            !setupVisible() &&
-            bootstrap.connection() !== "browser" &&
-            bootstrap.connection() !== "connecting"
-          }
-        >
-          <Show when={catalog.source() === "online" && settings.status()?.configured}>
-            <CatalogControls vm={catalog} />
           </Show>
-          <div class="library-grid">
-            <div>
+          <Show when={bootstrap.connection() === "browser"}>
+            <section class="state-message">
+              <h2>Abra o Popcorn no desktop</h2>
+              <p>O aplicativo conecta o catálogo e prepara a reprodução.</p>
+            </section>
+          </Show>
+          <Show when={bootstrap.connection() === "connecting"}>
+            <p class="state-message" role="status">
+              Iniciando o Popcorn…
+            </p>
+          </Show>
+          <Show when={setupVisible() && bootstrap.connection() !== "browser"}>
+            <SetupPanel
+              vm={settings}
+              onConfigured={configured}
+              onRemoved={() => {
+                resetSelection();
+                catalog.resetCatalog();
+              }}
+            />
+          </Show>
+          <Show when={!setupVisible() && bootstrap.connection() === "ready"}>
+            <Show
+              when={page() === "search"}
+              fallback={
+                <>
+                  <nav class="detail-navigation cluster" aria-label="Navegação do título">
+                    <button class="button secondary" type="button" onClick={backToSearch}>
+                      ← Voltar à pesquisa
+                    </button>
+                    <Show when={details.detail()?.content}>
+                      {(content) => (
+                        <div class="cluster">
+                          <button
+                            class="button secondary"
+                            type="button"
+                            aria-pressed={selectedEntry()?.status === "want"}
+                            onClick={() => {
+                              const title = details.detail();
+                              if (title) history.mark(title, content(), "want");
+                            }}
+                          >
+                            ＋ Quero assistir
+                          </button>
+                          <button
+                            class="button secondary"
+                            type="button"
+                            aria-pressed={selectedEntry()?.status === "watched"}
+                            onClick={() => {
+                              const title = details.detail();
+                              if (title)
+                                history.mark(title, sources.content() ?? content(), "watched");
+                            }}
+                          >
+                            ✓ Já assisti
+                          </button>
+                        </div>
+                      )}
+                    </Show>
+                  </nav>
+                  <DetailsPanel
+                    vm={details}
+                    online
+                    sources={{ ...sources, selectContent }}
+                    player={player}
+                    onPrepare={(id, index) => void prepareFile(id, index)}
+                    resumeSeconds={resumeSeconds()}
+                    onLaunch={(position) => void launch(position)}
+                  />
+                  <Show when={history.error()}>
+                    <p class="error-text" role="alert">
+                      {history.error()}
+                    </p>
+                  </Show>
+                </>
+              }
+            >
+              <section class="introduction" aria-labelledby="library-title">
+                <p class="eyebrow">SEU CINEMA, SEU TEMPO</p>
+                <h1 id="library-title">O que vamos assistir?</h1>
+                <p class="muted">Encontre uma nova história ou continue de onde parou.</p>
+              </section>
+              <CatalogControls vm={catalog} />
+              <HistoryShelf
+                vm={history}
+                disabled={player.busy()}
+                onOpen={(entry) => openTitle(entry.title, entry.content)}
+                onResume={(entry) => void resume(entry)}
+              />
               <PosterGrid
                 vm={catalog}
                 selectedTitle={details.selected}
-                onSelectTitle={(title) =>
-                  void details.openTitle(
-                    title,
-                    catalog.source() === "online",
-                    sources.selectContent,
-                  )
-                }
+                onSelectTitle={(title) => openTitle(title)}
               />
+            </Show>
+          </Show>
+          <footer class="page-footer" role="contentinfo" aria-label="Sobre e créditos">
+            <div>
+              <span>Popcorn · Filmes e séries</span>
+              <p class="muted">Seu progresso fica salvo neste dispositivo.</p>
             </div>
-            <DetailsPanel
-              vm={details}
-              online={catalog.source() === "online"}
-              sources={sources}
-              player={player}
-            />
-          </div>
-        </Show>
-
-        <footer class="page-footer" role="contentinfo" aria-label="Sobre e créditos">
-          <div class="cluster">
-            <span>Popcorn · Descoberta de filmes e séries</span>
-            <span>Reprodução progressiva por fontes do usuário.</span>
-          </div>
-          <div class="attribution">
-            <img src={tmdbLogo} width="80" height="11" alt="TMDB" />
-            <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
-          </div>
-        </footer>
-      </main>
-
-      <PlayerOverlay
-        vm={player}
-        title={details.detail()?.title || details.selected()?.title || ""}
-      />
-    </div>
+            <div class="attribution">
+              <img src={tmdbLogo} width="80" height="11" alt="TMDB" />
+              <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+            </div>
+          </footer>
+        </main>
+      </div>
+    </Show>
   );
 }

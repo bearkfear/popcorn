@@ -34,6 +34,8 @@ pub(crate) struct TitleData {
     pub(crate) cast: Vec<CastData>,
     pub(crate) runtime_minutes: u32,
     pub(crate) seasons: Vec<SeasonData>,
+    #[serde(default)]
+    pub(crate) trailer_key: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

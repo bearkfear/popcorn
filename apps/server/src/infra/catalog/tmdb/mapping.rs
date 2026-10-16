@@ -82,6 +82,40 @@ pub(super) struct RawTitle {
     runtime: Option<u32>,
     episode_run_time: Option<Vec<u32>>,
     seasons: Option<Vec<RawSeason>>,
+    videos: Option<RawVideos>,
+}
+
+#[derive(Deserialize)]
+struct RawVideos {
+    results: Vec<RawVideo>,
+}
+
+#[derive(Deserialize)]
+struct RawVideo {
+    key: String,
+    site: String,
+    #[serde(rename = "type")]
+    kind: String,
+    #[serde(default)]
+    official: bool,
+}
+
+impl RawVideos {
+    fn trailer(self) -> String {
+        self.results
+            .into_iter()
+            .filter(|video| {
+                video.site == "YouTube"
+                    && video.kind == "Trailer"
+                    && video.key.len() == 11
+                    && video
+                        .key
+                        .bytes()
+                        .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
+            })
+            .max_by_key(|video| video.official)
+            .map_or_else(String::new, |video| video.key)
+    }
 }
 
 #[derive(Deserialize)]
@@ -119,6 +153,7 @@ impl RawTitle {
             (self.name, self.first_air_date)
         };
         TitleData {
+            trailer_key: self.videos.map(RawVideos::trailer).unwrap_or_default(),
             media_type,
             tmdb_id: self.id,
             title: title.unwrap_or_default(),

@@ -1,5 +1,5 @@
 import { MediaType } from "@popcorn/sdk";
-import { createEffect, For, Show } from "solid-js";
+import { createEffect, createSignal, For, Show } from "solid-js";
 import { artworkUrl } from "../../catalog-ui";
 import { Artwork } from "../../shared/ui/artwork";
 import type { PlayerViewModel } from "../player/player.viewmodel";
@@ -12,12 +12,15 @@ export function DetailsPanel(props: {
   readonly online: boolean;
   readonly sources: SourcesViewModel;
   readonly player: PlayerViewModel;
+  readonly onPrepare: (sourceId: string, fileIndex: number) => void;
+  readonly resumeSeconds: number;
+  readonly onLaunch: (position: number) => void;
 }) {
   let heading: HTMLHeadingElement | undefined;
+  const [trailerOpen, setTrailerOpen] = createSignal(false);
 
   createEffect(() => {
     if (!props.vm.selected()) return;
-    if (!window.matchMedia("(max-width: 999px)").matches) return;
     heading?.focus({ preventScroll: true });
     heading?.scrollIntoView({
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -75,6 +78,33 @@ export function DetailsPanel(props: {
             </Show>
             <h3 class="synopsis-label">Sinopse</h3>
             <p class="overview">{title().overview || "Sinopse não disponível."}</p>
+            <Show
+              when={title().trailerKey}
+              fallback={
+                <p class="muted trailer-unavailable">Trailer não disponível para este título.</p>
+              }
+            >
+              <section class="trailer-section" aria-label="Trailer">
+                <button
+                  type="button"
+                  class="button secondary"
+                  aria-expanded={trailerOpen()}
+                  onClick={() => setTrailerOpen(!trailerOpen())}
+                >
+                  {trailerOpen() ? "Fechar trailer" : "▷ Assistir ao trailer"}
+                </button>
+                <Show when={trailerOpen()}>
+                  <iframe
+                    class="trailer-frame"
+                    title={`Trailer de ${title().title}`}
+                    src={`https://www.youtube-nocookie.com/embed/${title().trailerKey}`}
+                    allow="encrypted-media; picture-in-picture; fullscreen"
+                    allowfullscreen
+                    referrerpolicy="strict-origin-when-cross-origin"
+                  />
+                </Show>
+              </section>
+            </Show>
             <h3 class="section-label">Elenco</h3>
             <Show when={title().cast.length} fallback={<p class="muted">Elenco não disponível.</p>}>
               <ul class="cast-list">
@@ -88,7 +118,13 @@ export function DetailsPanel(props: {
                 </For>
               </ul>
             </Show>
-            <SourcesPanel sources={props.sources} player={props.player} />
+            <SourcesPanel
+              sources={props.sources}
+              player={props.player}
+              onPrepare={props.onPrepare}
+              resumeSeconds={props.resumeSeconds}
+              onLaunch={props.onLaunch}
+            />
             <Show when={props.online && title().content?.mediaType === MediaType.TV}>
               <section class="episodes-section" aria-label="Temporadas e episódios">
                 <h3 class="section-label">Temporadas e episódios</h3>

@@ -1,21 +1,20 @@
+import { resourceValue } from "../../shared/resource-value";
 // ViewModel orchestrating catalog browsing, search filters, genres and pagination.
 
 import { CatalogCategory, MediaType, type Title } from "@popcorn/sdk";
 import { createResource, createSignal } from "solid-js";
 import { catalogErrorText } from "../../catalog-ui";
-import type { CatalogClient, CatalogOrigin } from "../../shared/types";
+import type { CatalogClient } from "../../shared/types";
 
 type CatalogPage = {
   readonly titles: readonly Title[];
   readonly page: number;
   readonly totalPages: number;
-  readonly nextLocalPage: string;
   readonly stale: boolean;
 };
 
 type CatalogRequest = {
   readonly client: CatalogClient;
-  readonly source: CatalogOrigin;
   readonly mediaType: MediaType;
   readonly category: CatalogCategory;
   readonly genreId: number;
@@ -38,7 +37,6 @@ export function createCatalogViewModel(
   onResetDetail: () => void,
   onRequireSetup: (err: unknown) => void,
 ) {
-  const [source, setSource] = createSignal<CatalogOrigin>("online");
   const [mediaType, setMediaType] = createSignal(MediaType.MOVIE);
   const [category, setCategory] = createSignal(CatalogCategory.POPULAR);
   const [genreId, setGenreId] = createSignal(0);
@@ -50,52 +48,32 @@ export function createCatalogViewModel(
     const options = { timeoutMs: 10_000 };
 
     try {
-      if (request.source === "online") {
-        const nextPage = request.more ? (request.current?.page ?? 0) + 1 : 1;
-        const response = request.query
-          ? await request.client.searchTitles(
-              { mediaType: request.mediaType, query: request.query, page: nextPage },
-              options,
-            )
-          : await request.client.browseTitles(
-              {
-                mediaType: request.mediaType,
-                category: request.category,
-                page: nextPage,
-                genreId: request.genreId,
-              },
-              options,
-            );
-        return {
-          titles: request.more
-            ? [...(request.current?.titles ?? []), ...response.titles]
-            : response.titles,
-          page: response.page || nextPage,
-          totalPages: response.totalPages,
-          nextLocalPage: "",
-          stale: Boolean(request.more && request.current?.stale) || response.stale,
-        } satisfies CatalogPage;
-      }
-
-      const response = await request.client.listTitles(
-        {
-          pageSize: 20,
-          pageToken: request.more ? (request.current?.nextLocalPage ?? "") : "",
-        },
-        options,
-      );
+      const nextPage = request.more ? (request.current?.page ?? 0) + 1 : 1;
+      const response = request.query
+        ? await request.client.searchTitles(
+            { mediaType: request.mediaType, query: request.query, page: nextPage },
+            options,
+          )
+        : await request.client.browseTitles(
+            {
+              mediaType: request.mediaType,
+              category: request.category,
+              page: nextPage,
+              genreId: request.genreId,
+            },
+            options,
+          );
       return {
         titles: request.more
           ? [...(request.current?.titles ?? []), ...response.titles]
           : response.titles,
-        page: 0,
-        totalPages: 0,
-        nextLocalPage: response.nextPageToken,
-        stale: false,
+        page: response.page || nextPage,
+        totalPages: response.totalPages,
+        stale: Boolean(request.more && request.current?.stale) || response.stale,
       } satisfies CatalogPage;
     } catch (error) {
-      if (request.source === "online") onRequireSetup(error);
-      throw new Error(catalogErrorText(error, request.source === "online"));
+      onRequireSetup(error);
+      throw new Error(catalogErrorText(error, true));
     }
   });
 
@@ -111,20 +89,20 @@ export function createCatalogViewModel(
     }
   });
 
-  const titles = () => catalog.latest?.titles ?? [];
-  const genres = () => genreResponse.latest?.genres ?? [];
+  const catalogValue = resourceValue(catalog);
+  const genreResponseValue = resourceValue(genreResponse);
+  const titles = () => catalogValue()?.titles ?? [];
+  const genres = () => genreResponseValue()?.genres ?? [];
   const catalogBusy = () => catalog.loading;
   const genresBusy = () => genreResponse.loading;
   const catalogLoaded = () => catalog.state === "ready" || catalog.state === "refreshing";
   const catalogError = () => errorMessage(catalog.error);
   const genresError = () => errorMessage(genreResponse.error);
-  const catalogStale = () => catalog.latest?.stale ?? false;
-  const genresStale = () => genreResponse.latest?.stale ?? false;
-  const page = () => catalog.latest?.page ?? 0;
-  const totalPages = () => catalog.latest?.totalPages ?? 0;
-  const nextLocalPage = () => catalog.latest?.nextLocalPage ?? "";
-  const hasMore = () =>
-    source() === "local" ? Boolean(nextLocalPage()) : page() < Math.min(totalPages(), 500);
+  const catalogStale = () => catalogValue()?.stale ?? false;
+  const genresStale = () => genreResponseValue()?.stale ?? false;
+  const page = () => catalogValue()?.page ?? 0;
+  const totalPages = () => catalogValue()?.totalPages ?? 0;
+  const hasMore = () => page() < Math.min(totalPages(), 500);
 
   function resetCatalog() {
     setCatalogRequest(undefined);
@@ -138,29 +116,20 @@ export function createCatalogViewModel(
     if (!more) resetCatalog();
     setCatalogRequest({
       client,
-      source: source(),
       mediaType: mediaType(),
       category: category(),
       genreId: genreId(),
       query: query(),
       more,
-      current: catalog.latest,
+      current: catalogValue(),
     });
   }
 
   function loadGenres() {
     const client = getClient();
-    if (!client || source() !== "online") return;
+    if (!client) return;
     genreActions.mutate(undefined);
     setGenreRequest({ client, mediaType: mediaType() });
-  }
-
-  function changeSource(next: CatalogOrigin) {
-    resetCatalog();
-    genreActions.mutate(undefined);
-    setSource(next);
-    loadCatalog();
-    if (next === "online") loadGenres();
   }
 
   function changeMediaType(next: MediaType) {
@@ -188,8 +157,6 @@ export function createCatalogViewModel(
   }
 
   return {
-    source,
-    setSource,
     mediaType,
     category,
     genreId,
@@ -200,7 +167,6 @@ export function createCatalogViewModel(
     genres,
     page,
     totalPages,
-    nextLocalPage,
     catalogBusy,
     catalogLoaded,
     catalogError,
@@ -212,7 +178,6 @@ export function createCatalogViewModel(
     loadGenres,
     loadCatalog,
     resetCatalog,
-    changeSource,
     changeMediaType,
     changeCategory,
     performSearch,

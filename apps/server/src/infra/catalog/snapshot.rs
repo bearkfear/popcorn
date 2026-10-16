@@ -37,6 +37,7 @@ impl From<CatalogTitle> for TitleData {
             cast: Vec::new(),
             runtime_minutes: 0,
             seasons: Vec::new(),
+            trailer_key: String::new(),
         }
     }
 }

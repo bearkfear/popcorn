@@ -1,8 +1,10 @@
 //! Transport-independent media identities, source metadata and playback rules.
 
+pub mod audio;
 pub mod content;
 pub mod profile;
 pub mod range;
+pub mod selection;
 
 pub(crate) use content::{Content, Coordinates, MediaKind};
 pub(crate) use range::{RangeError, parse_range};
@@ -50,6 +52,16 @@ pub(crate) enum PlaybackState {
     Paused,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct PlaybackAudioTrack {
+    pub(crate) stream_index: u32,
+    pub(crate) language: String,
+    pub(crate) title: String,
+    pub(crate) channels: u32,
+    pub(crate) codec: String,
+    pub(crate) is_default: bool,
+}
+
 #[derive(Debug)]
 pub(crate) struct Playback {
     pub(crate) id: String,
@@ -67,6 +79,8 @@ pub(crate) struct Playback {
     pub(crate) stream_type: &'static str,
     pub(crate) error: &'static str,
     pub(crate) timestamp_offset_seconds: f64,
+    pub(crate) audio_tracks: Vec<PlaybackAudioTrack>,
+    pub(crate) audio_stream_index: Option<u32>,
 }
 
 #[derive(Debug)]

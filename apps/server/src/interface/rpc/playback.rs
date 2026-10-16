@@ -28,12 +28,22 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> PlaybackS
         _context: RequestContext,
         request: ServiceRequest<'_, StartPlaybackRequest>,
     ) -> ServiceResult<impl Encodable<StartPlaybackResponse> + Send + use<'a, R, T, C>> {
+        let attempt_id = Uuid::parse_str(request.idempotency_key).ok();
+        popcorn_diagnostics::record(
+            "playback.start_rpc",
+            serde_json::json!({
+                "attempt_id": attempt_id, "source_id": Uuid::parse_str(request.source_id).ok(),
+                "file_index": request.file_index, "quality": request.quality.to_i32(),
+                "audio_stream_index": request.audio_stream_index,
+            }),
+        );
         let playback = self
             .service
             .start(StartPlayback {
                 source_id: request.source_id.to_owned(),
                 file_index: request.file_index,
                 idempotency_key: request.idempotency_key.to_owned(),
+                audio_stream_index: request.audio_stream_index,
                 quality: match request.quality.to_i32() {
                     0 | 1 => Quality::Auto,
                     2 => Quality::FullHd,
@@ -42,7 +52,21 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> PlaybackS
                 },
             })
             .await
+            .inspect_err(|error| {
+                popcorn_diagnostics::record(
+                    "playback.start_rpc_failed",
+                    serde_json::json!({
+                        "attempt_id": attempt_id, "error": error.to_string(),
+                    }),
+                );
+            })
             .map_err(source_error)?;
+        popcorn_diagnostics::record(
+            "playback.start_rpc_ready",
+            serde_json::json!({
+                "attempt_id": attempt_id, "playback_id": playback.id,
+            }),
+        );
         Response::ok(StartPlaybackResponse {
             playback: encode_playback(playback).into(),
             ..Default::default()
@@ -126,6 +150,20 @@ fn encode_playback(value: Playback) -> proto::Playback {
         stream_type: value.stream_type.into(),
         error: value.error.into(),
         timestamp_offset_seconds: value.timestamp_offset_seconds,
+        audio_stream_index: value.audio_stream_index,
+        audio_tracks: value
+            .audio_tracks
+            .into_iter()
+            .map(|track| proto::PlaybackAudioTrack {
+                stream_index: track.stream_index,
+                language: track.language,
+                title: track.title,
+                channels: track.channels,
+                codec: track.codec,
+                is_default: track.is_default,
+                ..Default::default()
+            })
+            .collect(),
         ..Default::default()
     }
 }

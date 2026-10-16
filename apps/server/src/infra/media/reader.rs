@@ -1,4 +1,5 @@
 //! Revokes outstanding torrent readers when their owning playback stops.
+use popcorn_diagnostics::ProcessContext;
 
 use std::{
     future::Future,
@@ -7,19 +8,29 @@ use std::{
     task::{Context, Poll},
 };
 
+use super::read_metrics::ReadMetrics;
 use tokio::io::{AsyncRead, AsyncSeek, ReadBuf};
 use tokio_util::sync::CancellationToken;
 
 pub(super) struct PlaybackReader<R> {
     reader: R,
     cancelled: Pin<Box<dyn Future<Output = ()> + Send>>,
+    metrics: ReadMetrics,
 }
 
 impl<R> PlaybackReader<R> {
-    pub(super) fn new(reader: R, cancel: CancellationToken) -> Self {
+    pub(super) fn new(reader: R, cancel: CancellationToken, id: uuid::Uuid) -> Self {
         Self {
             reader,
             cancelled: Box::pin(cancel.cancelled_owned()),
+            metrics: ReadMetrics::new(
+                ProcessContext {
+                    playback_id: id,
+                    generation: None,
+                    tool: "source_reader",
+                },
+                "torrent_source",
+            ),
         }
     }
 }
@@ -30,13 +41,18 @@ impl<R: AsyncRead + Unpin> AsyncRead for PlaybackReader<R> {
         context: &mut Context<'_>,
         buffer: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        if self.cancelled.as_mut().poll(context).is_ready() {
-            return Poll::Ready(Err(io::Error::new(
+        let before = buffer.filled().len();
+        let result = if self.cancelled.as_mut().poll(context).is_ready() {
+            Poll::Ready(Err(io::Error::new(
                 io::ErrorKind::Interrupted,
                 "playback stopped",
-            )));
-        }
-        Pin::new(&mut self.reader).poll_read(context, buffer)
+            )))
+        } else {
+            Pin::new(&mut self.reader).poll_read(context, buffer)
+        };
+        self.metrics
+            .observe(buffer.filled().len() - before, &result);
+        result
     }
 }
 

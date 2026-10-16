@@ -1,3 +1,4 @@
+import { resourceValue } from "../../shared/resource-value";
 // ViewModel managing title details, seasons, and episode selections.
 
 import { type ContentRef, type Episode, MediaType, type Season, type Title } from "@popcorn/sdk";
@@ -79,18 +80,21 @@ export function createDetailsViewModel(getClient: () => CatalogClient | undefine
     }
   });
 
-  const detail = () => detailResponse.latest?.title;
+  const detailResponseValue = resourceValue(detailResponse);
+  const seasonResponseValue = resourceValue(seasonResponse);
+  const episodeResponseValue = resourceValue(episodeResponse);
+  const detail = () => detailResponseValue()?.title;
   const detailBusy = () => detailResponse.loading;
   const detailError = () => errorMessage(detailResponse.error);
-  const detailStale = () => detailResponse.latest?.stale ?? false;
-  const seasons = () => seasonResponse.latest?.items ?? [];
+  const detailStale = () => detailResponseValue()?.stale ?? false;
+  const seasons = () => seasonResponseValue()?.items ?? [];
   const seasonsBusy = () => seasonResponse.loading;
   const seasonsError = () => errorMessage(seasonResponse.error);
-  const seasonsStale = () => seasonResponse.latest?.stale ?? false;
-  const episodes = () => episodeResponse.latest?.items ?? [];
+  const seasonsStale = () => seasonResponseValue()?.stale ?? false;
+  const episodes = () => episodeResponseValue()?.items ?? [];
   const episodesBusy = () => episodeResponse.loading;
   const episodesError = () => errorMessage(episodeResponse.error);
-  const episodesStale = () => episodeResponse.latest?.stale ?? false;
+  const episodesStale = () => episodeResponseValue()?.stale ?? false;
 
   function resetSeries() {
     setSeasonRequest(undefined);
@@ -130,7 +134,7 @@ export function createDetailsViewModel(getClient: () => CatalogClient | undefine
   }
 
   createEffect(() => {
-    const result = detailResponse.latest;
+    const result = detailResponseValue();
     const client = getClient();
     const seriesId = result?.title.content?.tmdbId;
     if (client && result?.online && result.title.content?.mediaType === MediaType.TV && seriesId) {
@@ -139,7 +143,7 @@ export function createDetailsViewModel(getClient: () => CatalogClient | undefine
   });
 
   createEffect(() => {
-    const first = seasonResponse.latest?.items[0];
+    const first = seasonResponseValue()?.items[0];
     if (first) loadEpisodes(first.seasonNumber);
   });
 

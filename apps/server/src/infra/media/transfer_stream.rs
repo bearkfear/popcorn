@@ -38,17 +38,29 @@ impl TorrentEngine {
             drop(playbacks);
             values
         };
+        // Restored downloads are rechecked asynchronously, even when all bytes are on disk.
+        // Opening during that check fails immediately instead of waiting for the source.
+        super::source_ready::wait(&handle, &cancel, id).await?;
+        let stats = handle.stats();
         handle
+            .clone()
             .stream(file_index)
             .await
-            .map_err(|_| AccessError::Unavailable)
+            .map_err(|error| {
+                popcorn_diagnostics::record("media.source.open_failed", serde_json::json!({
+                    "playback_id": id, "state": format!("{:?}", handle.stats().state),
+                    "error": error.to_string() }));
+                AccessError::Unavailable
+            })
             .and_then(|stream| {
                 if stream.len() != expected_size {
                     return Err(AccessError::Unavailable);
                 }
+                popcorn_diagnostics::record("media.source.opened", serde_json::json!({ "playback_id": id,
+                    "file_size": expected_size, "downloaded_bytes": stats.progress_bytes, "total_bytes": stats.total_bytes }));
                 Ok(MediaAccess {
                     size: expected_size,
-                    reader: Box::new(PlaybackReader::new(stream, cancel)),
+                    reader: Box::new(PlaybackReader::new(stream, cancel, id)),
                     mime_type: mime_type(&file_name),
                 })
             })

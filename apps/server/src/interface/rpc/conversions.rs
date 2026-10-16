@@ -54,6 +54,7 @@ impl From<tmdb::TitleData> for Title {
                 .collect(),
             runtime_minutes: value.runtime_minutes,
             seasons: value.seasons.into_iter().map(Season::from).collect(),
+            trailer_key: value.trailer_key,
             ..Default::default()
         }
     }

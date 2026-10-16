@@ -1,12 +1,15 @@
 import { For, Show } from "solid-js";
 import { bytesLabel } from "../../shared/formatters";
-import { playbackQualities } from "../../shared/types";
+import { PlaybackSetup } from "../player/playback-setup";
 import type { PlayerViewModel } from "../player/player.viewmodel";
 import type { SourcesViewModel } from "./sources.viewmodel";
 
 export function SourcesPanel(props: {
   readonly sources: SourcesViewModel;
   readonly player: PlayerViewModel;
+  readonly onPrepare: (sourceId: string, fileIndex: number) => void;
+  readonly resumeSeconds: number;
+  readonly onLaunch: (position: number) => void;
 }) {
   function submitMagnet(event: SubmitEvent) {
     event.preventDefault();
@@ -88,24 +91,6 @@ export function SourcesPanel(props: {
           {props.sources.content()?.episodeNumber ? "episódio" : "título"}.
         </p>
       </Show>
-      <div class="playback-quality">
-        <label for="playback-quality">Qualidade inicial</label>
-        <select
-          id="playback-quality"
-          value={props.player.quality()}
-          disabled={props.player.busy()}
-          onChange={(event) => {
-            const choice = playbackQualities.find(
-              (quality) => String(quality.value) === event.currentTarget.value,
-            );
-            if (choice) props.player.setQuality(choice.value);
-          }}
-        >
-          <For each={playbackQualities}>
-            {(quality) => <option value={quality.value}>{quality.label}</option>}
-          </For>
-        </select>
-      </div>
       <ul class="source-list">
         <For each={props.sources.sources()}>
           {(source) => (
@@ -134,11 +119,14 @@ export function SourcesPanel(props: {
                           class="button play-button"
                           type="button"
                           disabled={props.player.busy()}
-                          onClick={() =>
-                            void props.player.playFile(source.sourceId, file.fileIndex)
-                          }
+                          onClick={() => props.onPrepare(source.sourceId, file.fileIndex)}
                         >
-                          {props.player.busy() ? "Abrindo..." : "▶ Assistir"}
+                          {props.player.busy()
+                            ? "Preparando..."
+                            : props.player.preparedFile()?.sourceId === source.sourceId &&
+                                props.player.preparedFile()?.fileIndex === file.fileIndex
+                              ? "✓ Arquivo selecionado"
+                              : "Selecionar arquivo"}
                         </button>
                       </Show>
                     </li>
@@ -149,6 +137,11 @@ export function SourcesPanel(props: {
           )}
         </For>
       </ul>
+      <PlaybackSetup
+        vm={props.player}
+        resumeSeconds={props.resumeSeconds}
+        onLaunch={props.onLaunch}
+      />
       <Show when={props.player.error()}>
         <p class="error-text" role="alert">
           {props.player.error()}

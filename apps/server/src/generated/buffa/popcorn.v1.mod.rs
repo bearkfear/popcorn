@@ -68,6 +68,7 @@ pub mod __buffa {
         reg.register_json_any(super::__REMOVE_SOURCE_REQUEST_JSON_ANY);
         reg.register_json_any(super::__REMOVE_SOURCE_RESPONSE_JSON_ANY);
         reg.register_json_any(super::__PLAYBACK_JSON_ANY);
+        reg.register_json_any(super::__PLAYBACK_AUDIO_TRACK_JSON_ANY);
         reg.register_json_any(super::__START_PLAYBACK_REQUEST_JSON_ANY);
         reg.register_json_any(super::__START_PLAYBACK_RESPONSE_JSON_ANY);
         reg.register_json_any(super::__GET_PLAYBACK_REQUEST_JSON_ANY);
@@ -231,6 +232,10 @@ pub use self::__buffa::view::RemoveSourceResponseOwnedView;
 pub use self::__buffa::view::PlaybackView;
 #[doc(inline)]
 pub use self::__buffa::view::PlaybackOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::PlaybackAudioTrackView;
+#[doc(inline)]
+pub use self::__buffa::view::PlaybackAudioTrackOwnedView;
 #[doc(inline)]
 pub use self::__buffa::view::StartPlaybackRequestView;
 #[doc(inline)]

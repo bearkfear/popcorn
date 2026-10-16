@@ -43,6 +43,29 @@ G3–G5 do `TDD.md`; formatos como MKV/HEVC ainda não são anunciados como comp
 
 ## Desenvolvimento desktop
 
+A navegação do aplicativo é online pelo TMDB: pesquisa e coleções → página de
+detalhes → página de reprodução. Não há seletor de catálogo offline/local na
+interface. Os detalhes incluem sinopse, elenco, temporadas/episódios e trailer
+do YouTube quando disponibilizado pelo TMDB; o trailer só é carregado ao clicar.
+
+Nos detalhes, selecione um arquivo de uma fonte vinculada para analisar suas
+faixas. Depois escolha a qualidade e o áudio disponível e clique em **Reproduzir**.
+Arquivos com múltiplas faixas passam pelo conversor para respeitar o áudio escolhido.
+O player ocupa uma página própria, sem o catálogo ou um modal atrás do vídeo.
+
+O progresso é salvo a cada cinco segundos e ao pausar/sair do player, no
+armazenamento persistente do WebView, sem URLs de transmissão ou credenciais.
+A pesquisa tem **Continuar assistindo**, **Já assistidos** e **Quero assistir**.
+Cada episódio mantém seu próprio ponto de retomada; ao concluir 95% da duração,
+o título passa para assistidos. O histórico pertence a este dispositivo e à
+instalação/origem do aplicativo, sem sincronização entre dispositivos.
+
+Para verificar as regras de histórico e retomada:
+
+```sh
+bun test apps/desktop/tests
+```
+
 Requer Rust 1.94 ou posterior, compilador C, Bun 1.3.14 e os pré-requisitos nativos
 do Tauri 2 para o sistema em uso. Windows precisa das ferramentas C++ e WebView2;
 macOS precisa das ferramentas de desenvolvimento da Apple.
@@ -278,6 +301,55 @@ Cada instância aceita apenas o origin configurado, além de clientes sem Origin
 com token. O preflight CORS não dispensa autenticação nas consultas.
 
 ## Verificar
+
+### Diagnóstico local de reprodução
+
+O desktop e o servidor salvam diagnósticos automaticamente, também no build de
+produção, em `<diretório de dados do app>/logs/`. No macOS:
+
+```text
+~/Library/Application Support/app.popcorn.desktop/logs/server.jsonl
+~/Library/Application Support/app.popcorn.desktop/logs/desktop.jsonl
+```
+
+Em execução standalone, o caminho é `<--data-dir>/logs/server.jsonl`.
+Cada arquivo é JSONL (um evento JSON por linha), tem limite de 5 MiB e mantém
+três arquivos anteriores (`.jsonl.1` a `.jsonl.3`): até 20 MiB por componente.
+Os eventos são gravados conforme acontecem e permanecem após fechar/reabrir o app.
+No Unix, a pasta usa permissão `0700` e os arquivos `0600`.
+
+`server.jsonl` inclui os logs do backend, status/tempo HTTP, bytes e esperas de
+leitura/escrita, estado do download, metadados de vídeo/áudio, plano de conversão,
+argumentos filtrados, PID/saída do FFmpeg/ffprobe e o trecho final do stderr.
+O stderr é drenado continuamente, filtrado e limitado; linhas incompletas
+excessivamente grandes são descartadas, sem bloquear o conversor.
+
+`desktop.jsonl` registra as transições da reprodução, falhas de RPC e a exceção
+original do MediaSource/SourceBuffer **antes** da limpeza do player, com fase,
+bytes recebidos/anexados, buffers, timestamps e geração da transmissão. Inclui
+dimensões/CSS do vídeo, estado de tela cheia, quadros decodificados, apresentados
+e descartados, além do tempo sem avanço. A coleta periódica ocorre a cada cinco
+segundos; falhas e mudanças de estado são registradas imediatamente.
+
+Use `timestamp_ms`, `run_id`, `playback_id`, `stream_generation` e `attempt_id`
+para correlacionar as tentativas. O registro HTTP nunca inclui URI/query ou
+headers completos. URLs privadas, magnets, bearer tokens e credenciais são
+removidos dos textos de erro e dos demais dados antes da escrita. Nenhum
+diagnóstico é enviado a serviços externos; os bytes do vídeo não são registrados.
+
+Depois de atualizar essa instrumentação, encerre o processo de desenvolvimento
+com Ctrl+C e execute `bun run desktop:dev` novamente para atualizar também os
+comandos nativos e o servidor. Reproduza o problema e preserve os arquivos atuais
+e rotacionados para investigação. O antigo log temporário de desenvolvimento
+`popcorn-media-diagnostics.log` não é mais utilizado.
+
+Para verificar persistência, rotação, filtragem de credenciais e captura de falhas:
+
+```sh
+cargo test -p popcorn-diagnostics
+```
+
+### Verificações do projeto
 
 ```sh
 bun install --frozen-lockfile

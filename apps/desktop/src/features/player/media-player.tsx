@@ -1,5 +1,14 @@
 import type { Playback } from "@popcorn/sdk";
-import { createEffect, createMemo, type JSX, onCleanup, onMount } from "solid-js";
+import { createEffect, createMemo, onCleanup, onMount } from "solid-js";
+import { bufferedPosition } from "./buffer-position";
+import {
+  bufferSnapshot,
+  diagnostic,
+  errorDetails,
+  mediaSnapshot,
+  mp4Header,
+  observeMedia,
+} from "./media-diagnostics";
 import { createPlayerMachine } from "./player.machine";
 
 class MediaPlaybackError extends Error {}
@@ -25,9 +34,13 @@ function mediaOperation(
       clean();
       resolve();
     };
-    const failure = () => {
+    const failure = (event: Event) => {
       clean();
-      reject(new MediaPlaybackError("media operation failed"));
+      reject(
+        new MediaPlaybackError(
+          `${target.constructor.name} emitted ${event.type} while waiting for ${completed}`,
+        ),
+      );
     };
     const cancelled = () => {
       clean();
@@ -100,6 +113,7 @@ type MediaConfig = {
   readonly streamType: string;
   readonly durationSeconds: number;
   readonly timestampOffsetSeconds: number;
+  readonly startSeconds: number;
 };
 
 function attachMse(
@@ -110,17 +124,15 @@ function attachMse(
   let disposed = false;
   let failed = false;
   let generation = 0;
-  let releaseGeneration = () => {};
+  let releaseGeneration: (reason?: string) => void = () => {};
   let activeBuffer: SourceBuffer | undefined;
-  let requestedTime = 0;
   let restoring = false;
   let waitingForTarget = true;
   let resumeAfterLoad = true;
 
   function start(time: number, resume: boolean) {
     const current = ++generation;
-    releaseGeneration();
-    requestedTime = time;
+    releaseGeneration("seek_replacement");
     waitingForTarget = true;
     resumeAfterLoad = resume;
     activeBuffer = undefined;
@@ -134,25 +146,62 @@ function attachMse(
     let buffer: SourceBuffer | undefined;
     let restored = false;
     let released = false;
+    let phase = "abrir o reprodutor";
+    const started = performance.now();
+    let receivedBytes = 0;
+    let appendedBytes = 0;
+    let appendCount = 0;
+    let lastChunkBytes = 0;
+    let lastDataAt = performance.now();
+    const context = { playbackId: config.playbackId, generation: requestGeneration };
+    const report = (event: string, extra: Record<string, unknown> = {}) =>
+      diagnostic(`mse.${event}`, context, {
+        ...mediaSnapshot(video),
+        phase,
+        requested_start: time,
+        resume,
+        stream_type: config.streamType,
+        timestamp_offset: config.timestampOffsetSeconds,
+        media_source_state: source.readyState,
+        source_duration: Number.isFinite(source.duration) ? source.duration : null,
+        source_buffer: bufferSnapshot(buffer),
+        elapsed_ms: Math.round(performance.now() - started),
+        received_bytes: receivedBytes,
+        appended_bytes: appendedBytes,
+        append_count: appendCount,
+        last_chunk_bytes: lastChunkBytes,
+        no_data_ms: Math.round(performance.now() - lastDataAt),
+        ...extra,
+      });
+    const timer = window.setInterval(() => report("progress"), 5_000);
+    report("started");
     const alive = () => !disposed && current === generation && !controller.signal.aborted;
-    const mediaFailed = () => {
+    const mediaFailed = (cause?: unknown) => {
       if (!alive()) return;
       failed = true;
-      fail("Não foi possível reproduzir este vídeo. Feche ou tente novamente.");
-      releaseGeneration();
+      report("failed", { exception: errorDetails(cause) });
+      const code = video.error?.code;
+      fail(`Falha ao ${phase}.${code ? ` Código de mídia: ${code}.` : ""} Tente novamente.`);
+      releaseGeneration("failure");
     };
     video.addEventListener("error", mediaFailed);
     source.addEventListener("sourceclose", mediaFailed);
-    releaseGeneration = () => {
+    releaseGeneration = (reason = "disposed") => {
       if (released) return;
       released = true;
+      report("released", { reason });
+      window.clearInterval(timer);
       controller.abort();
       activeBuffer = undefined;
       video.removeEventListener("error", mediaFailed);
       source.removeEventListener("sourceclose", mediaFailed);
-      if (buffer && source.readyState !== "closed") {
-        if (buffer.updating && source.readyState === "open") buffer.abort();
-        source.removeSourceBuffer(buffer);
+      try {
+        if (buffer && source.readyState !== "closed") {
+          if (buffer.updating && source.readyState === "open") buffer.abort();
+          source.removeSourceBuffer(buffer);
+        }
+      } catch (error) {
+        report("cleanup_failed", { exception: errorDetails(error) });
       }
       video.removeAttribute("src");
       video.load();
@@ -167,16 +216,29 @@ function attachMse(
           video.load();
         });
         if (!alive()) return;
+        report("source_opened");
+        phase = "configurar o formato do vídeo";
         buffer = source.addSourceBuffer(config.streamType);
         buffer.mode = "segments";
         buffer.timestampOffset = config.timestampOffsetSeconds;
         activeBuffer = buffer;
         source.duration = config.durationSeconds;
+        report("buffer_created");
         const url = new URL(config.mediaUrl);
         url.searchParams.set("start", String(time));
         url.searchParams.set("generation", String(requestGeneration));
+        phase = "iniciar a transmissão";
         const response = await fetch(url, { signal: controller.signal });
-        if (!response.ok || !response.body) throw new MediaPlaybackError("media request failed");
+        report("http_response", {
+          status: response.status,
+          content_type: response.headers.get("content-type"),
+          content_length: response.headers.get("content-length"),
+        });
+        if (!response.ok) {
+          phase = `iniciar a transmissão (HTTP ${response.status})`;
+          throw new MediaPlaybackError("media request failed");
+        }
+        if (!response.body) throw new MediaPlaybackError("media response body missing");
         reader = response.body.getReader();
         while (alive()) {
           if (restored) await waitForRoom(video, buffer, controller.signal);
@@ -186,49 +248,65 @@ function attachMse(
             restored &&
             trimTo > 0 &&
             buffer.buffered.length &&
-            buffer.buffered.start(0) < trimTo
+            buffer.buffered.start(0) + 15 < trimTo
           ) {
+            phase = "liberar o trecho já reproduzido";
             await mediaOperation(buffer, "updateend", ["error", "abort"], controller.signal, () => {
               buffer?.remove(0, trimTo);
             });
           }
           if (!alive()) return;
+          phase = "receber os dados do vídeo";
           const chunk = await reader.read();
           if (!alive()) return;
           if (chunk.done) {
             if (!restored) throw new MediaPlaybackError("requested position not buffered");
             source.endOfStream();
+            report("stream_ended");
             return;
           }
+          phase = "processar os dados do vídeo";
+          lastChunkBytes = chunk.value.byteLength;
+          receivedBytes += lastChunkBytes;
+          lastDataAt = performance.now();
+          if (appendCount === 0) report("first_chunk", mp4Header(chunk.value));
           await mediaOperation(buffer, "updateend", ["error", "abort"], controller.signal, () => {
             buffer?.appendBuffer(chunk.value);
           });
+          appendedBytes += lastChunkBytes;
+          appendCount++;
+          if (appendCount === 1) report("first_append");
           if (!alive()) return;
-          // Initial playback may begin just after zero (codec priming). Let
-          // native playback choose that first sample, but never seek to an
-          // unbuffered requested position after a remote seek.
-          const targetBuffered = containsTime(buffer.buffered, time);
-          if (!restored && (targetBuffered || (time === 0 && buffer.buffered.length > 0))) {
+          // Frame rounding and codec priming can put the first sample slightly
+          // after the saved timestamp. Seek into that sample instead of waiting forever.
+          const position = bufferedPosition(buffer.buffered, time);
+          if (!restored && position !== undefined) {
             restoring = true;
-            if (targetBuffered) video.currentTime = time;
+            video.currentTime = position;
             restored = true;
             waitingForTarget = false;
             restoring = false;
+            report("position_restored", {
+              actual_start: position,
+              adjustment_seconds: position - time,
+            });
             if (resume) {
-              void video.play().catch(() => {
+              void video.play().catch((error: unknown) => {
+                report("play_rejected", { exception: errorDetails(error) });
                 if (alive()) fail("Pressione reproduzir nos controles do vídeo para continuar.");
               });
             }
           }
         }
-      } catch {
-        if (alive()) mediaFailed();
+      } catch (error) {
+        if (alive()) mediaFailed(error);
       } finally {
         if (reader) {
           try {
             await reader.cancel();
-          } catch {
-            if (alive()) mediaFailed();
+          } catch (error) {
+            report("reader_cancel_failed", { exception: errorDetails(error) });
+            if (alive()) mediaFailed(error);
           }
           reader.releaseLock();
         }
@@ -241,16 +319,16 @@ function attachMse(
     if (disposed || failed || restoring) return;
     const time = video.currentTime;
     if (activeBuffer && containsTime(activeBuffer.buffered, time)) return;
-    if (waitingForTarget && time === requestedTime) return;
+    if (waitingForTarget) return;
     start(time, waitingForTarget ? resumeAfterLoad : !video.paused);
   };
   video.addEventListener("seeking", seeking);
-  start(0, true);
+  start(config.startSeconds, true);
   return () => {
     disposed = true;
     generation++;
     video.removeEventListener("seeking", seeking);
-    releaseGeneration();
+    releaseGeneration("component_disposed");
   };
 }
 
@@ -258,9 +336,45 @@ export function MediaPlayer(props: {
   readonly playback: Playback;
   readonly onError: (message: string) => void;
   readonly onEnded: () => void;
+  readonly startSeconds: number;
+  readonly onProgress: (position: number, duration: number) => void;
 }) {
   let video: HTMLVideoElement | undefined;
   const machine = createPlayerMachine();
+  onMount(() => {
+    if (video) onCleanup(observeMedia(video, () => props.playback));
+    let savedAt = 0;
+    let lastPosition = 0;
+    let lastDuration = 0;
+    const element = video;
+    if (!element) return;
+    const save = () => {
+      if (element.readyState >= 2) {
+        lastPosition = element.currentTime;
+        lastDuration = element.duration;
+      }
+      if (lastDuration > 0) props.onProgress(lastPosition, lastDuration);
+      savedAt = performance.now();
+    };
+    const tick = () => {
+      if (element.readyState >= 2) {
+        lastPosition = element.currentTime;
+        lastDuration = element.duration;
+      }
+      if (performance.now() - savedAt >= 5_000) save();
+    };
+    element.addEventListener("timeupdate", tick);
+    element.addEventListener("pause", save);
+    element.addEventListener("seeked", save);
+    window.addEventListener("pagehide", save);
+    onCleanup(() => {
+      save();
+      element.removeEventListener("timeupdate", tick);
+      element.removeEventListener("pause", save);
+      element.removeEventListener("seeked", save);
+      window.removeEventListener("pagehide", save);
+    });
+  });
   // Only transport identity changes recreate media, not one-second statistics.
   const config = createMemo(
     (): MediaConfig => ({
@@ -270,6 +384,7 @@ export function MediaPlayer(props: {
       streamType: props.playback.streamType,
       durationSeconds: props.playback.durationSeconds,
       timestampOffsetSeconds: props.playback.timestampOffsetSeconds,
+      startSeconds: Math.max(0, Math.min(props.startSeconds, props.playback.durationSeconds - 0.1)),
     }),
     undefined,
     {
@@ -279,7 +394,8 @@ export function MediaPlayer(props: {
         a.delivery === b.delivery &&
         a.streamType === b.streamType &&
         a.durationSeconds === b.durationSeconds &&
-        a.timestampOffsetSeconds === b.timestampOffsetSeconds,
+        a.timestampOffsetSeconds === b.timestampOffsetSeconds &&
+        a.startSeconds === b.startSeconds,
     },
   );
 
@@ -288,6 +404,17 @@ export function MediaPlayer(props: {
     const element = video;
     if (!element) return;
     machine.send("prepare");
+    diagnostic(
+      "media.transport_selected",
+      { playbackId: current.playbackId },
+      {
+        delivery: current.delivery,
+        stream_type: current.streamType,
+        duration_seconds: current.durationSeconds,
+        start_seconds: current.startSeconds,
+        timestamp_offset: current.timestampOffsetSeconds,
+      },
+    );
     if (current.delivery === "mse") {
       if (typeof MediaSource === "undefined" || !MediaSource.isTypeSupported(current.streamType)) {
         machine.send("fail");
@@ -303,14 +430,22 @@ export function MediaPlayer(props: {
       return;
     }
     const failed = () => {
+      diagnostic("media.direct_failed", { playbackId: current.playbackId }, mediaSnapshot(element));
       machine.send("fail");
       props.onError("Não foi possível carregar ou decodificar este vídeo. Tente novamente.");
     };
     element.addEventListener("error", failed);
+    element.autoplay = false;
+    const ready = () => {
+      if (current.startSeconds > 0) element.currentTime = current.startSeconds;
+      void element.play().catch(() => props.onError("Pressione reproduzir para continuar."));
+    };
+    element.addEventListener("loadedmetadata", ready, { once: true });
     element.src = current.mediaUrl;
     element.load();
     onCleanup(() => {
       element.removeEventListener("error", failed);
+      element.removeEventListener("loadedmetadata", ready);
       element.pause();
       element.removeAttribute("src");
       element.load();
@@ -325,7 +460,10 @@ export function MediaPlayer(props: {
       autoplay
       playsinline
       tabindex="0"
-      onEnded={props.onEnded}
+      onEnded={(event) => {
+        props.onProgress(event.currentTarget.currentTime, event.currentTarget.duration);
+        props.onEnded();
+      }}
       onLoadStart={() => machine.send("prepare")}
       onWaiting={() => machine.send("buffer")}
       onPlaying={() => machine.send("play")}
@@ -334,56 +472,5 @@ export function MediaPlayer(props: {
       onSeeked={(event) => machine.send(event.currentTarget.paused ? "pause" : "play")}
       onError={() => machine.send("fail")}
     />
-  );
-}
-
-export function PlayerOverlay(props: {
-  readonly children: JSX.Element;
-  readonly onClose: () => void;
-}) {
-  let dialog: HTMLDivElement | undefined;
-  const previousFocus = document.activeElement;
-  onMount(() => {
-    dialog?.focus();
-  });
-  onCleanup(() => {
-    if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
-  });
-  const keydown = (event: KeyboardEvent) => {
-    if (event.key === "Escape" && !document.fullscreenElement) {
-      event.preventDefault();
-      props.onClose();
-    }
-    if (event.key !== "Tab" || !dialog) return;
-    const controls = Array.from(
-      dialog.querySelectorAll<HTMLElement>(
-        "button:not(:disabled), video, [href], select, [tabindex='0']",
-      ),
-    ).filter((element) => element.getClientRects().length > 0);
-    const first = controls[0];
-    const last = controls.at(-1);
-    if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
-      event.preventDefault();
-      last?.focus();
-    } else if (
-      !event.shiftKey &&
-      (document.activeElement === last || document.activeElement === dialog)
-    ) {
-      event.preventDefault();
-      first?.focus();
-    }
-  };
-  return (
-    <div
-      ref={dialog}
-      class="player-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Reprodutor de vídeo"
-      tabindex="-1"
-      onKeyDown={keydown}
-    >
-      {props.children}
-    </div>
   );
 }

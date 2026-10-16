@@ -14,7 +14,7 @@ impl MediaTools {
                 "-nostdin",
                 "-hide_banner",
                 "-loglevel",
-                "error",
+                "warning",
                 "-copyts",
                 "-start_at_zero",
                 "-ss",

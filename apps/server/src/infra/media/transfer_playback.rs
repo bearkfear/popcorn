@@ -33,6 +33,10 @@ impl TorrentEngine {
                 playback.conversion = prepared.plan.description();
                 playback.stream_type = prepared.stream_type();
                 playback.mime_type = "video/mp4";
+                playback
+                    .audio_tracks
+                    .clone_from(&prepared.inspected.audio_tracks);
+                playback.audio_stream_index = prepared.inspected.audio_index;
             }
         }
         drop(playbacks);
@@ -72,5 +76,7 @@ fn transfer_snapshot(id: Uuid, active: &ActivePlayback) -> Playback {
         stream_type: "",
         error: "",
         timestamp_offset_seconds: -3600.0,
+        audio_tracks: Vec::new(),
+        audio_stream_index: None,
     }
 }

@@ -34,8 +34,8 @@ impl MediaTools {
         command
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
-            // FFmpeg errors may include its private input URL. Never inherit stderr.
-            .stderr(Stdio::null())
+            // Drained continuously by process diagnostics; never inherited without redaction.
+            .stderr(Stdio::piped())
             .kill_on_drop(true);
         #[cfg(windows)]
         command.creation_flags(0x0800_0000);

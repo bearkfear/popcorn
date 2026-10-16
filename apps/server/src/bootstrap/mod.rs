@@ -81,6 +81,7 @@ impl Backend {
             Credential::Private(token) => token,
         };
         let storage = Storage::open(&config.data_dir, &config.catalog).await?;
+        popcorn_diagnostics::init(&config.data_dir.join("logs"), "server")?;
         let catalog = match services::catalog(
             &storage,
             config.data_dir.join("tmdb.token"),
@@ -112,6 +113,12 @@ impl Backend {
             address.to_string(),
         ));
         let ready = Ready::new(address, storage.catalog_version.clone());
+        popcorn_diagnostics::record(
+            "server.ready",
+            serde_json::json!({
+                "instance_id": ready.instance_id, "protocol": ready.protocol_version,
+            }),
+        );
         Ok(Self {
             listener,
             storage,
@@ -160,6 +167,10 @@ impl Backend {
             media.shutdown().await;
         };
         let result = server::serve(self.listener, app, shutdown).await;
+        popcorn_diagnostics::record(
+            "server.stopped",
+            serde_json::json!({ "success": result.is_ok() }),
+        );
         self.media.shutdown().await;
         self.storage.close().await;
         result

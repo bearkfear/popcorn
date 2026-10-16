@@ -19,6 +19,7 @@ pub(crate) struct StartPlayback {
     pub(crate) file_index: u32,
     pub(crate) idempotency_key: String,
     pub(crate) quality: Quality,
+    pub(crate) audio_stream_index: Option<u32>,
 }
 
 impl<R: Sources, T: Transfers, C: Cache> MediaService<R, T, C> {

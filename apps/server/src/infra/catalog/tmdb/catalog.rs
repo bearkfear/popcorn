@@ -65,7 +65,7 @@ impl Tmdb {
         let path = format!("{}/{id}", media_path(media_type)?);
         self.cached::<RawTitle, _, _>(
             &path,
-            vec![("append_to_response", "credits".into())],
+            vec![("append_to_response", "credits,videos".into())],
             DETAIL_TTL,
             |raw| raw.into_title(media_type),
         )

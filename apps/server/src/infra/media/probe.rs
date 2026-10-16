@@ -3,15 +3,20 @@
 use serde::Deserialize;
 use tokio::io::AsyncReadExt as _;
 
+use crate::core::media::PlaybackAudioTrack;
+use crate::core::media::audio::select_audio_index;
 use crate::core::media::profile::{AudioTrack, MediaInfo, VideoTrack};
 
 use super::tools::MediaTools;
+use popcorn_diagnostics::{self as process, ProcessContext};
+use serde_json::json;
 
 #[derive(Debug, Clone)]
 pub(super) struct InspectedMedia {
     pub(super) info: MediaInfo,
     pub(super) video_index: u32,
     pub(super) audio_index: Option<u32>,
+    pub(super) audio_tracks: Vec<PlaybackAudioTrack>,
 }
 
 #[derive(Deserialize, Default)]
@@ -29,6 +34,14 @@ struct Track {
     channels: u32,
     color_transfer: String,
     disposition: Disposition,
+    tags: Tags,
+}
+
+#[derive(Deserialize, Default)]
+#[serde(default)]
+struct Tags {
+    language: String,
+    title: String,
 }
 
 #[derive(Deserialize, Default)]
@@ -51,18 +64,22 @@ struct Format {
 }
 
 impl MediaTools {
-    pub(super) async fn inspect(&self, url: &str) -> std::io::Result<InspectedMedia> {
-        let mut child = self
-            .command(true)
-            .args([
-                "-v", "error", "-protocol_whitelist", "http,tcp",
+    pub(super) async fn inspect(
+        &self,
+        url: &str,
+        audio_stream_index: Option<u32>,
+        context: ProcessContext,
+    ) -> std::io::Result<InspectedMedia> {
+        let mut command = self.command(true);
+        command.args([
+                "-v", "warning", "-protocol_whitelist", "http,tcp",
                 "-rw_timeout", "90000000",
                 "-format_whitelist", "matroska,webm,mov,avi,mpegts,ogg",
                 "-show_entries",
-                "format=format_name,duration:stream=index,codec_type,codec_name,profile,pix_fmt,width,height,level,avg_frame_rate,channels,color_transfer:stream_disposition=default,attached_pic",
+                "format=format_name,duration:stream=index,codec_type,codec_name,profile,pix_fmt,width,height,level,avg_frame_rate,channels,color_transfer:stream_disposition=default,attached_pic:stream_tags=language,title",
                 "-of", "json", url,
-            ])
-            .spawn()?;
+            ]);
+        let (mut child, mut process_log) = process::spawn(command, context)?;
         let mut bytes = Vec::new();
         child
             .stdout
@@ -74,16 +91,21 @@ impl MediaTools {
         if bytes.len() > 262_144 {
             return Err(std::io::Error::other("media metadata exceeds limit"));
         }
-        if !child.wait().await?.success() {
+        let status = child.wait().await?;
+        process_log.finish(status).await;
+        context.record("media.probe.output", json!({ "stdout_bytes": bytes.len() }));
+        if !status.success() {
             return Err(std::io::Error::other("media inspection failed"));
         }
-        let inspection: Inspection = serde_json::from_slice(&bytes)?;
-        inspection.into_media()
+        let inspection: Inspection = serde_json::from_slice(&bytes).inspect_err(|error| {
+            context.record("media.probe.invalid_json", json!({ "line": error.line(), "column": error.column(), "category": format!("{:?}", error.classify()) }));
+        })?;
+        inspection.into_media(audio_stream_index)
     }
 }
 
 impl Inspection {
-    fn into_media(self) -> std::io::Result<InspectedMedia> {
+    fn into_media(self, audio_stream_index: Option<u32>) -> std::io::Result<InspectedMedia> {
         let duration: f64 = self
             .format
             .duration
@@ -99,12 +121,22 @@ impl Inspection {
                 "media has no valid duration or dimensions",
             ));
         }
-        let audio = self
+        let audio_tracks: Vec<_> = self
             .streams
             .iter()
             .filter(|track| track.codec_type == "audio")
-            .max_by_key(|track| track.disposition.default);
+            .map(Track::description)
+            .collect();
+        let selected = select_audio_index(&audio_tracks, audio_stream_index).map_err(|_| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "selected audio track is unavailable",
+            )
+        })?;
+        let audio =
+            selected.and_then(|index| self.streams.iter().find(|track| track.index == index));
         Ok(InspectedMedia {
+            audio_tracks,
             video_index: video.index,
             audio_index: audio.map(|track| track.index),
             info: MediaInfo {
@@ -122,6 +154,17 @@ impl Inspection {
 }
 
 impl Track {
+    fn description(&self) -> PlaybackAudioTrack {
+        PlaybackAudioTrack {
+            stream_index: self.index,
+            language: self.tags.language.chars().take(32).collect(),
+            title: self.tags.title.chars().take(160).collect(),
+            channels: self.channels,
+            codec: self.codec_name.clone(),
+            is_default: self.disposition.default != 0,
+        }
+    }
+
     fn video(&self) -> VideoTrack {
         let frame_rate = self
             .avg_frame_rate

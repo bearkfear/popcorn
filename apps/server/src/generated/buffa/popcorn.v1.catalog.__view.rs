@@ -364,6 +364,10 @@ pub struct TitleView<'a> {
     pub runtime_minutes: u32,
     /// Field 11: `seasons`
     pub seasons: ::buffa::RepeatedView<'a, super::super::__buffa::view::SeasonView<'a>>,
+    /// Validated YouTube video identifier, empty when no trailer is available.
+    ///
+    /// Field 12: `trailer_key`
+    pub trailer_key: &'a str,
     pub __buffa_unknown_fields: ::buffa::UnknownFieldsView<'a>,
 }
 impl<'a> ::buffa::MessageView<'a> for TitleView<'a> {
@@ -463,6 +467,13 @@ impl<'a> ::buffa::MessageView<'a> for TitleView<'a> {
                     ::buffa::encoding::WireType::Varint,
                 )?;
                 view.runtime_minutes = ::buffa::types::decode_uint32(&mut cur)?;
+            }
+            12u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                view.trailer_key = ::buffa::types::borrow_str(&mut cur)?;
             }
             8u32 => {
                 ::buffa::encoding::check_wire_type(
@@ -571,6 +582,7 @@ impl<'a> ::buffa::MessageView<'a> for TitleView<'a> {
                 .iter()
                 .map(|v| v.to_owned_from_source(__buffa_src))
                 .collect::<::core::result::Result<_, ::buffa::DecodeError>>()?,
+            trailer_key: self.trailer_key.to_string(),
             __buffa_unknown_fields: self.__buffa_unknown_fields.to_owned()?.into(),
             ..::core::default::Default::default()
         })
@@ -637,6 +649,9 @@ impl<'a> ::buffa::ViewEncode<'a> for TitleView<'a> {
                 += 1u64 + ::buffa::encoding::varint_len(inner_size as u64) as u64
                     + inner_size as u64;
         }
+        if !self.trailer_key.is_empty() {
+            size += 1u64 + ::buffa::types::string_encoded_len(&self.trailer_key) as u64;
+        }
         size += self.__buffa_unknown_fields.encoded_len() as u64;
         ::buffa::saturate_size(size)
     }
@@ -700,6 +715,9 @@ impl<'a> ::buffa::ViewEncode<'a> for TitleView<'a> {
                 buf,
             );
             v.write_to(__cache, buf);
+        }
+        if !self.trailer_key.is_empty() {
+            ::buffa::types::put_string_field(12u32, &self.trailer_key, buf);
         }
         self.__buffa_unknown_fields.write_to(buf);
     }
@@ -768,6 +786,9 @@ impl<'__a> ::serde::Serialize for TitleView<'__a> {
         }
         if !self.seasons.is_empty() {
             __map.serialize_entry("seasons", &*self.seasons)?;
+        }
+        if !::buffa::json_helpers::skip_if::is_empty_str(self.trailer_key) {
+            __map.serialize_entry("trailerKey", self.trailer_key)?;
         }
         __map.end()
     }
@@ -918,6 +939,13 @@ impl TitleOwnedView {
         &self,
     ) -> &::buffa::RepeatedView<'_, super::super::__buffa::view::SeasonView<'_>> {
         &self.0.reborrow().seasons
+    }
+    /// Validated YouTube video identifier, empty when no trailer is available.
+    ///
+    /// Field 12: `trailer_key`
+    #[must_use]
+    pub fn trailer_key(&self) -> &'_ str {
+        self.0.reborrow().trailer_key
     }
 }
 impl ::core::convert::From<::buffa::OwnedView<TitleView<'static>>> for TitleOwnedView {
@@ -8750,6 +8778,8 @@ pub struct SourceView<'a> {
         'a,
         super::super::__buffa::view::SourceFileView<'a>,
     >,
+    /// Field 5: `recommended_file_index`
+    pub recommended_file_index: ::core::option::Option<u32>,
     pub __buffa_unknown_fields: ::buffa::UnknownFieldsView<'a>,
 }
 impl<'a> ::buffa::MessageView<'a> for SourceView<'a> {
@@ -8817,6 +8847,15 @@ impl<'a> ::buffa::MessageView<'a> for SourceView<'a> {
                     ::buffa::types::decode_int32(&mut cur)?,
                 );
             }
+            5u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::Varint,
+                )?;
+                view.recommended_file_index = Some(
+                    ::buffa::types::decode_uint32(&mut cur)?,
+                );
+            }
             4u32 => {
                 ::buffa::encoding::check_wire_type(
                     tag,
@@ -8873,6 +8912,7 @@ impl<'a> ::buffa::MessageView<'a> for SourceView<'a> {
                 .iter()
                 .map(|v| v.to_owned_from_source(__buffa_src))
                 .collect::<::core::result::Result<_, ::buffa::DecodeError>>()?,
+            recommended_file_index: self.recommended_file_index,
             __buffa_unknown_fields: self.__buffa_unknown_fields.to_owned()?.into(),
             ..::core::default::Default::default()
         })
@@ -8908,6 +8948,9 @@ impl<'a> ::buffa::ViewEncode<'a> for SourceView<'a> {
             size
                 += 1u64 + ::buffa::encoding::varint_len(inner_size as u64) as u64
                     + inner_size as u64;
+        }
+        if let Some(v) = self.recommended_file_index {
+            size += 1u64 + ::buffa::types::uint32_encoded_len(v) as u64;
         }
         size += self.__buffa_unknown_fields.encoded_len() as u64;
         ::buffa::saturate_size(size)
@@ -8945,6 +8988,9 @@ impl<'a> ::buffa::ViewEncode<'a> for SourceView<'a> {
             );
             v.write_to(__cache, buf);
         }
+        if let Some(v) = self.recommended_file_index {
+            ::buffa::types::put_uint32_field(5u32, v, buf);
+        }
         self.__buffa_unknown_fields.write_to(buf);
     }
 }
@@ -8979,6 +9025,13 @@ impl<'__a> ::serde::Serialize for SourceView<'__a> {
         }
         if !self.files.is_empty() {
             __map.serialize_entry("files", &*self.files)?;
+        }
+        if let ::core::option::Option::Some(__v) = self.recommended_file_index {
+            __map
+                .serialize_entry(
+                    "recommendedFileIndex",
+                    &::buffa::json_helpers::ProtoJson(&__v),
+                )?;
         }
         __map.end()
     }
@@ -9090,6 +9143,11 @@ impl SourceOwnedView {
         &self,
     ) -> &::buffa::RepeatedView<'_, super::super::__buffa::view::SourceFileView<'_>> {
         &self.0.reborrow().files
+    }
+    /// Field 5: `recommended_file_index`
+    #[must_use]
+    pub fn recommended_file_index(&self) -> ::core::option::Option<u32> {
+        self.0.reborrow().recommended_file_index
     }
 }
 impl ::core::convert::From<::buffa::OwnedView<SourceView<'static>>> for SourceOwnedView {
@@ -10874,6 +10932,13 @@ pub struct PlaybackView<'a> {
     ///
     /// Field 15: `timestamp_offset_seconds`
     pub timestamp_offset_seconds: f64,
+    /// Field 16: `audio_tracks`
+    pub audio_tracks: ::buffa::RepeatedView<
+        'a,
+        super::super::__buffa::view::PlaybackAudioTrackView<'a>,
+    >,
+    /// Field 17: `audio_stream_index`
+    pub audio_stream_index: ::core::option::Option<u32>,
     pub __buffa_unknown_fields: ::buffa::UnknownFieldsView<'a>,
 }
 impl<'a> ::buffa::MessageView<'a> for PlaybackView<'a> {
@@ -11013,6 +11078,33 @@ impl<'a> ::buffa::MessageView<'a> for PlaybackView<'a> {
                 )?;
                 view.timestamp_offset_seconds = ::buffa::types::decode_double(&mut cur)?;
             }
+            17u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::Varint,
+                )?;
+                view.audio_stream_index = Some(::buffa::types::decode_uint32(&mut cur)?);
+            }
+            16u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                let __sub_ctx = ctx.descend()?;
+                let sub = ::buffa::types::borrow_bytes(&mut cur)?;
+                ctx.register_element_memory(
+                    ::core::mem::size_of::<
+                        super::super::__buffa::view::PlaybackAudioTrackView,
+                    >(),
+                )?;
+                view.audio_tracks
+                    .push(
+                        <super::super::__buffa::view::PlaybackAudioTrackView as ::buffa::MessageView>::decode_view_ctx(
+                            sub,
+                            __sub_ctx,
+                        )?,
+                    );
+            }
             _ => {
                 ::buffa::encoding::skip_field_depth(tag, &mut cur, ctx.depth())?;
                 let span_len = before_tag.len() - cur.len();
@@ -11050,6 +11142,12 @@ impl<'a> ::buffa::MessageView<'a> for PlaybackView<'a> {
             stream_type: self.stream_type.to_string(),
             error: self.error.to_string(),
             timestamp_offset_seconds: self.timestamp_offset_seconds,
+            audio_tracks: self
+                .audio_tracks
+                .iter()
+                .map(|v| v.to_owned_from_source(__buffa_src))
+                .collect::<::core::result::Result<_, ::buffa::DecodeError>>()?,
+            audio_stream_index: self.audio_stream_index,
             __buffa_unknown_fields: self.__buffa_unknown_fields.to_owned()?.into(),
             ..::core::default::Default::default()
         })
@@ -11057,7 +11155,7 @@ impl<'a> ::buffa::MessageView<'a> for PlaybackView<'a> {
 }
 impl<'a> ::buffa::ViewEncode<'a> for PlaybackView<'a> {
     #[allow(clippy::needless_borrow, clippy::let_and_return)]
-    fn compute_size(&self, _cache: &mut ::buffa::SizeCache) -> u32 {
+    fn compute_size(&self, __cache: &mut ::buffa::SizeCache) -> u32 {
         #[allow(unused_imports)]
         use ::buffa::Enumeration as _;
         let mut size = 0u64;
@@ -11114,13 +11212,24 @@ impl<'a> ::buffa::ViewEncode<'a> for PlaybackView<'a> {
         if self.timestamp_offset_seconds.to_bits() != 0u64 {
             size += 1u64 + ::buffa::types::FIXED64_ENCODED_LEN as u64;
         }
+        for v in &self.audio_tracks {
+            let __slot = __cache.reserve();
+            let inner_size = v.compute_size(__cache);
+            __cache.set(__slot, inner_size);
+            size
+                += 2u64 + ::buffa::encoding::varint_len(inner_size as u64) as u64
+                    + inner_size as u64;
+        }
+        if let Some(v) = self.audio_stream_index {
+            size += 2u64 + ::buffa::types::uint32_encoded_len(v) as u64;
+        }
         size += self.__buffa_unknown_fields.encoded_len() as u64;
         ::buffa::saturate_size(size)
     }
     #[allow(clippy::needless_borrow)]
     fn write_to(
         &self,
-        _cache: &mut ::buffa::SizeCache,
+        __cache: &mut ::buffa::SizeCache,
         buf: &mut impl ::buffa::EncodeSink,
     ) {
         #[allow(unused_imports)]
@@ -11172,6 +11281,17 @@ impl<'a> ::buffa::ViewEncode<'a> for PlaybackView<'a> {
         }
         if self.timestamp_offset_seconds.to_bits() != 0u64 {
             ::buffa::types::put_double_field(15u32, self.timestamp_offset_seconds, buf);
+        }
+        for v in &self.audio_tracks {
+            ::buffa::types::put_len_delimited_header(
+                16u32,
+                u64::from(__cache.consume_next()),
+                buf,
+            );
+            v.write_to(__cache, buf);
+        }
+        if let Some(v) = self.audio_stream_index {
+            ::buffa::types::put_uint32_field(17u32, v, buf);
         }
         self.__buffa_unknown_fields.write_to(buf);
     }
@@ -11267,6 +11387,16 @@ impl<'__a> ::serde::Serialize for PlaybackView<'__a> {
                 .serialize_entry(
                     "timestampOffsetSeconds",
                     &::buffa::json_helpers::ProtoJson(&self.timestamp_offset_seconds),
+                )?;
+        }
+        if !self.audio_tracks.is_empty() {
+            __map.serialize_entry("audioTracks", &*self.audio_tracks)?;
+        }
+        if let ::core::option::Option::Some(__v) = self.audio_stream_index {
+            __map
+                .serialize_entry(
+                    "audioStreamIndex",
+                    &::buffa::json_helpers::ProtoJson(&__v),
                 )?;
         }
         __map.end()
@@ -11443,6 +11573,21 @@ impl PlaybackOwnedView {
     pub fn timestamp_offset_seconds(&self) -> f64 {
         self.0.reborrow().timestamp_offset_seconds
     }
+    /// Field 16: `audio_tracks`
+    #[must_use]
+    pub fn audio_tracks(
+        &self,
+    ) -> &::buffa::RepeatedView<
+        '_,
+        super::super::__buffa::view::PlaybackAudioTrackView<'_>,
+    > {
+        &self.0.reborrow().audio_tracks
+    }
+    /// Field 17: `audio_stream_index`
+    #[must_use]
+    pub fn audio_stream_index(&self) -> ::core::option::Option<u32> {
+        self.0.reborrow().audio_stream_index
+    }
 }
 impl ::core::convert::From<::buffa::OwnedView<PlaybackView<'static>>>
 for PlaybackOwnedView {
@@ -11475,6 +11620,381 @@ impl ::serde::Serialize for PlaybackOwnedView {
     }
 }
 #[derive(Clone, Debug, Default)]
+pub struct PlaybackAudioTrackView<'a> {
+    /// Field 1: `stream_index`
+    pub stream_index: u32,
+    /// Field 2: `language`
+    pub language: &'a str,
+    /// Field 3: `title`
+    pub title: &'a str,
+    /// Field 4: `channels`
+    pub channels: u32,
+    /// Field 5: `codec`
+    pub codec: &'a str,
+    /// Field 6: `is_default`
+    pub is_default: bool,
+    pub __buffa_unknown_fields: ::buffa::UnknownFieldsView<'a>,
+}
+impl<'a> ::buffa::MessageView<'a> for PlaybackAudioTrackView<'a> {
+    type Owned = super::super::PlaybackAudioTrack;
+    fn decode_view(buf: &'a [u8]) -> ::core::result::Result<Self, ::buffa::DecodeError> {
+        let __limit = ::core::cell::Cell::new(::buffa::DEFAULT_UNKNOWN_FIELD_LIMIT);
+        <Self as ::buffa::MessageView>::decode_view_ctx(
+            buf,
+            ::buffa::DecodeContext::new(::buffa::RECURSION_LIMIT, &__limit),
+        )
+    }
+    fn decode_view_with_ctx(
+        buf: &'a [u8],
+        ctx: ::buffa::DecodeContext<'_>,
+    ) -> ::core::result::Result<Self, ::buffa::DecodeError> {
+        <Self as ::buffa::MessageView>::decode_view_ctx(buf, ctx)
+    }
+    #[inline]
+    fn merge_view_field(
+        &mut self,
+        tag: ::buffa::encoding::Tag,
+        cur: &'a [u8],
+        before_tag: &'a [u8],
+        ctx: ::buffa::DecodeContext<'_>,
+    ) -> ::core::result::Result<&'a [u8], ::buffa::DecodeError> {
+        let _ = ctx;
+        #[allow(unused_variables)]
+        let view = self;
+        let mut cur = cur;
+        match tag.field_number() {
+            1u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::Varint,
+                )?;
+                view.stream_index = ::buffa::types::decode_uint32(&mut cur)?;
+            }
+            2u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                view.language = ::buffa::types::borrow_str(&mut cur)?;
+            }
+            3u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                view.title = ::buffa::types::borrow_str(&mut cur)?;
+            }
+            4u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::Varint,
+                )?;
+                view.channels = ::buffa::types::decode_uint32(&mut cur)?;
+            }
+            5u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::LengthDelimited,
+                )?;
+                view.codec = ::buffa::types::borrow_str(&mut cur)?;
+            }
+            6u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::Varint,
+                )?;
+                view.is_default = ::buffa::types::decode_bool(&mut cur)?;
+            }
+            _ => {
+                ::buffa::encoding::skip_field_depth(tag, &mut cur, ctx.depth())?;
+                let span_len = before_tag.len() - cur.len();
+                view.__buffa_unknown_fields.push_record(before_tag, span_len, ctx)?;
+            }
+        }
+        ::core::result::Result::Ok(cur)
+    }
+    fn to_owned_message(
+        &self,
+    ) -> ::core::result::Result<super::super::PlaybackAudioTrack, ::buffa::DecodeError> {
+        self.to_owned_from_source(None)
+    }
+    #[allow(clippy::useless_conversion, clippy::needless_update)]
+    fn to_owned_from_source(
+        &self,
+        __buffa_src: ::core::option::Option<&::buffa::bytes::Bytes>,
+    ) -> ::core::result::Result<super::super::PlaybackAudioTrack, ::buffa::DecodeError> {
+        #[allow(unused_imports)]
+        use ::buffa::alloc::string::ToString as _;
+        let _ = __buffa_src;
+        ::core::result::Result::Ok(super::super::PlaybackAudioTrack {
+            stream_index: self.stream_index,
+            language: self.language.to_string(),
+            title: self.title.to_string(),
+            channels: self.channels,
+            codec: self.codec.to_string(),
+            is_default: self.is_default,
+            __buffa_unknown_fields: self.__buffa_unknown_fields.to_owned()?.into(),
+            ..::core::default::Default::default()
+        })
+    }
+}
+impl<'a> ::buffa::ViewEncode<'a> for PlaybackAudioTrackView<'a> {
+    #[allow(clippy::needless_borrow, clippy::let_and_return)]
+    fn compute_size(&self, _cache: &mut ::buffa::SizeCache) -> u32 {
+        #[allow(unused_imports)]
+        use ::buffa::Enumeration as _;
+        let mut size = 0u64;
+        if self.stream_index != 0u32 {
+            size += 1u64 + ::buffa::types::uint32_encoded_len(self.stream_index) as u64;
+        }
+        if !self.language.is_empty() {
+            size += 1u64 + ::buffa::types::string_encoded_len(&self.language) as u64;
+        }
+        if !self.title.is_empty() {
+            size += 1u64 + ::buffa::types::string_encoded_len(&self.title) as u64;
+        }
+        if self.channels != 0u32 {
+            size += 1u64 + ::buffa::types::uint32_encoded_len(self.channels) as u64;
+        }
+        if !self.codec.is_empty() {
+            size += 1u64 + ::buffa::types::string_encoded_len(&self.codec) as u64;
+        }
+        if self.is_default {
+            size += 1u64 + ::buffa::types::BOOL_ENCODED_LEN as u64;
+        }
+        size += self.__buffa_unknown_fields.encoded_len() as u64;
+        ::buffa::saturate_size(size)
+    }
+    #[allow(clippy::needless_borrow)]
+    fn write_to(
+        &self,
+        _cache: &mut ::buffa::SizeCache,
+        buf: &mut impl ::buffa::EncodeSink,
+    ) {
+        #[allow(unused_imports)]
+        use ::buffa::Enumeration as _;
+        if self.stream_index != 0u32 {
+            ::buffa::types::put_uint32_field(1u32, self.stream_index, buf);
+        }
+        if !self.language.is_empty() {
+            ::buffa::types::put_string_field(2u32, &self.language, buf);
+        }
+        if !self.title.is_empty() {
+            ::buffa::types::put_string_field(3u32, &self.title, buf);
+        }
+        if self.channels != 0u32 {
+            ::buffa::types::put_uint32_field(4u32, self.channels, buf);
+        }
+        if !self.codec.is_empty() {
+            ::buffa::types::put_string_field(5u32, &self.codec, buf);
+        }
+        if self.is_default {
+            ::buffa::types::put_bool_field(6u32, self.is_default, buf);
+        }
+        self.__buffa_unknown_fields.write_to(buf);
+    }
+}
+/// Serializes this view as protobuf JSON.
+///
+/// Implicit-presence fields with default values are omitted, `required`
+/// fields are always emitted, explicit-presence (`optional`) fields are
+/// emitted only when set, bytes fields are base64-encoded, and enum
+/// values are their proto name strings.
+///
+/// This impl uses `serialize_map(None)` because the number of emitted
+/// fields depends on default-omission rules; serializers that require
+/// known map lengths (e.g. `bincode`) will return a runtime error.
+/// Use the owned message type for those formats.
+impl<'__a> ::serde::Serialize for PlaybackAudioTrackView<'__a> {
+    fn serialize<__S: ::serde::Serializer>(
+        &self,
+        __s: __S,
+    ) -> ::core::result::Result<__S::Ok, __S::Error> {
+        use ::serde::ser::SerializeMap as _;
+        let mut __map = __s.serialize_map(::core::option::Option::None)?;
+        if !::buffa::json_helpers::skip_if::is_zero_u32(&self.stream_index) {
+            __map
+                .serialize_entry(
+                    "streamIndex",
+                    &::buffa::json_helpers::ProtoJson(&self.stream_index),
+                )?;
+        }
+        if !::buffa::json_helpers::skip_if::is_empty_str(self.language) {
+            __map.serialize_entry("language", self.language)?;
+        }
+        if !::buffa::json_helpers::skip_if::is_empty_str(self.title) {
+            __map.serialize_entry("title", self.title)?;
+        }
+        if !::buffa::json_helpers::skip_if::is_zero_u32(&self.channels) {
+            __map
+                .serialize_entry(
+                    "channels",
+                    &::buffa::json_helpers::ProtoJson(&self.channels),
+                )?;
+        }
+        if !::buffa::json_helpers::skip_if::is_empty_str(self.codec) {
+            __map.serialize_entry("codec", self.codec)?;
+        }
+        if self.is_default {
+            __map.serialize_entry("isDefault", &self.is_default)?;
+        }
+        __map.end()
+    }
+}
+impl<'a> ::buffa::MessageName for PlaybackAudioTrackView<'a> {
+    const PACKAGE: &'static str = "popcorn.v1";
+    const NAME: &'static str = "PlaybackAudioTrack";
+    const FULL_NAME: &'static str = "popcorn.v1.PlaybackAudioTrack";
+    const TYPE_URL: &'static str = "type.googleapis.com/popcorn.v1.PlaybackAudioTrack";
+}
+::buffa::impl_default_view_instance!(PlaybackAudioTrackView);
+::buffa::impl_view_reborrow!(PlaybackAudioTrackView);
+/** Self-contained, `'static` owned view of a `PlaybackAudioTrack` message.
+
+ Wraps [`::buffa::OwnedView`]`<`[`PlaybackAudioTrackView`]`<'static>>`: the decoded view and the [`::buffa::bytes::Bytes`] buffer it borrows from travel together, so the handle is `'static` and `Send + Sync` — suitable for async handlers, spawned tasks, and anywhere a `'static` bound is required.
+
+ Field accessors return borrows tied to `&self`. Use [`Self::view`] to get the full [`PlaybackAudioTrackView`] when you need struct patterns, iteration helpers, or to pass the view to lifetime-parameterised code.*/
+#[derive(Clone, Debug)]
+pub struct PlaybackAudioTrackOwnedView(
+    ::buffa::OwnedView<PlaybackAudioTrackView<'static>>,
+);
+impl PlaybackAudioTrackOwnedView {
+    /// Decode an owned view from a [`::buffa::bytes::Bytes`] buffer.
+    ///
+    /// The view borrows directly from the buffer's data; the buffer is
+    /// retained inside the returned handle.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`::buffa::DecodeError`] if the buffer contains invalid
+    /// protobuf data.
+    pub fn decode(
+        bytes: ::buffa::bytes::Bytes,
+    ) -> ::core::result::Result<Self, ::buffa::DecodeError> {
+        ::core::result::Result::Ok(
+            PlaybackAudioTrackOwnedView(::buffa::OwnedView::decode(bytes)?),
+        )
+    }
+    /// Decode with custom [`::buffa::DecodeOptions`] (recursion limit,
+    /// max message size).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`::buffa::DecodeError`] if the buffer is invalid or
+    /// exceeds the configured limits.
+    pub fn decode_with_options(
+        bytes: ::buffa::bytes::Bytes,
+        opts: &::buffa::DecodeOptions,
+    ) -> ::core::result::Result<Self, ::buffa::DecodeError> {
+        ::core::result::Result::Ok(
+            PlaybackAudioTrackOwnedView(
+                ::buffa::OwnedView::decode_with_options(bytes, opts)?,
+            ),
+        )
+    }
+    /// Build from an owned message via an encode → decode round-trip.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`::buffa::DecodeError::MessageTooLarge`] if the
+    /// message's encoded size exceeds the 2 GiB protobuf limit, or
+    /// another [`::buffa::DecodeError`] if the re-encoded bytes are
+    /// somehow invalid (should not happen for well-formed messages).
+    pub fn from_owned(
+        msg: &super::super::PlaybackAudioTrack,
+    ) -> ::core::result::Result<Self, ::buffa::DecodeError> {
+        ::core::result::Result::Ok(
+            PlaybackAudioTrackOwnedView(::buffa::OwnedView::from_owned(msg)?),
+        )
+    }
+    /// Borrow the full [`PlaybackAudioTrackView`] with its lifetime tied to `&self`.
+    #[must_use]
+    pub fn view(&self) -> &PlaybackAudioTrackView<'_> {
+        self.0.reborrow()
+    }
+    /// Convert to the owned message type.
+    ///
+    /// Infallible: this type's constructors wire-decode their
+    /// buffer, and a view produced by wire decoding always
+    /// converts. Delegates to [`::buffa::OwnedView::to_owned_message`],
+    /// whose contract also governs handles converted from a raw
+    /// [`::buffa::OwnedView`].
+    #[must_use]
+    pub fn to_owned_message(&self) -> super::super::PlaybackAudioTrack {
+        self.0.to_owned_message()
+    }
+    /// The underlying bytes buffer.
+    #[must_use]
+    pub fn bytes(&self) -> &::buffa::bytes::Bytes {
+        self.0.bytes()
+    }
+    /// Consume the handle, returning the underlying bytes buffer.
+    #[must_use]
+    pub fn into_bytes(self) -> ::buffa::bytes::Bytes {
+        self.0.into_bytes()
+    }
+    /// Field 1: `stream_index`
+    #[must_use]
+    pub fn stream_index(&self) -> u32 {
+        self.0.reborrow().stream_index
+    }
+    /// Field 2: `language`
+    #[must_use]
+    pub fn language(&self) -> &'_ str {
+        self.0.reborrow().language
+    }
+    /// Field 3: `title`
+    #[must_use]
+    pub fn title(&self) -> &'_ str {
+        self.0.reborrow().title
+    }
+    /// Field 4: `channels`
+    #[must_use]
+    pub fn channels(&self) -> u32 {
+        self.0.reborrow().channels
+    }
+    /// Field 5: `codec`
+    #[must_use]
+    pub fn codec(&self) -> &'_ str {
+        self.0.reborrow().codec
+    }
+    /// Field 6: `is_default`
+    #[must_use]
+    pub fn is_default(&self) -> bool {
+        self.0.reborrow().is_default
+    }
+}
+impl ::core::convert::From<::buffa::OwnedView<PlaybackAudioTrackView<'static>>>
+for PlaybackAudioTrackOwnedView {
+    fn from(inner: ::buffa::OwnedView<PlaybackAudioTrackView<'static>>) -> Self {
+        PlaybackAudioTrackOwnedView(inner)
+    }
+}
+impl ::core::convert::From<PlaybackAudioTrackOwnedView>
+for ::buffa::OwnedView<PlaybackAudioTrackView<'static>> {
+    fn from(wrapper: PlaybackAudioTrackOwnedView) -> Self {
+        wrapper.0
+    }
+}
+impl ::core::convert::AsRef<::buffa::OwnedView<PlaybackAudioTrackView<'static>>>
+for PlaybackAudioTrackOwnedView {
+    fn as_ref(&self) -> &::buffa::OwnedView<PlaybackAudioTrackView<'static>> {
+        &self.0
+    }
+}
+impl ::buffa::HasMessageView for super::super::PlaybackAudioTrack {
+    type View<'a> = PlaybackAudioTrackView<'a>;
+    type ViewHandle = PlaybackAudioTrackOwnedView;
+}
+impl ::serde::Serialize for PlaybackAudioTrackOwnedView {
+    fn serialize<__S: ::serde::Serializer>(
+        &self,
+        __s: __S,
+    ) -> ::core::result::Result<__S::Ok, __S::Error> {
+        ::serde::Serialize::serialize(&self.0, __s)
+    }
+}
+#[derive(Clone, Debug, Default)]
 pub struct StartPlaybackRequestView<'a> {
     /// Field 1: `source_id`
     pub source_id: &'a str,
@@ -11484,6 +12004,8 @@ pub struct StartPlaybackRequestView<'a> {
     pub idempotency_key: &'a str,
     /// Field 4: `quality`
     pub quality: ::buffa::EnumValue<super::super::PlaybackQuality>,
+    /// Field 5: `audio_stream_index`
+    pub audio_stream_index: ::core::option::Option<u32>,
     pub __buffa_unknown_fields: ::buffa::UnknownFieldsView<'a>,
 }
 impl<'a> ::buffa::MessageView<'a> for StartPlaybackRequestView<'a> {
@@ -11544,6 +12066,13 @@ impl<'a> ::buffa::MessageView<'a> for StartPlaybackRequestView<'a> {
                     ::buffa::types::decode_int32(&mut cur)?,
                 );
             }
+            5u32 => {
+                ::buffa::encoding::check_wire_type(
+                    tag,
+                    ::buffa::encoding::WireType::Varint,
+                )?;
+                view.audio_stream_index = Some(::buffa::types::decode_uint32(&mut cur)?);
+            }
             _ => {
                 ::buffa::encoding::skip_field_depth(tag, &mut cur, ctx.depth())?;
                 let span_len = before_tag.len() - cur.len();
@@ -11576,6 +12105,7 @@ impl<'a> ::buffa::MessageView<'a> for StartPlaybackRequestView<'a> {
             file_index: self.file_index,
             idempotency_key: self.idempotency_key.to_string(),
             quality: self.quality,
+            audio_stream_index: self.audio_stream_index,
             __buffa_unknown_fields: self.__buffa_unknown_fields.to_owned()?.into(),
             ..::core::default::Default::default()
         })
@@ -11604,6 +12134,9 @@ impl<'a> ::buffa::ViewEncode<'a> for StartPlaybackRequestView<'a> {
                 size += 1u64 + ::buffa::types::int32_encoded_len(val) as u64;
             }
         }
+        if let Some(v) = self.audio_stream_index {
+            size += 1u64 + ::buffa::types::uint32_encoded_len(v) as u64;
+        }
         size += self.__buffa_unknown_fields.encoded_len() as u64;
         ::buffa::saturate_size(size)
     }
@@ -11629,6 +12162,9 @@ impl<'a> ::buffa::ViewEncode<'a> for StartPlaybackRequestView<'a> {
             if val != 0 {
                 ::buffa::types::put_int32_field(4u32, val, buf);
             }
+        }
+        if let Some(v) = self.audio_stream_index {
+            ::buffa::types::put_uint32_field(5u32, v, buf);
         }
         self.__buffa_unknown_fields.write_to(buf);
     }
@@ -11666,6 +12202,13 @@ impl<'__a> ::serde::Serialize for StartPlaybackRequestView<'__a> {
         }
         if !::buffa::json_helpers::skip_if::is_default_enum_value(&self.quality) {
             __map.serialize_entry("quality", &self.quality)?;
+        }
+        if let ::core::option::Option::Some(__v) = self.audio_stream_index {
+            __map
+                .serialize_entry(
+                    "audioStreamIndex",
+                    &::buffa::json_helpers::ProtoJson(&__v),
+                )?;
         }
         __map.end()
     }
@@ -11781,6 +12324,11 @@ impl StartPlaybackRequestOwnedView {
     #[must_use]
     pub fn quality(&self) -> ::buffa::EnumValue<super::super::PlaybackQuality> {
         self.0.reborrow().quality
+    }
+    /// Field 5: `audio_stream_index`
+    #[must_use]
+    pub fn audio_stream_index(&self) -> ::core::option::Option<u32> {
+        self.0.reborrow().audio_stream_index
     }
 }
 impl ::core::convert::From<::buffa::OwnedView<StartPlaybackRequestView<'static>>>

@@ -1,5 +1,6 @@
 import type { ContentRef } from "@popcorn/sdk";
 import { createResource, createSignal } from "solid-js";
+import { resourceValue } from "../../shared/resource-value";
 import type { SourceClient } from "../../shared/types";
 
 const SOURCE_ERROR = "Não foi possível acessar esta fonte. Verifique o magnet e tente novamente.";
@@ -28,7 +29,8 @@ export function createSourcesViewModel(getClient: () => SourceClient | undefined
     }
   });
 
-  const sources = () => sourceResponse.latest?.sources ?? [];
+  const sourceResponseValue = resourceValue(sourceResponse);
+  const sources = () => sourceResponseValue()?.sources ?? [];
   const busy = () => sourceResponse.loading || mutationBusy();
   const error = () => mutationError() || errorMessage(sourceResponse.error);
 

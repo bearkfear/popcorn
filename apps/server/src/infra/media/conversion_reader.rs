@@ -14,24 +14,31 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
+use super::output::copy_output;
 use super::preparation::Preparation;
+use super::read_metrics::ReadMetrics;
+use popcorn_diagnostics::{ProcessContext, ProcessLog};
+use serde_json::json;
 
 pub(super) struct ConversionReader {
     reader: DuplexStream,
     cancel: CancellationToken,
     error: Arc<OnceLock<io::Error>>,
+    metrics: ReadMetrics,
 }
 
 impl ConversionReader {
-    pub(super) const fn new(
+    pub(super) fn new(
         reader: DuplexStream,
         cancel: CancellationToken,
         error: Arc<OnceLock<io::Error>>,
+        context: ProcessContext,
     ) -> Self {
         Self {
             reader,
             cancel,
             error,
+            metrics: ReadMetrics::new(context, "converted_http"),
         }
     }
 }
@@ -43,13 +50,15 @@ impl AsyncRead for ConversionReader {
         buffer: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
         let before = buffer.filled().len();
-        let result = Pin::new(&mut self.reader).poll_read(context, buffer);
+        let mut result = Pin::new(&mut self.reader).poll_read(context, buffer);
         if matches!(result, Poll::Ready(Ok(())))
             && buffer.filled().len() == before
             && let Some(error) = self.error.get()
         {
-            return Poll::Ready(Err(io::Error::new(error.kind(), error.to_string())));
+            result = Poll::Ready(Err(io::Error::new(error.kind(), error.to_string())));
         }
+        self.metrics
+            .observe(buffer.filled().len() - before, &result);
         result
     }
 }
@@ -68,6 +77,8 @@ pub(super) struct ConversionJob {
     pub(super) error: Arc<OnceLock<io::Error>>,
     pub(super) state: watch::Sender<Preparation>,
     pub(super) _permit: OwnedSemaphorePermit,
+    pub(super) context: ProcessContext,
+    pub(super) process_log: ProcessLog,
 }
 
 impl ConversionJob {
@@ -75,11 +86,13 @@ impl ConversionJob {
         let outcome = tokio::select! {
             () = self.cancel.cancelled() => None,
             () = self.playback.cancelled() => None,
-            result = copy_output(&mut self.child, &mut self.writer) => Some(result),
+            result = copy_output(&mut self.child, &mut self.writer, self.context) => Some(result),
         };
         match outcome {
             Some(Ok(())) => {}
             Some(Err(error)) => {
+                self.context.record("media.converter.failed", json!({ "kind": format!("{:?}", error.kind()),
+                    "message": error.to_string(), "cancelled": self.cancel.is_cancelled() || self.playback.is_cancelled() }));
                 if error.kind() != io::ErrorKind::BrokenPipe
                     && !self.cancel.is_cancelled()
                     && !self.playback.is_cancelled()
@@ -93,6 +106,8 @@ impl ConversionJob {
                 }
             }
             None => {
+                self.context.record("media.converter.cancelled", json!({
+                    "reason": if self.playback.is_cancelled() { "playback_stopped" } else { "stream_replaced_or_client_closed" } }));
                 if self
                     .error
                     .set(io::Error::new(
@@ -110,17 +125,8 @@ impl ConversionJob {
         {
             tracing::warn!(kind = ?error.kind(), "could not reap media converter");
         }
+        if let Ok(status) = self.child.wait().await {
+            self.process_log.finish(status).await;
+        }
     }
-}
-
-async fn copy_output(child: &mut Child, writer: &mut DuplexStream) -> io::Result<()> {
-    let mut stdout = child
-        .stdout
-        .take()
-        .ok_or_else(|| io::Error::other("converter stdout unavailable"))?;
-    tokio::io::copy(&mut stdout, writer).await?;
-    if !child.wait().await?.success() {
-        return Err(io::Error::other("media converter exited unsuccessfully"));
-    }
-    Ok(())
 }

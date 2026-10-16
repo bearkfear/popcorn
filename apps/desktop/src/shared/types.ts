@@ -21,7 +21,6 @@ export type SourceClient = ReturnType<typeof createSourceClient>;
 export type StorageClient = ReturnType<typeof createStorageClient>;
 
 export type Connection = "connecting" | "ready" | "error" | "browser";
-export type CatalogOrigin = "online" | "local";
 
 export const playbackQualities = [
   { value: PlaybackQuality.AUTO, label: "Auto (até 1080p)" },

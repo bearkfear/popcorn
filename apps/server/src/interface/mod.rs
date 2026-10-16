@@ -2,6 +2,7 @@
 
 pub mod access;
 pub mod cli;
+mod diagnostics;
 pub mod health;
 pub mod media;
 pub mod rpc;
@@ -30,4 +31,5 @@ pub(crate) fn router<H: HealthProbe>(
         .fallback_service(rpc.into_axum_service())
         .layer(middleware::from_fn_with_state(access, authorize))
         .merge(media)
+        .layer(middleware::from_fn(diagnostics::request))
 }

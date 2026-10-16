@@ -1,16 +1,18 @@
 //! Owns cancellable inspection and conversion state for one playback generation.
 
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use tokio::{
-    sync::{Mutex, watch},
+    sync::{Mutex, Notify, watch},
     task::JoinSet,
 };
 use tokio_util::sync::CancellationToken;
 
 use crate::core::media::profile::{AudioConversion, PlaybackPlan, Quality};
 
-use super::{probe::InspectedMedia, tools::MediaTools};
+use super::probe::InspectedMedia;
+use popcorn_diagnostics::ProcessContext;
+use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub(super) enum Preparation {
@@ -43,6 +45,7 @@ pub(super) struct Processing {
     pub(super) slot: Arc<tokio::sync::Semaphore>,
     // Dropping the playback aborts outstanding inspection and kills its child.
     pub(super) tasks: Mutex<JoinSet<()>>,
+    published: Arc<Notify>,
 }
 
 pub(super) struct StreamGeneration {
@@ -51,36 +54,33 @@ pub(super) struct StreamGeneration {
 }
 
 impl Processing {
-    pub(super) fn start(url: String, quality: Quality) -> Self {
+    pub(super) fn start(
+        url: String,
+        quality: Quality,
+        audio_stream_index: Option<u32>,
+        playback_id: Uuid,
+    ) -> Self {
         let (state, _) = watch::channel(Preparation::Preparing);
         let cancel = CancellationToken::new();
         let mut tasks = JoinSet::new();
         let update = state.clone();
         let stopped = cancel.clone();
-        tasks.spawn(async move {
-            let work = async { MediaTools::discover()?.inspect(&url).await };
-            let outcome = tokio::select! {
-                () = stopped.cancelled() => return,
-                result = tokio::time::timeout(Duration::from_mins(2), work) => result,
-            };
-            let next = match outcome {
-                Ok(Ok(inspected)) => {
-                    let plan = inspected.info.plan(quality);
-                    Preparation::Ready(Arc::new(PreparedMedia { inspected, plan }))
-                }
-                Ok(Err(error)) if error.kind() == std::io::ErrorKind::NotFound => {
-                    Preparation::Failed("Conversor interno ausente. Reinstale o Popcorn.")
-                }
-                Ok(Err(error)) => {
-                    tracing::warn!(%error, "media inspection failed");
-                    Preparation::Failed("Não foi possível analisar o vídeo desta fonte.")
-                }
-                Err(_) => {
-                    Preparation::Failed("A fonte demorou demais para fornecer os dados do vídeo.")
-                }
-            };
-            update.send_replace(next);
-        });
+        let published = Arc::new(Notify::new());
+        let gate = published.clone();
+        let context = ProcessContext {
+            playback_id,
+            generation: None,
+            tool: "ffprobe",
+        };
+        tasks.spawn(super::inspection::inspect(
+            url,
+            quality,
+            audio_stream_index,
+            gate,
+            stopped,
+            update,
+            context,
+        ));
         Self {
             state,
             cancel,
@@ -90,7 +90,12 @@ impl Processing {
             }),
             slot: Arc::new(tokio::sync::Semaphore::new(1)),
             tasks: Mutex::new(tasks),
+            published,
         }
+    }
+
+    pub(super) fn publish(&self) {
+        self.published.notify_one();
     }
 
     pub(super) async fn stop(&self) {

@@ -3958,12 +3958,24 @@ dependencies = [
 name = "popcorn-desktop"
 version = "0.1.0"
 dependencies = [
+ "popcorn-diagnostics",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",
  "thiserror 2.0.21",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "popcorn-diagnostics"
+version = "0.1.0"
+dependencies = [
+ "regex",
+ "serde_json",
+ "tempfile",
  "tokio",
  "uuid",
 ]
@@ -3985,6 +3997,7 @@ dependencies = [
  "clap",
  "connectrpc",
  "librqbit",
+ "popcorn-diagnostics",
  "popcorn-proto",
  "reqwest",
  "same-file",

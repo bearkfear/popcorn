@@ -103,7 +103,7 @@ function createTmdbSubViewModel(getCatalogClient: () => CatalogClient | undefine
   }
 
   return {
-    status: () => statusResource.latest,
+    status: () => (statusResource.error ? undefined : statusResource.latest),
     settingsOpen,
     setSettingsOpen,
     configurationBusy,
