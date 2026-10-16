@@ -81,4 +81,24 @@ describe("watch history", () => {
     expect(createHistoryViewModel().find(content)?.status).toBe("watched");
     expect(data.values().next().value).not.toContain("mediaUrl");
   });
+
+  test("two windows merge different titles and refresh the saved resume point", () => {
+    const data = new Map<string, string>();
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) => data.get(key) ?? null,
+        setItem: (key: string, value: string) => data.set(key, value),
+      },
+    });
+    const main = createHistoryViewModel();
+    const player = createHistoryViewModel();
+    player.progress(entry, 240, 5400);
+    const other = { ...content, tmdbId: 99 };
+    main.mark({ ...title, content: other }, other, "want");
+    player.progress(entry, 245, 5400);
+    main.refresh();
+    expect(main.find(content)?.position).toBe(245);
+    expect(main.find(other)?.status).toBe("want");
+  });
 });

@@ -21,7 +21,16 @@ export function createHistoryViewModel() {
   }
   const [entries, setEntries] = createSignal(initial);
 
+  function refresh() {
+    try {
+      setEntries(readHistory(localStorage.getItem(STORAGE_KEY)));
+    } catch {
+      setError("Não foi possível atualizar seu histórico neste dispositivo.");
+    }
+  }
+
   function save(entry: WatchEntry) {
+    refresh();
     const next = [entry, ...entries().filter((item) => item.key !== entry.key)].slice(0, 500);
     setEntries(next);
     try {
@@ -70,6 +79,6 @@ export function createHistoryViewModel() {
     });
   }
 
-  return { entries, error, find, mark, progress };
+  return { entries, error, find, mark, progress, refresh };
 }
 export type HistoryViewModel = ReturnType<typeof createHistoryViewModel>;

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "player-window",
+  "description": "The dedicated local video window can receive close requests and close itself.",
+  "windows": ["player"],
+  "permissions": ["core:default", "core:window:allow-destroy"]
+}

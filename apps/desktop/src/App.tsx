@@ -1,4 +1,6 @@
 import type { ContentRef, Title, TmdbStatus } from "@popcorn/sdk";
+import { invoke, isTauri } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
 import tmdbLogo from "./assets/tmdb.svg";
 import { createBootstrapViewModel } from "./features/bootstrap/bootstrap.viewmodel";
@@ -31,6 +33,22 @@ export function App() {
   const [page, setPage] = createSignal<Page>("search");
   const [session, setSession] = createSignal<WatchContext>();
   const [serviceOpen, setServiceOpen] = createSignal(false);
+  let openingWindow = false;
+  const [videoWindowOpen, setVideoWindowOpen] = createSignal(false);
+
+  async function openVideo(context: WatchContext, position: number) {
+    if (openingWindow) return;
+    openingWindow = true;
+    try {
+      await invoke("open_player_window", { session: { context, position } });
+      setVideoWindowOpen(true);
+      player.close(false);
+    } catch (error) {
+      player.setMediaError(error instanceof Error ? error.message : String(error));
+    } finally {
+      openingWindow = false;
+    }
+  }
 
   function resetSelection() {
     player.close();
@@ -90,6 +108,7 @@ export function App() {
     sources.selectContent(content);
   }
   async function prepareFile(sourceId: string, fileIndex: number) {
+    if (isTauri() && (await invoke<boolean>("player_window_active"))) return;
     const title = details.detail() ?? details.selected();
     const content = sources.content();
     if (!title || !content) return;
@@ -101,17 +120,26 @@ export function App() {
     const context = session();
     if (!context) return;
     const audioStreamIndex = player.audioStreamIndex();
-    setSession({
+    const selected = {
       ...context,
       quality: player.quality(),
       ...(audioStreamIndex !== undefined ? { audioStreamIndex } : {}),
-    });
+    };
+    setSession(selected);
+    if (isTauri()) {
+      await openVideo(selected, position);
+      return;
+    }
     navigate("player");
     await player.launch(position);
   }
   async function resume(entry: WatchEntry) {
     if (entry.sourceId === undefined || entry.fileIndex === undefined) {
       openTitle(entry.title, entry.content);
+      return;
+    }
+    if (isTauri()) {
+      await openVideo(entry, resumePosition(entry));
       return;
     }
     openTitle(entry.title, entry.content);
@@ -152,6 +180,35 @@ export function App() {
         : "Explorar · Popcorn";
   });
   onMount(() => {
+    if (isTauri()) {
+      let disposed = false;
+      const closed = listen("player-window-closed", () => {
+        setVideoWindowOpen(false);
+        history.refresh();
+        const context = session();
+        if (
+          page() === "details" &&
+          context?.sourceId !== undefined &&
+          context.fileIndex !== undefined
+        ) {
+          void prepareFile(context.sourceId, context.fileIndex);
+        }
+      });
+      void invoke<boolean>("player_window_active").then((active) => {
+        if (!disposed) setVideoWindowOpen(active);
+      });
+      onCleanup(() => {
+        disposed = true;
+        void closed.then((unlisten) => unlisten());
+      });
+    }
+    const syncHistory = () => history.refresh();
+    window.addEventListener("storage", syncHistory);
+    window.addEventListener("focus", syncHistory);
+    onCleanup(() => {
+      window.removeEventListener("storage", syncHistory);
+      window.removeEventListener("focus", syncHistory);
+    });
     window.history.replaceState({ page: "search" }, "", "#search");
     const pop = (event: PopStateEvent) => {
       player.close();
@@ -252,7 +309,10 @@ export function App() {
             </section>
           </Show>
           <Show when={settings.cacheOpen()}>
-            <CachePanel vm={settings} playbackActive={Boolean(player.playback())} />
+            <CachePanel
+              vm={settings}
+              playbackActive={Boolean(player.playback()) || videoWindowOpen()}
+            />
           </Show>
           <Show when={bootstrap.connectionError()}>
             <p class="service-error" role="alert">

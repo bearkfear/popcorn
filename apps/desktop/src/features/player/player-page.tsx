@@ -8,8 +8,9 @@ import type { PlayerViewModel } from "./player.viewmodel";
 export function PlayerPage(props: {
   readonly vm: PlayerViewModel;
   readonly title: string;
+  readonly dedicated?: boolean;
   readonly onBack: () => void;
-  readonly onProgress: (position: number, duration: number) => void;
+  readonly onProgress: (position: number, duration: number, audioIndex?: number) => void;
   readonly onEnded: () => void;
 }) {
   let page: HTMLElement | undefined;
@@ -30,40 +31,47 @@ export function PlayerPage(props: {
     onCleanup(() => window.removeEventListener("keydown", keydown));
   });
   return (
-    <main ref={page} class="player-page" tabindex="-1" aria-label="Reprodução">
-      <header class="player-toolbar">
-        <button class="button secondary" type="button" onClick={props.onBack}>
-          ← Voltar aos detalhes
-        </button>
-        <div class="player-download">
-          <strong>{props.title}</strong>
-          <Show when={props.vm.playback()}>
-            {(playback) => (
-              <>
-                <span>
-                  {bytesLabel(playback().sizeBytes)} · {props.vm.progress().toFixed(1)}% recebido ·{" "}
-                  {rateLabel(playback().downloadBytesPerSecond)} · {playback().peers} peers
-                </span>
-                <progress
-                  max="100"
-                  value={props.vm.progress()}
-                  aria-label="Progresso do download"
-                />
-              </>
-            )}
-          </Show>
-        </div>
-        <button
-          class="button secondary"
-          type="button"
-          disabled={props.vm.busy() || !props.vm.mediaReady()}
-          onClick={() => void props.vm.toggleDownload()}
-        >
-          {props.vm.playback()?.state === PlaybackState.PAUSED
-            ? "Retomar download"
-            : "Pausar download"}
-        </button>
-      </header>
+    <main
+      ref={page}
+      class={`player-page${props.dedicated ? " dedicated-player" : ""}`}
+      tabindex="-1"
+      aria-label="Reprodução"
+    >
+      <Show when={!props.dedicated}>
+        <header class="player-toolbar">
+          <button class="button secondary" type="button" onClick={props.onBack}>
+            ← Voltar aos detalhes
+          </button>
+          <div class="player-download">
+            <strong>{props.title}</strong>
+            <Show when={props.vm.playback()}>
+              {(playback) => (
+                <>
+                  <span>
+                    {bytesLabel(playback().sizeBytes)} · {props.vm.progress().toFixed(1)}% recebido
+                    · {rateLabel(playback().downloadBytesPerSecond)} · {playback().peers} peers
+                  </span>
+                  <progress
+                    max="100"
+                    value={props.vm.progress()}
+                    aria-label="Progresso do download"
+                  />
+                </>
+              )}
+            </Show>
+          </div>
+          <button
+            class="button secondary"
+            type="button"
+            disabled={props.vm.busy() || !props.vm.mediaReady()}
+            onClick={() => void props.vm.toggleDownload()}
+          >
+            {props.vm.playback()?.state === PlaybackState.PAUSED
+              ? "Retomar download"
+              : "Pausar download"}
+          </button>
+        </header>
+      </Show>
       <Show when={props.vm.displayError() || props.vm.monitorError() || !props.vm.mediaReady()}>
         <div class="player-status-area" aria-live="polite">
           <Show when={!props.vm.mediaReady() && !props.vm.displayError()}>
@@ -98,6 +106,7 @@ export function PlayerPage(props: {
               onError={props.vm.setMediaError}
               onEnded={props.onEnded}
               onProgress={props.onProgress}
+              onAudioChange={(index, position) => void props.vm.changeAudio(index, position)}
             />
           )}
         </Show>

@@ -3,6 +3,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod diagnostics;
+mod player_window;
 
 use std::{
     path::PathBuf,
@@ -154,13 +155,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(())
         })
         .manage(DesktopState::default())
+        .manage(player_window::PlayerSession::default())
         .invoke_handler(tauri::generate_handler![
             bootstrap,
             stop_backend,
             open_tmdb_settings,
-            media_diagnostic
+            media_diagnostic,
+            player_window::open_player_window,
+            player_window::take_player_session,
+            player_window::player_window_active
         ])
         .on_window_event(|window, event| {
+            if window.label() != "main" {
+                if matches!(event, tauri::WindowEvent::Destroyed) {
+                    let _ = window
+                        .app_handle()
+                        .emit_to("main", "player-window-closed", ());
+                }
+                return;
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let app = window.app_handle();
                 if !app

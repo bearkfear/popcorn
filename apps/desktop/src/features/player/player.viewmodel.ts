@@ -217,6 +217,15 @@ export function createPlayerViewModel(getClient: () => PlaybackClient | undefine
     await playFile(sourceId, fileIndex, false);
   }
 
+  async function changeAudio(index: number, position: number) {
+    const current = playback();
+    if (busy() || !lastFile || !current?.audioTracks.some((track) => track.streamIndex === index))
+      return;
+    if (current.audioStreamIndex === index) return;
+    setAudioStreamIndex(index);
+    await playFile(lastFile.sourceId, lastFile.fileIndex, true, position);
+  }
+
   async function launch(position = 0) {
     if (!lastFile || !mediaReady()) return;
     diagnostic(
@@ -276,6 +285,7 @@ export function createPlayerViewModel(getClient: () => PlaybackClient | undefine
     preparedFile,
     audioStreamIndex,
     setAudioStreamIndex,
+    changeAudio,
     prepareFile,
     launch,
     quality,

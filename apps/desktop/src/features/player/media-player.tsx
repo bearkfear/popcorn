@@ -10,6 +10,7 @@ import {
   observeMedia,
 } from "./media-diagnostics";
 import { createPlayerMachine } from "./player.machine";
+import { VideoSurface } from "./video-surface";
 
 class MediaPlaybackError extends Error {}
 
@@ -337,7 +338,8 @@ export function MediaPlayer(props: {
   readonly onError: (message: string) => void;
   readonly onEnded: () => void;
   readonly startSeconds: number;
-  readonly onProgress: (position: number, duration: number) => void;
+  readonly onProgress: (position: number, duration: number, audioIndex?: number) => void;
+  readonly onAudioChange: (index: number, position: number) => void;
 }) {
   let video: HTMLVideoElement | undefined;
   const machine = createPlayerMachine();
@@ -347,13 +349,14 @@ export function MediaPlayer(props: {
     let lastPosition = 0;
     let lastDuration = 0;
     const element = video;
+    const audioIndex = props.playback.audioStreamIndex;
     if (!element) return;
     const save = () => {
       if (element.readyState >= 2) {
         lastPosition = element.currentTime;
         lastDuration = element.duration;
       }
-      if (lastDuration > 0) props.onProgress(lastPosition, lastDuration);
+      if (lastDuration > 0) props.onProgress(lastPosition, lastDuration, audioIndex);
       savedAt = performance.now();
     };
     const tick = () => {
@@ -452,25 +455,36 @@ export function MediaPlayer(props: {
     });
   });
   return (
-    <video
-      ref={video}
-      class="video-player"
-      data-player-state={machine.state()}
-      controls
-      autoplay
-      playsinline
-      tabindex="0"
-      onEnded={(event) => {
-        props.onProgress(event.currentTarget.currentTime, event.currentTarget.duration);
-        props.onEnded();
-      }}
-      onLoadStart={() => machine.send("prepare")}
-      onWaiting={() => machine.send("buffer")}
-      onPlaying={() => machine.send("play")}
-      onPause={() => machine.send("pause")}
-      onSeeking={() => machine.send("seek")}
-      onSeeked={(event) => machine.send(event.currentTarget.paused ? "pause" : "play")}
-      onError={() => machine.send("fail")}
-    />
+    <VideoSurface
+      video={() => video}
+      playbackId={() => props.playback.playbackId}
+      onError={props.onError}
+      audioTracks={props.playback.audioTracks}
+      audioIndex={props.playback.audioStreamIndex}
+      onAudioChange={(index) =>
+        props.onAudioChange(index, video?.currentTime ?? props.startSeconds)
+      }
+    >
+      <video
+        ref={video}
+        class="video-player"
+        data-player-state={machine.state()}
+        controls
+        autoplay
+        playsinline
+        tabindex="0"
+        onEnded={(event) => {
+          props.onProgress(event.currentTarget.currentTime, event.currentTarget.duration);
+          props.onEnded();
+        }}
+        onLoadStart={() => machine.send("prepare")}
+        onWaiting={() => machine.send("buffer")}
+        onPlaying={() => machine.send("play")}
+        onPause={() => machine.send("pause")}
+        onSeeking={() => machine.send("seek")}
+        onSeeked={(event) => machine.send(event.currentTarget.paused ? "pause" : "play")}
+        onError={() => machine.send("fail")}
+      />
+    </VideoSurface>
   );
 }
