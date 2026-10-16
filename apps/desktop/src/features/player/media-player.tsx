@@ -1,5 +1,6 @@
 import type { Playback } from "@popcorn/sdk";
 import { createEffect, createMemo, onCleanup, onMount } from "solid-js";
+import { createActor } from "xstate";
 import { bufferedPosition } from "./buffer-position";
 import {
   bufferSnapshot,
@@ -9,6 +10,7 @@ import {
   mp4Header,
   observeMedia,
 } from "./media-diagnostics";
+import { type MseStreamEvent, mseSessionMachine } from "./mse-session.machine";
 import { createPlayerMachine } from "./player.machine";
 import { VideoSurface } from "./video-surface";
 
@@ -122,20 +124,9 @@ function attachMse(
   config: MediaConfig,
   fail: (message: string) => void,
 ): () => void {
-  let disposed = false;
-  let failed = false;
-  let generation = 0;
-  let releaseGeneration: (reason?: string) => void = () => {};
   let activeBuffer: SourceBuffer | undefined;
-  let restoring = false;
-  let waitingForTarget = true;
-  let resumeAfterLoad = true;
 
-  function start(time: number, resume: boolean) {
-    const current = ++generation;
-    releaseGeneration("seek_replacement");
-    waitingForTarget = true;
-    resumeAfterLoad = resume;
+  function start(time: number, resume: boolean, notify: (event: MseStreamEvent) => void) {
     activeBuffer = undefined;
     // Do not autoplay keyframe preroll before the requested position exists.
     video.autoplay = false;
@@ -176,21 +167,24 @@ function attachMse(
       });
     const timer = window.setInterval(() => report("progress"), 5_000);
     report("started");
-    const alive = () => !disposed && current === generation && !controller.signal.aborted;
+    const alive = () => !controller.signal.aborted;
+    let releaseReason = "disposed";
     const mediaFailed = (cause?: unknown) => {
       if (!alive()) return;
-      failed = true;
       report("failed", { exception: errorDetails(cause) });
       const code = video.error?.code;
-      fail(`Falha ao ${phase}.${code ? ` Código de mídia: ${code}.` : ""} Tente novamente.`);
-      releaseGeneration("failure");
+      releaseReason = "failure";
+      notify({
+        type: "FAIL",
+        message: `Falha ao ${phase}.${code ? ` Código de mídia: ${code}.` : ""} Tente novamente.`,
+      });
     };
     video.addEventListener("error", mediaFailed);
     source.addEventListener("sourceclose", mediaFailed);
-    releaseGeneration = (reason = "disposed") => {
+    const release = () => {
       if (released) return;
       released = true;
-      report("released", { reason });
+      report("released", { reason: releaseReason });
       window.clearInterval(timer);
       controller.abort();
       activeBuffer = undefined;
@@ -282,15 +276,13 @@ function attachMse(
           // after the saved timestamp. Seek into that sample instead of waiting forever.
           const position = bufferedPosition(buffer.buffered, time);
           if (!restored && position !== undefined) {
-            restoring = true;
             video.currentTime = position;
             restored = true;
-            waitingForTarget = false;
-            restoring = false;
             report("position_restored", {
               actual_start: position,
               adjustment_seconds: position - time,
             });
+            notify({ type: "RESTORED" });
             if (resume) {
               void video.play().catch((error: unknown) => {
                 report("play_rejected", { exception: errorDetails(error) });
@@ -314,22 +306,24 @@ function attachMse(
       }
     }
     void stream();
+    return release;
   }
 
+  const actor = createActor(mseSessionMachine, {
+    input: { startSeconds: config.startSeconds, fail, open: start },
+  });
+
   const seeking = () => {
-    if (disposed || failed || restoring) return;
+    if (!actor.getSnapshot().matches({ active: "ready" })) return;
     const time = video.currentTime;
     if (activeBuffer && containsTime(activeBuffer.buffered, time)) return;
-    if (waitingForTarget) return;
-    start(time, waitingForTarget ? resumeAfterLoad : !video.paused);
+    actor.send({ type: "SEEK", time, resume: !video.paused });
   };
   video.addEventListener("seeking", seeking);
-  start(config.startSeconds, true);
+  actor.start();
   return () => {
-    disposed = true;
-    generation++;
     video.removeEventListener("seeking", seeking);
-    releaseGeneration("component_disposed");
+    actor.stop();
   };
 }
 

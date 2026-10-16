@@ -1,21 +1,21 @@
-import { type Playback, PlaybackQuality, PlaybackState } from "@popcorn/sdk";
-import { createResource, createSignal, onCleanup } from "solid-js";
-import { resourceValue } from "../../shared/resource-value";
+import { PlaybackQuality, PlaybackState } from "@popcorn/sdk";
+import { fromActorRef } from "@xstate/solid";
+import { createSignal, onCleanup } from "solid-js";
+import { createActor, waitFor } from "xstate";
 import type { PlaybackClient } from "../../shared/types";
-import { diagnostic, errorDetails } from "./media-diagnostics";
+import { diagnostic } from "./media-diagnostics";
+import { playbackSessionMachine } from "./playback-session.machine";
 
 type PlaybackFile = { readonly sourceId: string; readonly fileIndex: number };
-type PlaybackRequest = { readonly client: PlaybackClient; readonly playbackId: string };
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error ?? "");
-}
-
 export function createPlayerViewModel(getClient: () => PlaybackClient | undefined) {
-  const [playbackRequest, setPlaybackRequest] = createSignal<PlaybackRequest>();
+  const actor = createActor(playbackSessionMachine).start();
+  const snapshot = fromActorRef(actor);
+  const send = actor.send;
+  const playback = () => snapshot().context.playback;
+  const busy = () => snapshot().matches("starting") || snapshot().matches({ active: "mutating" });
+  const error = () => snapshot().context.error;
+  const monitorError = () => snapshot().context.monitorError;
   const [quality, setQuality] = createSignal(PlaybackQuality.AUTO);
-  const [busy, setBusy] = createSignal(false);
-  const [error, setError] = createSignal("");
   const [mediaError, setMediaError] = createSignal("");
   const [viewing, setViewing] = createSignal(false);
   const [initialPosition, setInitialPosition] = createSignal(0);
@@ -23,49 +23,6 @@ export function createPlayerViewModel(getClient: () => PlaybackClient | undefine
   const [preparedFile, setPreparedFile] = createSignal<PlaybackFile>();
   let preparedQuality = quality();
   let lastFile: PlaybackFile | undefined;
-  let controller: AbortController | undefined;
-  let poll: number | undefined;
-  let generation = 0;
-  let disposed = false;
-  let lastState = "";
-
-  const [playbackResource, playbackActions] = createResource(playbackRequest, async (request) => {
-    try {
-      const response = await request.client.getPlayback(
-        { playbackId: request.playbackId },
-        { timeoutMs: 5_000 },
-      );
-      if (!response.playback) throw new Error("playback missing");
-      const current = response.playback;
-      const state = `${current.playbackId}:${current.state}:${current.conversion}:${current.error}`;
-      if (state !== lastState) {
-        lastState = state;
-        diagnostic(
-          "playback.state_changed",
-          { playbackId: current.playbackId },
-          {
-            state: current.state,
-            conversion: current.conversion,
-            delivery: current.delivery,
-            error: current.error,
-            downloaded_bytes: String(current.downloadedBytes),
-            total_bytes: String(current.totalBytes),
-            duration_seconds: current.durationSeconds,
-            stream_type: current.streamType,
-            audio_stream_index: current.audioStreamIndex,
-          },
-        );
-      }
-      return response.playback;
-    } catch (error) {
-      diagnostic("playback.poll_failed", { playbackId: request.playbackId }, errorDetails(error));
-      throw new Error(
-        "Não foi possível atualizar o estado da reprodução. Tentando reconectar ao serviço.",
-      );
-    }
-  });
-  const playback = resourceValue(playbackResource);
-
   const progress = () => {
     const current = playback();
     if (!current || current.totalBytes <= 0n) return 0;
@@ -83,7 +40,6 @@ export function createPlayerViewModel(getClient: () => PlaybackClient | undefine
       ? playback()?.error || "Não foi possível preparar este vídeo. Tente novamente."
       : "";
   const displayError = () => preparationError() || mediaError() || error();
-  const monitorError = () => errorMessage(playbackResource.error);
   const conversionLabel = () => {
     switch (playback()?.conversion) {
       case "direct":
@@ -99,107 +55,37 @@ export function createPlayerViewModel(getClient: () => PlaybackClient | undefine
     }
   };
 
-  function stopPolling() {
-    if (poll !== undefined) window.clearInterval(poll);
-    poll = undefined;
-  }
-
   function close(stop = true) {
-    const current = playback();
-    if (current) diagnostic("playback.closed", { playbackId: current.playbackId }, { stop });
-    generation++;
-    controller?.abort();
-    controller = undefined;
-    stopPolling();
-    setPlaybackRequest(undefined);
-    playbackActions.mutate(undefined);
-    setBusy(false);
-    setError("");
+    send({ type: "CLOSE", stop });
     setMediaError("");
     setViewing(false);
     setPreparedFile(undefined);
-    const client = getClient();
-    if (stop && current && client) {
-      void client.stopPlayback({ playbackId: current.playbackId }).catch((error: unknown) => {
-        diagnostic("playback.stop_failed", { playbackId: current.playbackId }, errorDetails(error));
-      });
-    }
-  }
-
-  function monitor(client: PlaybackClient, current: Playback) {
-    stopPolling();
-    playbackActions.mutate(current);
-    setPlaybackRequest({ client, playbackId: current.playbackId });
-    poll = window.setInterval(() => {
-      void playbackActions.refetch();
-    }, 1_000);
   }
 
   async function playFile(sourceId: string, fileIndex: number, open = true, position = 0) {
     const client = getClient();
-    if (!client || busy()) return;
+    if (!client || busy() || actor.getSnapshot().status === "stopped") return;
     close();
-    const currentGeneration = generation;
-    controller = new AbortController();
     lastFile = { sourceId, fileIndex };
     setPreparedFile(lastFile);
     setInitialPosition(position);
     setViewing(open);
     preparedQuality = quality();
-    setBusy(true);
-    const started = performance.now();
-    const attemptId = crypto.randomUUID();
-    diagnostic(
-      "playback.start_requested",
-      {},
-      {
-        attempt_id: attemptId,
-        source_id: sourceId,
-        file_index: fileIndex,
+    send({
+      type: "START",
+      request: {
+        client,
+        sourceId,
+        fileIndex,
         quality: quality(),
-        audio_stream_index: audioStreamIndex(),
-        start_seconds: position,
-        open_player: open,
+        audioStreamIndex: audioStreamIndex(),
+        position,
+        open,
       },
-    );
-    try {
-      const response = await client.startPlayback(
-        {
-          sourceId,
-          fileIndex,
-          quality: quality(),
-          idempotencyKey: attemptId,
-          ...(audioStreamIndex() !== undefined ? { audioStreamIndex: audioStreamIndex() } : {}),
-        },
-        { signal: controller.signal, timeoutMs: 60_000 },
-      );
-      if (!response.playback) throw new Error("playback missing");
-      diagnostic(
-        "playback.start_response",
-        { playbackId: response.playback.playbackId },
-        {
-          attempt_id: attemptId,
-          elapsed_ms: Math.round(performance.now() - started),
-          state: response.playback.state,
-        },
-      );
-      if (!disposed && generation === currentGeneration) monitor(client, response.playback);
-    } catch (error) {
-      diagnostic(
-        "playback.start_failed",
-        {},
-        {
-          attempt_id: attemptId,
-          elapsed_ms: Math.round(performance.now() - started),
-          exception: errorDetails(error),
-        },
-      );
-      if (!disposed && generation === currentGeneration) {
-        setError("Não foi possível preparar o vídeo. A fonte pode estar indisponível.");
-      }
-    } finally {
-      if (!disposed && generation === currentGeneration) setBusy(false);
-    }
+    });
+    await waitFor(actor, (state) => !state.matches("starting")).catch((cause: unknown) => {
+      if (actor.getSnapshot().status !== "stopped") throw cause;
+    });
   }
 
   async function retry() {
@@ -250,32 +136,18 @@ export function createPlayerViewModel(getClient: () => PlaybackClient | undefine
   }
 
   async function toggleDownload() {
-    const client = getClient();
-    const current = playback();
-    if (!client || !current || busy()) return;
-    setBusy(true);
-    setError("");
-    try {
-      const response =
-        current.state === PlaybackState.PAUSED
-          ? await client.resumePlayback({ playbackId: current.playbackId }, { timeoutMs: 10_000 })
-          : await client.pausePlayback({ playbackId: current.playbackId }, { timeoutMs: 10_000 });
-      if (!response.playback) throw new Error("playback missing");
-      if (!disposed && playback()?.playbackId === current.playbackId) {
-        playbackActions.mutate(response.playback);
-      }
-    } catch {
-      if (!disposed && playback()?.playbackId === current.playbackId) {
-        setError("Não foi possível alterar o estado do download.");
-      }
-    } finally {
-      if (!disposed && playback()?.playbackId === current.playbackId) setBusy(false);
-    }
+    if (!playback() || busy() || actor.getSnapshot().status === "stopped") return;
+    send({ type: "TOGGLE_DOWNLOAD" });
+    await waitFor(actor, (state) => !state.matches({ active: "mutating" })).catch(
+      (cause: unknown) => {
+        if (actor.getSnapshot().status !== "stopped") throw cause;
+      },
+    );
   }
 
   onCleanup(() => {
-    disposed = true;
     close();
+    actor.stop();
   });
 
   return {

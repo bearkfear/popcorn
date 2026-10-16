@@ -216,7 +216,6 @@ export function App() {
     };
     window.addEventListener("popstate", pop);
     onCleanup(() => window.removeEventListener("popstate", pop));
-    void bootstrap.listenForShutdown();
     void connect();
   });
 
