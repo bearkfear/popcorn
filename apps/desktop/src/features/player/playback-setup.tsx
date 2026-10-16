@@ -1,5 +1,8 @@
-import { createEffect, For, Show } from "solid-js";
+import { Button } from "@kobalte/core/button";
+import { createEffect, Show } from "solid-js";
 import { playbackQualities } from "../../shared/types";
+import { Icon } from "../../shared/ui/icon";
+import { SelectField } from "../../shared/ui/select-field";
 import type { PlayerViewModel } from "./player.viewmodel";
 
 export function PlaybackSetup(props: {
@@ -47,49 +50,40 @@ export function PlaybackSetup(props: {
         <h3 ref={heading}>Prepare a sessão</h3>
       </div>
       <div class="playback-options">
-        <label>
-          Qualidade
-          <select
-            value={props.vm.quality()}
-            disabled={props.vm.busy()}
-            onChange={(event) => {
-              const option = playbackQualities.find(
-                (item) => String(item.value) === event.currentTarget.value,
-              );
-              if (option) props.vm.setQuality(option.value);
-            }}
-          >
-            <For each={playbackQualities}>
-              {(item) => <option value={item.value}>{item.label}</option>}
-            </For>
-          </select>
-        </label>
-        <label>
-          Áudio
-          <select
-            value={props.vm.audioStreamIndex() ?? props.vm.playback()?.audioStreamIndex ?? ""}
-            disabled={props.vm.busy() || !audio().length}
-            onChange={(event) => props.vm.setAudioStreamIndex(Number(event.currentTarget.value))}
-          >
-            <Show when={!audio().length}>
-              <option value="">
-                {props.vm.mediaReady() ? "Sem faixa de áudio" : "Selecione e prepare um arquivo"}
-              </option>
-            </Show>
-            <For each={audio()}>
-              {(track) => (
-                <option value={track.streamIndex}>
-                  {languages[track.language.toLowerCase()] ||
-                    (track.language && track.language !== "und"
-                      ? track.language
-                      : `Faixa ${track.streamIndex}`)}{" "}
-                  · {track.title || track.codec.toUpperCase()} · {track.channels} canais
-                  {track.isDefault ? " · padrão" : ""}
-                </option>
-              )}
-            </For>
-          </select>
-        </label>
+        <SelectField
+          label="Qualidade"
+          value={String(props.vm.quality())}
+          disabled={props.vm.busy()}
+          options={playbackQualities.map((item) => ({
+            value: String(item.value),
+            label: item.label,
+          }))}
+          onChange={(value) => {
+            const option = playbackQualities.find((item) => String(item.value) === value);
+            if (option) props.vm.setQuality(option.value);
+          }}
+        />
+        <SelectField
+          label="Áudio"
+          value={String(props.vm.audioStreamIndex() ?? props.vm.playback()?.audioStreamIndex ?? "")}
+          disabled={props.vm.busy() || !audio().length}
+          options={
+            audio().length
+              ? audio().map((track) => ({
+                  value: String(track.streamIndex),
+                  label: `${languages[track.language.toLowerCase()] || (track.language && track.language !== "und" ? track.language : `Faixa ${track.streamIndex}`)} · ${track.title || track.codec.toUpperCase()} · ${track.channels} canais${track.isDefault ? " · padrão" : ""}`,
+                }))
+              : [
+                  {
+                    value: "",
+                    label: props.vm.mediaReady()
+                      ? "Sem faixa de áudio"
+                      : "Selecione e prepare um arquivo",
+                  },
+                ]
+          }
+          onChange={(value) => props.vm.setAudioStreamIndex(Number(value))}
+        />
       </div>
       <Show when={props.vm.preparedFile() && !props.vm.mediaReady() && !props.vm.displayError()}>
         <p class="muted" role="status">
@@ -100,31 +94,37 @@ export function PlaybackSetup(props: {
         <p class="error-text" role="alert">
           {props.vm.displayError()}
         </p>
-        <button
+        <Button
           class="button secondary"
           type="button"
           disabled={props.vm.busy()}
           onClick={() => void props.vm.retry()}
         >
           Tentar preparar novamente
-        </button>
+        </Button>
       </Show>
       <Show when={props.vm.mediaReady()}>
         <div class="cluster playback-launch">
-          <button
+          <Button
             class="button"
             type="button"
             disabled={props.vm.busy()}
             onClick={() => props.onLaunch(props.resumeSeconds)}
           >
-            {props.resumeSeconds > 0
-              ? `▶ Continuar de ${Math.floor(props.resumeSeconds / 60)} min`
-              : "▶ Reproduzir"}
-          </button>
+            {props.resumeSeconds > 0 ? (
+              <>
+                <Icon name="play" /> Continuar de {Math.floor(props.resumeSeconds / 60)} min
+              </>
+            ) : (
+              <>
+                <Icon name="play" /> Reproduzir
+              </>
+            )}
+          </Button>
           <Show when={props.resumeSeconds > 0}>
-            <button class="button secondary" type="button" onClick={() => props.onLaunch(0)}>
+            <Button class="button secondary" type="button" onClick={() => props.onLaunch(0)}>
               Assistir do início
-            </button>
+            </Button>
           </Show>
         </div>
       </Show>

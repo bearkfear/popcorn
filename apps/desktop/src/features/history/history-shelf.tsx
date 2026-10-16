@@ -1,5 +1,8 @@
+import { Button } from "@kobalte/core/button";
+import { ToggleGroup } from "@kobalte/core/toggle-group";
 import { createSignal, For, Show } from "solid-js";
 import { Artwork } from "../../shared/ui/artwork";
+import { Icon } from "../../shared/ui/icon";
 import { type WatchEntry, type WatchStatus, watchProgress } from "./history.model";
 import type { HistoryViewModel } from "./history.viewmodel";
 
@@ -18,7 +21,12 @@ export function HistoryShelf(props: {
           <p class="eyebrow">SUA BIBLIOTECA</p>
           <h2>Seu próximo play está aqui.</h2>
         </div>
-        <div class="cluster history-tabs">
+        <ToggleGroup
+          class="cluster history-tabs"
+          aria-label="Filtro da biblioteca"
+          value={filter()}
+          onChange={(value) => value && setFilter(value as WatchStatus)}
+        >
           <For
             each={[
               { value: "watching" as const, label: "Continuar assistindo" },
@@ -27,17 +35,12 @@ export function HistoryShelf(props: {
             ]}
           >
             {(tab) => (
-              <button
-                type="button"
-                class="button secondary"
-                aria-pressed={filter() === tab.value}
-                onClick={() => setFilter(tab.value)}
-              >
+              <ToggleGroup.Item class="button secondary" value={tab.value}>
                 {tab.label}
-              </button>
+              </ToggleGroup.Item>
             )}
           </For>
-        </div>
+        </ToggleGroup>
       </div>
       <Show when={props.vm.error()}>
         <p class="error-text" role="alert">
@@ -60,14 +63,14 @@ export function HistoryShelf(props: {
           <For each={entries()}>
             {(entry) => (
               <li class="history-card">
-                <button
+                <Button
                   class="history-artwork"
                   type="button"
                   onClick={() => props.onOpen(entry)}
                   disabled={props.disabled}
                 >
                   <Artwork url={entry.title.posterUrl} title={entry.title.title} />
-                </button>
+                </Button>
                 <div class="history-copy">
                   <strong>{entry.title.title}</strong>
                   <Show when={entry.content.episodeNumber !== undefined}>
@@ -85,7 +88,7 @@ export function HistoryShelf(props: {
                       {Math.floor(entry.position / 60)} de {Math.ceil(entry.duration / 60)} min
                     </span>
                   </Show>
-                  <button
+                  <Button
                     type="button"
                     class="button secondary"
                     disabled={props.disabled}
@@ -97,8 +100,14 @@ export function HistoryShelf(props: {
                         : props.onOpen(entry)
                     }
                   >
-                    {entry.status === "watching" ? "▶ Continuar" : "Ver detalhes"}
-                  </button>
+                    {entry.status === "watching" ? (
+                      <>
+                        <Icon name="play" /> Continuar
+                      </>
+                    ) : (
+                      "Ver detalhes"
+                    )}
+                  </Button>
                 </div>
               </li>
             )}

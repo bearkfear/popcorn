@@ -1,6 +1,8 @@
+import { Button } from "@kobalte/core/button";
 import { PlaybackState } from "@popcorn/sdk";
 import { onCleanup, onMount, Show } from "solid-js";
 import { bytesLabel, rateLabel } from "../../shared/formatters";
+import { Icon } from "../../shared/ui/icon";
 import { MediaPlayer } from "./media-player";
 import type { PlayerViewModel } from "./player.viewmodel";
 
@@ -39,9 +41,9 @@ export function PlayerPage(props: {
     >
       <Show when={!props.dedicated}>
         <header class="player-toolbar">
-          <button class="button secondary" type="button" onClick={props.onBack}>
-            ← Voltar aos detalhes
-          </button>
+          <Button class="button secondary" type="button" onClick={props.onBack}>
+            <Icon name="arrow-left" /> Voltar aos detalhes
+          </Button>
           <div class="player-download">
             <strong>{props.title}</strong>
             <Show when={props.vm.playback()}>
@@ -60,7 +62,7 @@ export function PlayerPage(props: {
               )}
             </Show>
           </div>
-          <button
+          <Button
             class="button secondary"
             type="button"
             disabled={props.vm.busy() || !props.vm.mediaReady()}
@@ -69,7 +71,7 @@ export function PlayerPage(props: {
             {props.vm.playback()?.state === PlaybackState.PAUSED
               ? "Retomar download"
               : "Pausar download"}
-          </button>
+          </Button>
         </header>
       </Show>
       <Show when={props.vm.displayError() || props.vm.monitorError() || !props.vm.mediaReady()}>
@@ -86,14 +88,14 @@ export function PlayerPage(props: {
             <p role="status">{props.vm.monitorError()}</p>
           </Show>
           <Show when={props.vm.displayError()}>
-            <button
+            <Button
               type="button"
               class="button secondary"
               disabled={props.vm.busy()}
               onClick={() => void props.vm.retry()}
             >
               Tentar novamente
-            </button>
+            </Button>
           </Show>
         </div>
       </Show>

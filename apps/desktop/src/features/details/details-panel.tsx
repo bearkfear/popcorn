@@ -1,7 +1,11 @@
+import { Button } from "@kobalte/core/button";
+import { Collapsible } from "@kobalte/core/collapsible";
 import { MediaType } from "@popcorn/sdk";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { artworkUrl } from "../../catalog-ui";
 import { Artwork } from "../../shared/ui/artwork";
+import { Icon } from "../../shared/ui/icon";
+import { SelectField } from "../../shared/ui/select-field";
 import type { PlayerViewModel } from "../player/player.viewmodel";
 import type { SourcesViewModel } from "../sources/sources.viewmodel";
 import { SourcesPanel } from "../sources/sources-panel";
@@ -42,7 +46,7 @@ export function DetailsPanel(props: {
         <p class="error-text" role="alert">
           {props.vm.detailError()}
         </p>
-        <button
+        <Button
           class="button secondary"
           type="button"
           onClick={() => {
@@ -52,7 +56,7 @@ export function DetailsPanel(props: {
           }}
         >
           Tentar detalhes novamente
-        </button>
+        </Button>
       </Show>
       <Show when={props.vm.detail()}>
         {(title) => (
@@ -84,26 +88,29 @@ export function DetailsPanel(props: {
                 <p class="muted trailer-unavailable">Trailer não disponível para este título.</p>
               }
             >
-              <section class="trailer-section" aria-label="Trailer">
-                <button
-                  type="button"
-                  class="button secondary"
-                  aria-expanded={trailerOpen()}
-                  onClick={() => setTrailerOpen(!trailerOpen())}
-                >
-                  {trailerOpen() ? "Fechar trailer" : "▷ Assistir ao trailer"}
-                </button>
-                <Show when={trailerOpen()}>
-                  <iframe
-                    class="trailer-frame"
-                    title={`Trailer de ${title().title}`}
-                    src={`https://www.youtube-nocookie.com/embed/${title().trailerKey}`}
-                    allow="encrypted-media; picture-in-picture; fullscreen"
-                    allowfullscreen
-                    referrerpolicy="strict-origin-when-cross-origin"
-                  />
-                </Show>
-              </section>
+              <Collapsible open={trailerOpen()} onOpenChange={setTrailerOpen}>
+                <section class="trailer-section" aria-label="Trailer">
+                  <Collapsible.Trigger as={Button} class="button secondary">
+                    {trailerOpen() ? (
+                      <>Fechar trailer</>
+                    ) : (
+                      <>
+                        <Icon name="play" /> Assistir ao trailer
+                      </>
+                    )}
+                  </Collapsible.Trigger>
+                  <Collapsible.Content>
+                    <iframe
+                      class="trailer-frame"
+                      title={`Trailer de ${title().title}`}
+                      src={`https://www.youtube-nocookie.com/embed/${title().trailerKey}`}
+                      allow="encrypted-media; picture-in-picture; fullscreen"
+                      allowfullscreen
+                      referrerpolicy="strict-origin-when-cross-origin"
+                    />
+                  </Collapsible.Content>
+                </section>
+              </Collapsible>
             </Show>
             <h3 class="section-label">Elenco</h3>
             <Show when={title().cast.length} fallback={<p class="muted">Elenco não disponível.</p>}>
@@ -149,23 +156,17 @@ export function DetailsPanel(props: {
                   <p class="muted">Temporadas não disponíveis.</p>
                 </Show>
                 <Show when={props.vm.seasons().length}>
-                  <label for="season">Temporada</label>
-                  <select
-                    id="season"
-                    value={props.vm.seasonNumber()}
-                    onChange={(event) =>
-                      void props.vm.loadEpisodes(Number(event.currentTarget.value))
-                    }
-                  >
-                    <For each={props.vm.seasons()}>
-                      {(season) => (
-                        <option value={season.seasonNumber}>
-                          {season.name || `Temporada ${season.seasonNumber}`} ·{" "}
-                          {season.episodeCount} episódios
-                        </option>
-                      )}
-                    </For>
-                  </select>
+                  <SelectField
+                    label="Temporada"
+                    value={String(
+                      props.vm.seasonNumber() ?? props.vm.seasons()[0]?.seasonNumber ?? "",
+                    )}
+                    options={props.vm.seasons().map((season) => ({
+                      value: String(season.seasonNumber),
+                      label: `${season.name || `Temporada ${season.seasonNumber}`} · ${season.episodeCount} episódios`,
+                    }))}
+                    onChange={(value) => void props.vm.loadEpisodes(Number(value))}
+                  />
                   <p class="season-overview">
                     {
                       props.vm
@@ -183,7 +184,7 @@ export function DetailsPanel(props: {
                     <p class="error-text" role="alert">
                       {props.vm.episodesError()}
                     </p>
-                    <button
+                    <Button
                       class="button secondary"
                       type="button"
                       onClick={() => {
@@ -192,7 +193,7 @@ export function DetailsPanel(props: {
                       }}
                     >
                       Tentar episódios novamente
-                    </button>
+                    </Button>
                   </Show>
                   <Show
                     when={
@@ -229,7 +230,7 @@ export function DetailsPanel(props: {
                           <p>{episode.overview || "Sinopse não disponível."}</p>
                           <Show when={episode.content}>
                             {(content) => (
-                              <button
+                              <Button
                                 class="button secondary episode-source-button"
                                 type="button"
                                 aria-pressed={
@@ -240,7 +241,7 @@ export function DetailsPanel(props: {
                                 onClick={() => void props.sources.selectContent(content())}
                               >
                                 Usar fontes deste episódio
-                              </button>
+                              </Button>
                             )}
                           </Show>
                         </li>

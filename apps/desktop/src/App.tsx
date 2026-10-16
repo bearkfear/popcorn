@@ -1,3 +1,5 @@
+import { Button } from "@kobalte/core/button";
+import { ToggleButton } from "@kobalte/core/toggle-button";
 import type { ContentRef, Title, TmdbStatus } from "@popcorn/sdk";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -18,6 +20,7 @@ import { CachePanel } from "./features/settings/cache-panel";
 import { createSettingsViewModel } from "./features/settings/settings.viewmodel";
 import { SetupPanel } from "./features/settings/setup-panel";
 import { createSourcesViewModel } from "./features/sources/sources.viewmodel";
+import { Icon } from "./shared/ui/icon";
 
 type WatchContext = Omit<WatchEntry, "key" | "status" | "position" | "duration" | "updatedAt">;
 type Page = "search" | "details";
@@ -241,7 +244,7 @@ export function App() {
     >
       <div class="app-shell">
         <header class="app-header cluster">
-          <button
+          <Button
             class="brand-lockup brand-button"
             type="button"
             onClick={backToSearch}
@@ -253,19 +256,19 @@ export function App() {
             <span class="wordmark">
               popcorn<span class="wordmark-dot">.</span>
             </span>
-          </button>
+          </Button>
           <nav class="cluster" aria-label="Navegação principal">
-            <button class="text-button" type="button" onClick={backToSearch}>
+            <Button class="text-button" type="button" onClick={backToSearch}>
               Explorar
-            </button>
-            <button
+            </Button>
+            <Button
               class="text-button"
               type="button"
               aria-expanded={serviceOpen()}
               onClick={() => setServiceOpen(!serviceOpen())}
             >
               Configurações
-            </button>
+            </Button>
           </nav>
         </header>
         <main class={`page ${page() === "details" ? "details-page" : "search-page"}`}>
@@ -278,14 +281,14 @@ export function App() {
                 </p>
               </div>
               <div class="cluster">
-                <button
+                <Button
                   class="button secondary"
                   type="button"
                   onClick={() => settings.setSettingsOpen(!settings.settingsOpen())}
                 >
                   Configurar TMDB
-                </button>
-                <button
+                </Button>
+                <Button
                   class="button secondary"
                   type="button"
                   disabled={settings.cacheBusy()}
@@ -295,15 +298,15 @@ export function App() {
                   }}
                 >
                   Armazenamento
-                </button>
-                <button
+                </Button>
+                <Button
                   class="button secondary"
                   type="button"
                   disabled={bootstrap.connection() === "connecting"}
                   onClick={() => void connect()}
                 >
                   Reconectar
-                </button>
+                </Button>
               </div>
             </section>
           </Show>
@@ -345,35 +348,37 @@ export function App() {
               fallback={
                 <>
                   <nav class="detail-navigation cluster" aria-label="Navegação do título">
-                    <button class="button secondary" type="button" onClick={backToSearch}>
-                      ← Voltar à pesquisa
-                    </button>
+                    <Button class="button secondary" type="button" onClick={backToSearch}>
+                      <Icon name="arrow-left" /> Voltar à pesquisa
+                    </Button>
                     <Show when={details.detail()?.content}>
                       {(content) => (
                         <div class="cluster">
-                          <button
+                          <ToggleButton
                             class="button secondary"
                             type="button"
-                            aria-pressed={selectedEntry()?.status === "want"}
-                            onClick={() => {
+                            pressed={selectedEntry()?.status === "want"}
+                            onChange={(pressed) => {
+                              if (!pressed) return;
                               const title = details.detail();
                               if (title) history.mark(title, content(), "want");
                             }}
                           >
-                            ＋ Quero assistir
-                          </button>
-                          <button
+                            <Icon name="plus" /> Quero assistir
+                          </ToggleButton>
+                          <ToggleButton
                             class="button secondary"
                             type="button"
-                            aria-pressed={selectedEntry()?.status === "watched"}
-                            onClick={() => {
+                            pressed={selectedEntry()?.status === "watched"}
+                            onChange={(pressed) => {
+                              if (!pressed) return;
                               const title = details.detail();
                               if (title)
                                 history.mark(title, sources.content() ?? content(), "watched");
                             }}
                           >
-                            ✓ Já assisti
-                          </button>
+                            <Icon name="check" /> Já assisti
+                          </ToggleButton>
                         </div>
                       )}
                     </Show>

@@ -89,6 +89,13 @@ h3 {
 a {
   color: inherit;
 }
+.app-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  vertical-align: -0.125em;
+}
 
 .app-shell {
   min-height: 100vh;
@@ -378,7 +385,8 @@ a {
 .setup-form > label:not(.checkbox-label),
 .search-form > label,
 .genre-filter > label,
-.episodes-section > label {
+.episodes-section > label,
+.select-field-label {
   display: block;
   margin-bottom: 6px;
   color: var(--muted);
@@ -386,8 +394,7 @@ a {
   font-weight: 700;
 }
 .setup-form input[type="password"],
-.search-fields input,
-select {
+.search-fields input {
   width: 100%;
   min-height: 44px;
   padding: 9px 12px;
@@ -395,6 +402,64 @@ select {
   border-radius: var(--radius-control);
   background: #15171b;
   color: var(--ink);
+}
+.select-field {
+  min-width: 0;
+}
+.select-field-trigger {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: #15171b;
+  color: var(--ink);
+  text-align: left;
+}
+.select-field-trigger:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.select-field-content {
+  z-index: 50;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(320px, var(--kb-popper-content-available-height));
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: #22252a;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 42%);
+}
+.select-field-listbox {
+  margin: 0;
+  padding: 0;
+  outline: none;
+  list-style: none;
+}
+.select-field-item {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 7px 9px;
+  border-radius: 3px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+}
+.select-field-item[data-highlighted] {
+  outline: none;
+  background: var(--soft);
+}
+.select-field-item[data-selected] {
+  color: var(--accent-strong);
 }
 .setup-form > .muted {
   margin: var(--space-2) 0 var(--space-4);
@@ -407,9 +472,37 @@ select {
   font-size: 14px;
 }
 .checkbox-label input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.checkbox-control {
+  display: grid;
   width: 18px;
   height: 18px;
-  accent-color: var(--accent);
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #15171b;
+  color: white;
+  font-size: 12px;
+}
+.checkbox-control[data-checked] {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.checkbox-label:has(input:focus-visible) .checkbox-control {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.checkbox-label[data-disabled] {
+  cursor: default;
+  opacity: 0.55;
 }
 
 .catalog-controls {
@@ -454,11 +547,75 @@ select {
   padding-top: var(--space-3);
   border-top: 1px solid var(--line);
 }
-.genre-filter > label {
-  margin: 0;
+.genre-select {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
 }
-.genre-filter select {
+.genre-select-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.genre-select-trigger {
+  display: flex;
+  min-width: 0;
   min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: #15171b;
+  color: var(--ink);
+  text-align: left;
+}
+.genre-select-trigger:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+.genre-select-trigger [data-part="icon"] {
+  color: var(--muted);
+}
+.genre-select-content {
+  z-index: 50;
+  width: min(280px, calc(100vw - 32px));
+  max-height: min(320px, var(--kb-popper-content-available-height));
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: #22252a;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 42%);
+}
+.genre-select-listbox {
+  margin: 0;
+  padding: 0;
+  outline: none;
+  list-style: none;
+}
+.genre-select-item {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 7px 9px;
+  border-radius: 3px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+}
+.genre-select-item[data-highlighted] {
+  outline: none;
+  background: var(--soft);
+}
+.genre-select-item[data-selected] {
+  color: var(--accent-strong);
 }
 .cache-label {
   color: #e2c47b;
@@ -853,7 +1010,7 @@ select {
   padding-top: var(--space-4);
   border-top: 1px solid var(--line);
 }
-.episodes-section select {
+.episodes-section .select-field {
   margin-bottom: var(--space-3);
 }
 .season-overview {
@@ -1025,7 +1182,12 @@ select {
 .video-presentation-group {
   justify-content: flex-end;
 }
+.video-audio-field {
+  flex: 0 1 100px;
+  min-width: 0;
+}
 .video-audio-select {
+  width: 100%;
   min-width: 0;
   max-width: 100px;
   padding: 5px;
@@ -1053,17 +1215,21 @@ select {
 .video-controls button:active {
   opacity: 0.65;
 }
-.video-controls svg {
+.video-controls .app-icon {
+  display: inline-block;
   width: 24px;
   height: 24px;
+  font-size: 24px;
+  text-align: center;
 }
 .video-controls .video-play-toggle {
   width: 44px;
   height: 44px;
 }
-.video-play-toggle svg {
+.video-controls .video-play-toggle .app-icon {
   width: 38px;
   height: 38px;
+  font-size: 38px;
 }
 .video-timeline {
   display: flex;
@@ -1291,8 +1457,8 @@ select {
   .genre-filter {
     grid-template-columns: 1fr;
   }
-  .genre-filter select {
-    grid-column: 1;
+  .genre-select {
+    grid-template-columns: 1fr;
   }
   .collection-header {
     align-items: flex-end;
@@ -1416,7 +1582,11 @@ select {
   display: grid;
   gap: var(--space-2);
 }
-.playback-options select {
+.playback-options .select-field {
+  display: grid;
+  gap: var(--space-2);
+}
+.playback-options .select-field-trigger {
   width: 100%;
   min-width: 0;
 }

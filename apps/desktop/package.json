@@ -16,9 +16,11 @@
     "preview": "bun --bun vite preview"
   },
   "dependencies": {
+    "@kobalte/core": "^0.13.14",
     "@popcorn/sdk": "workspace:*",
     "@tauri-apps/api": "2.12.4",
     "@xstate/solid": "^2.0.0",
+    "lucide-solid": "^1.58.0",
     "solid-js": "1.9.17",
     "xstate": "^5.33.2"
   },

@@ -1,5 +1,7 @@
+import { Button } from "@kobalte/core/button";
 import { createEffect, For, Show, untrack } from "solid-js";
 import { bytesLabel } from "../../shared/formatters";
+import { Icon } from "../../shared/ui/icon";
 import { PlaybackSetup } from "../player/playback-setup";
 import type { PlayerViewModel } from "../player/player.viewmodel";
 import type { SourcesViewModel } from "./sources.viewmodel";
@@ -74,13 +76,13 @@ export function SourcesPanel(props: {
             spellcheck={false}
             disabled={props.sources.busy()}
           />
-          <button
+          <Button
             class="button"
             type="submit"
             disabled={props.sources.busy() || !props.sources.magnet().trim()}
           >
             {props.sources.busy() ? "Preparando..." : "Adicionar"}
-          </button>
+          </Button>
         </div>
       </form>
       <div class="torrent-import">
@@ -114,14 +116,14 @@ export function SourcesPanel(props: {
             <li>
               <div class="source-row">
                 <span>Fonte {props.sources.sources().indexOf(source) + 1}</span>
-                <button
+                <Button
                   class="text-button"
                   type="button"
                   disabled={props.sources.busy()}
                   onClick={() => void props.sources.removeSource(source.sourceId)}
                 >
                   Remover
-                </button>
+                </Button>
               </div>
               <Show
                 when={source.recommendedFileIndex !== undefined}
@@ -139,14 +141,14 @@ export function SourcesPanel(props: {
                               <strong>{file.name}</strong>
                               <span>{bytesLabel(file.sizeBytes)}</span>
                             </div>
-                            <button
+                            <Button
                               class="button"
                               type="button"
                               disabled={props.player.busy()}
                               onClick={() => props.onPrepare(source.sourceId, file.fileIndex)}
                             >
                               Usar este vídeo
-                            </button>
+                            </Button>
                           </li>
                         )}
                       </For>
@@ -155,7 +157,7 @@ export function SourcesPanel(props: {
                 }
               >
                 <Show when={props.sources.sources().length > 1 || props.player.error()}>
-                  <button
+                  <Button
                     class="button"
                     type="button"
                     disabled={props.player.busy()}
@@ -164,12 +166,16 @@ export function SourcesPanel(props: {
                       if (index !== undefined) props.onPrepare(source.sourceId, index);
                     }}
                   >
-                    {props.player.busy()
-                      ? "Preparando..."
-                      : props.player.preparedFile()?.sourceId === source.sourceId
-                        ? "✓ Fonte selecionada"
-                        : "Usar esta fonte"}
-                  </button>
+                    {props.player.busy() ? (
+                      "Preparando..."
+                    ) : props.player.preparedFile()?.sourceId === source.sourceId ? (
+                      <>
+                        <Icon name="check" /> Fonte selecionada
+                      </>
+                    ) : (
+                      "Usar esta fonte"
+                    )}
+                  </Button>
                 </Show>
               </Show>
             </li>

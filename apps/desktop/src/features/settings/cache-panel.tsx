@@ -1,4 +1,5 @@
 // View displaying local disk storage statistics and cache management controls.
+import { Button } from "@kobalte/core/button";
 import { Show } from "solid-js";
 import { bytesLabel } from "../../shared/formatters";
 import type { SettingsViewModel } from "./settings.viewmodel";
@@ -49,13 +50,13 @@ export function CachePanel(props: {
             onInput={(e) => props.vm.setCacheLimitGb(e.currentTarget.value)}
             disabled={props.vm.cacheBusy()}
           />
-          <button class="button" type="submit" disabled={props.vm.cacheBusy()}>
+          <Button class="button" type="submit" disabled={props.vm.cacheBusy()}>
             Salvar limite
-          </button>
+          </Button>
         </div>
       </form>
       <div class="cache-actions">
-        <button
+        <Button
           class="button secondary danger"
           type="button"
           disabled={props.vm.cacheBusy() || props.playbackActive}
@@ -67,11 +68,11 @@ export function CachePanel(props: {
           }}
         >
           Limpar cache agora
-        </button>
+        </Button>
       </div>
-      <button class="button secondary" type="button" onClick={() => props.vm.setCacheOpen(false)}>
+      <Button class="button secondary" type="button" onClick={() => props.vm.setCacheOpen(false)}>
         Fechar
-      </button>
+      </Button>
       <Show when={props.vm.cacheError()}>
         <p class="error-text" role="alert">
           {props.vm.cacheError()}

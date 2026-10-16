@@ -1,40 +1,10 @@
 // Floating playback controls and shortcuts for the canvas video surface.
+import { Button } from "@kobalte/core/button";
 import type { Playback } from "@popcorn/sdk";
-import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { Icon } from "../../shared/ui/icon";
+import { SelectField } from "../../shared/ui/select-field";
 import { type PlayerAction, playerShortcut } from "./player-shortcuts";
-
-type IconName = "play" | "pause" | "back" | "forward" | "volume" | "mute" | "pip" | "fullscreen";
-function Icon(props: { name: IconName }) {
-  const paths: Record<IconName, string> = {
-    play: "M8 5v14l12-7z",
-    pause: "M7 5h3v14H7zM14 5h3v14h-3z",
-    back: "M11 6 2 12l9 6zM21 6l-9 6 9 6z",
-    forward: "m3 6 9 6-9 6zm10 0 9 6-9 6z",
-    volume: "M3 9v6h4l5 4V5L7 9zM15 8q5 4 0 8M18 5q8 7 0 14",
-    mute: "M3 9v6h4l5 4V5L7 9zM16 9l6 6m0-6-6 6",
-    pip: "M3 5h18v14H3zM12 12h7v5h-7z",
-    fullscreen: "M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6",
-  };
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d={paths[props.name]}
-        fill={
-          props.name === "volume" ||
-          props.name === "mute" ||
-          props.name === "pip" ||
-          props.name === "fullscreen"
-            ? "none"
-            : "currentColor"
-        }
-        stroke="currentColor"
-        stroke-width="1.7"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-    </svg>
-  );
-}
 
 function clock(seconds: number): string {
   const value = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
@@ -148,15 +118,15 @@ export function PlayerControls(props: {
     >
       <div class="video-controls-top">
         <div class="video-volume-group">
-          <button
+          <Button
             type="button"
             aria-label={props.volume() === 0 ? "Ativar som" : "Silenciar"}
             title="Ativar/desativar som (M)"
             aria-keyshortcuts="m"
             onClick={() => act("mute")}
           >
-            <Icon name={props.volume() === 0 ? "mute" : "volume"} />
-          </button>
+            <Icon name={props.volume() === 0 ? "speaker-slash" : "speaker-high"} />
+          </Button>
           <input
             class="video-volume"
             type="range"
@@ -176,16 +146,16 @@ export function PlayerControls(props: {
           />
         </div>
         <div class="video-transport-group">
-          <button
+          <Button
             type="button"
             aria-label="Voltar 10 segundos"
             title="Voltar 10 segundos (← / J)"
             aria-keyshortcuts="ArrowLeft j"
             onClick={() => act("back")}
           >
-            <Icon name="back" />
-          </button>
-          <button
+            <Icon name="rewind" />
+          </Button>
+          <Button
             class="video-play-toggle"
             type="button"
             aria-label={props.paused() ? "Reproduzir" : "Pausar"}
@@ -194,66 +164,59 @@ export function PlayerControls(props: {
             onClick={() => act("play")}
           >
             <Icon name={props.paused() ? "play" : "pause"} />
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             aria-label="Avançar 10 segundos"
             title="Avançar 10 segundos (→ / L)"
             aria-keyshortcuts="ArrowRight l"
             onClick={() => act("forward")}
           >
-            <Icon name="forward" />
-          </button>
+            <Icon name="fast-forward" />
+          </Button>
         </div>
         <div class="video-presentation-group">
           <Show when={props.audioTracks.length > 1}>
-            <select
-              class="video-audio-select"
+            <SelectField
+              class="video-audio-field"
+              triggerClass="video-audio-select"
               aria-label="Faixa de áudio"
-              title="Selecionar áudio"
-              value={props.audioIndex ?? ""}
-              onChange={(event) => props.onAudioChange(Number(event.currentTarget.value))}
-            >
-              <For each={props.audioTracks}>
-                {(track) => {
-                  const languages: Record<string, string> = {
-                    por: "Português",
-                    pt: "Português",
-                    eng: "Inglês",
-                    en: "Inglês",
-                    spa: "Espanhol",
-                    es: "Espanhol",
-                  };
-                  return (
-                    <option value={track.streamIndex}>
-                      {languages[track.language.toLowerCase()] ||
-                        track.language ||
-                        `Faixa ${track.streamIndex}`}
-                      {track.title ? ` · ${track.title}` : ""}
-                    </option>
-                  );
-                }}
-              </For>
-            </select>
+              value={String(props.audioIndex ?? props.audioTracks[0]?.streamIndex ?? "")}
+              options={props.audioTracks.map((track) => {
+                const languages: Record<string, string> = {
+                  por: "Português",
+                  pt: "Português",
+                  eng: "Inglês",
+                  en: "Inglês",
+                  spa: "Espanhol",
+                  es: "Espanhol",
+                };
+                return {
+                  value: String(track.streamIndex),
+                  label: `${languages[track.language.toLowerCase()] || track.language || `Faixa ${track.streamIndex}`}${track.title ? ` · ${track.title}` : ""}`,
+                };
+              })}
+              onChange={(value) => props.onAudioChange(Number(value))}
+            />
           </Show>
-          <button
+          <Button
             type="button"
             aria-label="Picture-in-picture"
             title="Picture-in-picture (P)"
             aria-keyshortcuts="p"
             onClick={() => act("pip")}
           >
-            <Icon name="pip" />
-          </button>
-          <button
+            <Icon name="picture-in-picture" />
+          </Button>
+          <Button
             type="button"
             aria-label="Tela cheia"
             title="Tela cheia (F)"
             aria-keyshortcuts="f"
             onClick={() => act("fullscreen")}
           >
-            <Icon name="fullscreen" />
-          </button>
+            <Icon name="corners-out" />
+          </Button>
         </div>
       </div>
       <div class="video-timeline">
