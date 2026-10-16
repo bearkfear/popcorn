@@ -1,10 +1,10 @@
 // UI component for catalog filtering, search input, and genre selection.
 
-import { Button } from "@kobalte/core/button";
-import { Select } from "@kobalte/core/select";
-import { ToggleGroup } from "@kobalte/core/toggle-group";
+import { createListCollection, Select } from "@ark-ui/solid/select";
+import { ToggleGroup } from "@ark-ui/solid/toggle-group";
 import { CatalogCategory, MediaType } from "@popcorn/sdk";
-import { Show } from "solid-js";
+import { createMemo, For, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 import { Icon } from "../../shared/ui/icon";
 import type { CatalogViewModel } from "./catalog.viewmodel";
 
@@ -26,11 +26,13 @@ export function CatalogControls(props: CatalogControlsProps) {
     },
     ...vm.genres().map((genre) => ({ id: String(genre.id), name: genre.name })),
   ];
-  const selectedGenre = () =>
-    genreOptions().find((genre) => genre.id === String(vm.genreId())) ?? {
-      id: "0",
-      name: vm.genresBusy() ? "Carregando gêneros..." : "Todos os gêneros",
-    };
+  const collection = createMemo(() =>
+    createListCollection({
+      items: genreOptions(),
+      itemToValue: (genre) => genre.id,
+      itemToString: (genre) => genre.name,
+    }),
+  );
 
   const handleSearch = (event: Event) => {
     event.preventDefault();
@@ -39,11 +41,11 @@ export function CatalogControls(props: CatalogControlsProps) {
 
   return (
     <section class="catalog-controls" aria-label="Explorar o TMDB">
-      <ToggleGroup
+      <ToggleGroup.Root
         class="cluster media-tabs"
         aria-label="Tipo de mídia"
-        value={String(vm.mediaType())}
-        onChange={(value) => value && vm.changeMediaType(Number(value) as MediaType)}
+        value={[String(vm.mediaType())]}
+        onValueChange={({ value }) => value[0] && vm.changeMediaType(Number(value[0]) as MediaType)}
       >
         <ToggleGroup.Item class="button secondary" value={String(MediaType.MOVIE)}>
           Filmes
@@ -51,7 +53,7 @@ export function CatalogControls(props: CatalogControlsProps) {
         <ToggleGroup.Item class="button secondary" value={String(MediaType.TV)}>
           Séries
         </ToggleGroup.Item>
-      </ToggleGroup>
+      </ToggleGroup.Root>
 
       <form class="search-form" onSubmit={handleSearch}>
         <label for="catalog-search">
@@ -65,17 +67,19 @@ export function CatalogControls(props: CatalogControlsProps) {
             onInput={(e) => vm.setSearchInput(e.currentTarget.value)}
             placeholder={vm.mediaType() === MediaType.MOVIE ? "Nome do filme" : "Nome da série"}
           />
-          <Button class="button" type="submit">
+          <button class="button" type="submit">
             Buscar
-          </Button>
+          </button>
         </div>
       </form>
 
-      <ToggleGroup
+      <ToggleGroup.Root
         class="cluster category-tabs"
         aria-label="Categoria do catálogo"
-        value={vm.query() ? null : String(vm.category())}
-        onChange={(value) => value && vm.changeCategory(Number(value) as CatalogCategory)}
+        value={vm.query() ? [] : [String(vm.category())]}
+        onValueChange={({ value }) =>
+          value[0] && vm.changeCategory(Number(value[0]) as CatalogCategory)
+        }
       >
         <ToggleGroup.Item class="button secondary" value={String(CatalogCategory.POPULAR)}>
           Populares
@@ -86,43 +90,46 @@ export function CatalogControls(props: CatalogControlsProps) {
         <ToggleGroup.Item class="button secondary" value={String(CatalogCategory.TOP_RATED)}>
           Mais bem avaliados
         </ToggleGroup.Item>
-      </ToggleGroup>
+      </ToggleGroup.Root>
 
       <div class="genre-filter">
-        <Select
+        <Select.Root
           class="genre-select"
-          options={genreOptions()}
-          optionValue={(genre) => genre.id}
-          optionTextValue={(genre) => genre.name}
-          value={selectedGenre()}
+          collection={collection()}
+          value={[String(vm.genreId())]}
           disabled={vm.genresBusy()}
-          itemComponent={(itemProps) => (
-            <Select.Item class="genre-select-item" item={itemProps.item}>
-              <Select.ItemLabel>{itemProps.item.rawValue?.name}</Select.ItemLabel>
-              <Select.ItemIndicator aria-hidden="true">
-                <Icon name="check" />
-              </Select.ItemIndicator>
-            </Select.Item>
-          )}
-          onChange={(genre) => vm.changeCategory(CatalogCategory.POPULAR, Number(genre?.id ?? 0))}
+          positioning={{ placement: "bottom-start" }}
+          onValueChange={({ value }) =>
+            vm.changeCategory(CatalogCategory.POPULAR, Number(value[0] ?? 0))
+          }
         >
           <Select.Label class="genre-select-label">
             Gênero <span class="muted">· em Populares</span>
           </Select.Label>
           <Select.Trigger class="genre-select-trigger">
-            <Select.Value<GenreOption>>
-              {(state) => state.selectedOption()?.name ?? "Todos os gêneros"}
-            </Select.Value>
-            <Select.Icon aria-hidden="true">
+            <Select.ValueText placeholder="Todos os gêneros" />
+            <Select.Indicator aria-hidden="true">
               <Icon name="caret-down" />
-            </Select.Icon>
+            </Select.Indicator>
           </Select.Trigger>
-          <Select.Portal>
-            <Select.Content class="genre-select-content">
-              <Select.Listbox class="genre-select-listbox" />
-            </Select.Content>
-          </Select.Portal>
-        </Select>
+          <Portal>
+            <Select.Positioner>
+              <Select.Content class="genre-select-content genre-select-listbox">
+                <For each={collection().items}>
+                  {(item) => (
+                    <Select.Item class="genre-select-item" item={item}>
+                      <Select.ItemText>{item.name}</Select.ItemText>
+                      <Select.ItemIndicator aria-hidden="true">
+                        <Icon name="check" />
+                      </Select.ItemIndicator>
+                    </Select.Item>
+                  )}
+                </For>
+              </Select.Content>
+            </Select.Positioner>
+          </Portal>
+          <Select.HiddenSelect />
+        </Select.Root>
         <Show when={vm.genresStale()}>
           <span class="cache-label">Gêneros: cache / offline</span>
         </Show>
@@ -130,9 +137,9 @@ export function CatalogControls(props: CatalogControlsProps) {
           <p class="error-text" role="alert">
             {vm.genresError()}
           </p>
-          <Button type="button" class="button secondary" onClick={() => void vm.loadGenres()}>
+          <button type="button" class="button secondary" onClick={() => void vm.loadGenres()}>
             Tentar gêneros novamente
-          </Button>
+          </button>
         </Show>
       </div>
     </section>

@@ -1,5 +1,4 @@
-import { Button } from "@kobalte/core/button";
-import { ToggleButton } from "@kobalte/core/toggle-button";
+import { Toggle } from "@ark-ui/solid/toggle";
 import type { ContentRef, Title, TmdbStatus } from "@popcorn/sdk";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -244,7 +243,7 @@ export function App() {
     >
       <div class="app-shell">
         <header class="app-header cluster">
-          <Button
+          <button
             class="brand-lockup brand-button"
             type="button"
             onClick={backToSearch}
@@ -256,19 +255,19 @@ export function App() {
             <span class="wordmark">
               popcorn<span class="wordmark-dot">.</span>
             </span>
-          </Button>
+          </button>
           <nav class="cluster" aria-label="Navegação principal">
-            <Button class="text-button" type="button" onClick={backToSearch}>
+            <button class="text-button" type="button" onClick={backToSearch}>
               Explorar
-            </Button>
-            <Button
+            </button>
+            <button
               class="text-button"
               type="button"
               aria-expanded={serviceOpen()}
               onClick={() => setServiceOpen(!serviceOpen())}
             >
               Configurações
-            </Button>
+            </button>
           </nav>
         </header>
         <main class={`page ${page() === "details" ? "details-page" : "search-page"}`}>
@@ -281,14 +280,14 @@ export function App() {
                 </p>
               </div>
               <div class="cluster">
-                <Button
+                <button
                   class="button secondary"
                   type="button"
                   onClick={() => settings.setSettingsOpen(!settings.settingsOpen())}
                 >
                   Configurar TMDB
-                </Button>
-                <Button
+                </button>
+                <button
                   class="button secondary"
                   type="button"
                   disabled={settings.cacheBusy()}
@@ -298,15 +297,15 @@ export function App() {
                   }}
                 >
                   Armazenamento
-                </Button>
-                <Button
+                </button>
+                <button
                   class="button secondary"
                   type="button"
                   disabled={bootstrap.connection() === "connecting"}
                   onClick={() => void connect()}
                 >
                   Reconectar
-                </Button>
+                </button>
               </div>
             </section>
           </Show>
@@ -348,29 +347,29 @@ export function App() {
               fallback={
                 <>
                   <nav class="detail-navigation cluster" aria-label="Navegação do título">
-                    <Button class="button secondary" type="button" onClick={backToSearch}>
+                    <button class="button secondary" type="button" onClick={backToSearch}>
                       <Icon name="arrow-left" /> Voltar à pesquisa
-                    </Button>
+                    </button>
                     <Show when={details.detail()?.content}>
                       {(content) => (
                         <div class="cluster">
-                          <ToggleButton
+                          <Toggle.Root
                             class="button secondary"
                             type="button"
                             pressed={selectedEntry()?.status === "want"}
-                            onChange={(pressed) => {
+                            onPressedChange={(pressed) => {
                               if (!pressed) return;
                               const title = details.detail();
                               if (title) history.mark(title, content(), "want");
                             }}
                           >
                             <Icon name="plus" /> Quero assistir
-                          </ToggleButton>
-                          <ToggleButton
+                          </Toggle.Root>
+                          <Toggle.Root
                             class="button secondary"
                             type="button"
                             pressed={selectedEntry()?.status === "watched"}
-                            onChange={(pressed) => {
+                            onPressedChange={(pressed) => {
                               if (!pressed) return;
                               const title = details.detail();
                               if (title)
@@ -378,7 +377,7 @@ export function App() {
                             }}
                           >
                             <Icon name="check" /> Já assisti
-                          </ToggleButton>
+                          </Toggle.Root>
                         </div>
                       )}
                     </Show>

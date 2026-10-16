@@ -1,4 +1,3 @@
-import { Button } from "@kobalte/core/button";
 import { createEffect, For, Show, untrack } from "solid-js";
 import { bytesLabel } from "../../shared/formatters";
 import { Icon } from "../../shared/ui/icon";
@@ -76,13 +75,13 @@ export function SourcesPanel(props: {
             spellcheck={false}
             disabled={props.sources.busy()}
           />
-          <Button
+          <button
             class="button"
             type="submit"
             disabled={props.sources.busy() || !props.sources.magnet().trim()}
           >
             {props.sources.busy() ? "Preparando..." : "Adicionar"}
-          </Button>
+          </button>
         </div>
       </form>
       <div class="torrent-import">
@@ -116,14 +115,14 @@ export function SourcesPanel(props: {
             <li>
               <div class="source-row">
                 <span>Fonte {props.sources.sources().indexOf(source) + 1}</span>
-                <Button
+                <button
                   class="text-button"
                   type="button"
                   disabled={props.sources.busy()}
                   onClick={() => void props.sources.removeSource(source.sourceId)}
                 >
                   Remover
-                </Button>
+                </button>
               </div>
               <Show
                 when={source.recommendedFileIndex !== undefined}
@@ -141,14 +140,14 @@ export function SourcesPanel(props: {
                               <strong>{file.name}</strong>
                               <span>{bytesLabel(file.sizeBytes)}</span>
                             </div>
-                            <Button
+                            <button
                               class="button"
                               type="button"
                               disabled={props.player.busy()}
                               onClick={() => props.onPrepare(source.sourceId, file.fileIndex)}
                             >
                               Usar este vídeo
-                            </Button>
+                            </button>
                           </li>
                         )}
                       </For>
@@ -157,7 +156,7 @@ export function SourcesPanel(props: {
                 }
               >
                 <Show when={props.sources.sources().length > 1 || props.player.error()}>
-                  <Button
+                  <button
                     class="button"
                     type="button"
                     disabled={props.player.busy()}
@@ -175,7 +174,7 @@ export function SourcesPanel(props: {
                     ) : (
                       "Usar esta fonte"
                     )}
-                  </Button>
+                  </button>
                 </Show>
               </Show>
             </li>

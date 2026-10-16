@@ -1,5 +1,4 @@
-import { Button } from "@kobalte/core/button";
-import { Collapsible } from "@kobalte/core/collapsible";
+import { Collapsible } from "@ark-ui/solid/collapsible";
 import { MediaType } from "@popcorn/sdk";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { artworkUrl } from "../../catalog-ui";
@@ -46,7 +45,7 @@ export function DetailsPanel(props: {
         <p class="error-text" role="alert">
           {props.vm.detailError()}
         </p>
-        <Button
+        <button
           class="button secondary"
           type="button"
           onClick={() => {
@@ -56,7 +55,7 @@ export function DetailsPanel(props: {
           }}
         >
           Tentar detalhes novamente
-        </Button>
+        </button>
       </Show>
       <Show when={props.vm.detail()}>
         {(title) => (
@@ -88,9 +87,14 @@ export function DetailsPanel(props: {
                 <p class="muted trailer-unavailable">Trailer não disponível para este título.</p>
               }
             >
-              <Collapsible open={trailerOpen()} onOpenChange={setTrailerOpen}>
+              <Collapsible.Root
+                open={trailerOpen()}
+                onOpenChange={(details) => setTrailerOpen(details.open)}
+                lazyMount
+                unmountOnExit
+              >
                 <section class="trailer-section" aria-label="Trailer">
-                  <Collapsible.Trigger as={Button} class="button secondary">
+                  <Collapsible.Trigger class="button secondary">
                     {trailerOpen() ? (
                       <>Fechar trailer</>
                     ) : (
@@ -110,7 +114,7 @@ export function DetailsPanel(props: {
                     />
                   </Collapsible.Content>
                 </section>
-              </Collapsible>
+              </Collapsible.Root>
             </Show>
             <h3 class="section-label">Elenco</h3>
             <Show when={title().cast.length} fallback={<p class="muted">Elenco não disponível.</p>}>
@@ -184,7 +188,7 @@ export function DetailsPanel(props: {
                     <p class="error-text" role="alert">
                       {props.vm.episodesError()}
                     </p>
-                    <Button
+                    <button
                       class="button secondary"
                       type="button"
                       onClick={() => {
@@ -193,7 +197,7 @@ export function DetailsPanel(props: {
                       }}
                     >
                       Tentar episódios novamente
-                    </Button>
+                    </button>
                   </Show>
                   <Show
                     when={
@@ -230,7 +234,7 @@ export function DetailsPanel(props: {
                           <p>{episode.overview || "Sinopse não disponível."}</p>
                           <Show when={episode.content}>
                             {(content) => (
-                              <Button
+                              <button
                                 class="button secondary episode-source-button"
                                 type="button"
                                 aria-pressed={
@@ -241,7 +245,7 @@ export function DetailsPanel(props: {
                                 onClick={() => void props.sources.selectContent(content())}
                               >
                                 Usar fontes deste episódio
-                              </Button>
+                              </button>
                             )}
                           </Show>
                         </li>

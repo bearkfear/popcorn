@@ -1,7 +1,6 @@
 // View presenting first-use TMDB API setup and token configuration form.
 
-import { Button } from "@kobalte/core/button";
-import { Checkbox } from "@kobalte/core/checkbox";
+import { Checkbox } from "@ark-ui/solid/checkbox";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { Show } from "solid-js";
 import { Icon } from "../../shared/ui/icon";
@@ -61,7 +60,7 @@ export function SetupPanel(props: {
             </a>
           }
         >
-          <Button
+          <button
             class="button secondary"
             type="button"
             onClick={() => {
@@ -69,7 +68,7 @@ export function SetupPanel(props: {
             }}
           >
             Abrir configurações TMDB
-          </Button>
+          </button>
         </Show>
         <p class="settings-address">https://www.themoviedb.org/settings/api</p>
       </div>
@@ -86,39 +85,39 @@ export function SetupPanel(props: {
           autocomplete="off"
         />
         <p class="muted">O token é mantido em memória e validado diretamente com o TMDB.</p>
-        <Checkbox
+        <Checkbox.Root
           class="checkbox-label"
           checked={props.vm.remember()}
-          onChange={props.vm.setRemember}
+          onCheckedChange={(details) => props.vm.setRemember(details.checked === true)}
           disabled={props.vm.configurationBusy()}
         >
-          <Checkbox.Input />
+          <Checkbox.HiddenInput />
           <Checkbox.Control class="checkbox-control">
             <Checkbox.Indicator aria-hidden="true">
               <Icon name="check" />
             </Checkbox.Indicator>
           </Checkbox.Control>
           <Checkbox.Label>Salvar neste dispositivo</Checkbox.Label>
-        </Checkbox>
+        </Checkbox.Root>
         <Show when={props.vm.configurationError()}>
           <p class="error-text" role="alert">
             {props.vm.configurationError()}
           </p>
         </Show>
-        <Button class="button" type="submit" disabled={props.vm.configurationBusy()}>
+        <button class="button" type="submit" disabled={props.vm.configurationBusy()}>
           {props.vm.configurationBusy() ? "Validando acesso..." : "Salvar e continuar"}
-        </Button>
+        </button>
         <Show when={props.vm.status()?.configured}>
           <div class="cluster">
-            <Button
+            <button
               class="button secondary"
               type="button"
               disabled={props.vm.configurationBusy()}
               onClick={props.onConfigured}
             >
               Voltar ao catálogo
-            </Button>
-            <Button
+            </button>
+            <button
               class="button secondary danger"
               type="button"
               disabled={props.vm.configurationBusy()}
@@ -129,7 +128,7 @@ export function SetupPanel(props: {
               }}
             >
               Remover configuração
-            </Button>
+            </button>
           </div>
         </Show>
       </form>

@@ -1,6 +1,5 @@
 // UI component for displaying the catalog poster grid, status states, and pagination.
 
-import { Button } from "@kobalte/core/button";
 import { CatalogCategory, MediaType, type Title } from "@popcorn/sdk";
 import { For, Show } from "solid-js";
 import { Artwork } from "../../shared/ui/artwork";
@@ -56,14 +55,14 @@ export function PosterGrid(props: PosterGridProps) {
           <div class="state-message error-message" role="alert">
             <h3>Consulta indisponível</h3>
             <p>{vm.catalogError()}</p>
-            <Button
+            <button
               type="button"
               class="button secondary"
               disabled={vm.catalogBusy()}
               onClick={() => void vm.loadCatalog(vm.catalogLoaded() && vm.hasMore())}
             >
               Tentar novamente
-            </Button>
+            </button>
           </div>
         </Show>
 
@@ -79,13 +78,13 @@ export function PosterGrid(props: PosterGridProps) {
               {vm.query() ? "Nenhum resultado para esta busca" : "Nenhum título nesta coleção"}
             </h3>
             <p>A consulta terminou sem títulos. Experimente outra busca, gênero ou coleção.</p>
-            <Button
+            <button
               type="button"
               class="button secondary"
               onClick={() => vm.changeCategory(CatalogCategory.POPULAR)}
             >
               Voltar aos populares
-            </Button>
+            </button>
           </div>
         </Show>
 
@@ -100,7 +99,7 @@ export function PosterGrid(props: PosterGridProps) {
           <For each={vm.titles()}>
             {(title) => (
               <li>
-                <Button
+                <button
                   type="button"
                   class="poster-card"
                   disabled={!title.content}
@@ -122,7 +121,7 @@ export function PosterGrid(props: PosterGridProps) {
                       )}
                     </span>
                   </span>
-                </Button>
+                </button>
               </li>
             )}
           </For>
@@ -130,14 +129,14 @@ export function PosterGrid(props: PosterGridProps) {
 
         <Show when={vm.catalogLoaded() && vm.hasMore()}>
           <div class="pagination">
-            <Button
+            <button
               type="button"
               class="button secondary"
               disabled={vm.catalogBusy()}
               onClick={() => void vm.loadCatalog(true)}
             >
               Carregar mais títulos
-            </Button>
+            </button>
           </div>
         </Show>
       </section>

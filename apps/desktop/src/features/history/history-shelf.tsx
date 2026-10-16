@@ -1,5 +1,4 @@
-import { Button } from "@kobalte/core/button";
-import { ToggleGroup } from "@kobalte/core/toggle-group";
+import { ToggleGroup } from "@ark-ui/solid/toggle-group";
 import { createSignal, For, Show } from "solid-js";
 import { Artwork } from "../../shared/ui/artwork";
 import { Icon } from "../../shared/ui/icon";
@@ -21,11 +20,11 @@ export function HistoryShelf(props: {
           <p class="eyebrow">SUA BIBLIOTECA</p>
           <h2>Seu próximo play está aqui.</h2>
         </div>
-        <ToggleGroup
+        <ToggleGroup.Root
           class="cluster history-tabs"
           aria-label="Filtro da biblioteca"
-          value={filter()}
-          onChange={(value) => value && setFilter(value as WatchStatus)}
+          value={[filter()]}
+          onValueChange={({ value }) => value[0] && setFilter(value[0] as WatchStatus)}
         >
           <For
             each={[
@@ -40,7 +39,7 @@ export function HistoryShelf(props: {
               </ToggleGroup.Item>
             )}
           </For>
-        </ToggleGroup>
+        </ToggleGroup.Root>
       </div>
       <Show when={props.vm.error()}>
         <p class="error-text" role="alert">
@@ -63,14 +62,14 @@ export function HistoryShelf(props: {
           <For each={entries()}>
             {(entry) => (
               <li class="history-card">
-                <Button
+                <button
                   class="history-artwork"
                   type="button"
                   onClick={() => props.onOpen(entry)}
                   disabled={props.disabled}
                 >
                   <Artwork url={entry.title.posterUrl} title={entry.title.title} />
-                </Button>
+                </button>
                 <div class="history-copy">
                   <strong>{entry.title.title}</strong>
                   <Show when={entry.content.episodeNumber !== undefined}>
@@ -88,7 +87,7 @@ export function HistoryShelf(props: {
                       {Math.floor(entry.position / 60)} de {Math.ceil(entry.duration / 60)} min
                     </span>
                   </Show>
-                  <Button
+                  <button
                     type="button"
                     class="button secondary"
                     disabled={props.disabled}
@@ -107,7 +106,7 @@ export function HistoryShelf(props: {
                     ) : (
                       "Ver detalhes"
                     )}
-                  </Button>
+                  </button>
                 </div>
               </li>
             )}

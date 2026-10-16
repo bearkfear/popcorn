@@ -1,5 +1,4 @@
 // Floating playback controls and shortcuts for the canvas video surface.
-import { Button } from "@kobalte/core/button";
 import type { Playback } from "@popcorn/sdk";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Icon } from "../../shared/ui/icon";
@@ -118,7 +117,7 @@ export function PlayerControls(props: {
     >
       <div class="video-controls-top">
         <div class="video-volume-group">
-          <Button
+          <button
             type="button"
             aria-label={props.volume() === 0 ? "Ativar som" : "Silenciar"}
             title="Ativar/desativar som (M)"
@@ -126,7 +125,7 @@ export function PlayerControls(props: {
             onClick={() => act("mute")}
           >
             <Icon name={props.volume() === 0 ? "speaker-slash" : "speaker-high"} />
-          </Button>
+          </button>
           <input
             class="video-volume"
             type="range"
@@ -146,7 +145,7 @@ export function PlayerControls(props: {
           />
         </div>
         <div class="video-transport-group">
-          <Button
+          <button
             type="button"
             aria-label="Voltar 10 segundos"
             title="Voltar 10 segundos (← / J)"
@@ -154,8 +153,8 @@ export function PlayerControls(props: {
             onClick={() => act("back")}
           >
             <Icon name="rewind" />
-          </Button>
-          <Button
+          </button>
+          <button
             class="video-play-toggle"
             type="button"
             aria-label={props.paused() ? "Reproduzir" : "Pausar"}
@@ -164,8 +163,8 @@ export function PlayerControls(props: {
             onClick={() => act("play")}
           >
             <Icon name={props.paused() ? "play" : "pause"} />
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
             aria-label="Avançar 10 segundos"
             title="Avançar 10 segundos (→ / L)"
@@ -173,7 +172,7 @@ export function PlayerControls(props: {
             onClick={() => act("forward")}
           >
             <Icon name="fast-forward" />
-          </Button>
+          </button>
         </div>
         <div class="video-presentation-group">
           <Show when={props.audioTracks.length > 1}>
@@ -199,7 +198,7 @@ export function PlayerControls(props: {
               onChange={(value) => props.onAudioChange(Number(value))}
             />
           </Show>
-          <Button
+          <button
             type="button"
             aria-label="Picture-in-picture"
             title="Picture-in-picture (P)"
@@ -207,8 +206,8 @@ export function PlayerControls(props: {
             onClick={() => act("pip")}
           >
             <Icon name="picture-in-picture" />
-          </Button>
-          <Button
+          </button>
+          <button
             type="button"
             aria-label="Tela cheia"
             title="Tela cheia (F)"
@@ -216,7 +215,7 @@ export function PlayerControls(props: {
             onClick={() => act("fullscreen")}
           >
             <Icon name="corners-out" />
-          </Button>
+          </button>
         </div>
       </div>
       <div class="video-timeline">

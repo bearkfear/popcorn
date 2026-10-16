@@ -1,4 +1,3 @@
-import { Button } from "@kobalte/core/button";
 import { createEffect, Show } from "solid-js";
 import { playbackQualities } from "../../shared/types";
 import { Icon } from "../../shared/ui/icon";
@@ -94,18 +93,18 @@ export function PlaybackSetup(props: {
         <p class="error-text" role="alert">
           {props.vm.displayError()}
         </p>
-        <Button
+        <button
           class="button secondary"
           type="button"
           disabled={props.vm.busy()}
           onClick={() => void props.vm.retry()}
         >
           Tentar preparar novamente
-        </Button>
+        </button>
       </Show>
       <Show when={props.vm.mediaReady()}>
         <div class="cluster playback-launch">
-          <Button
+          <button
             class="button"
             type="button"
             disabled={props.vm.busy()}
@@ -120,11 +119,11 @@ export function PlaybackSetup(props: {
                 <Icon name="play" /> Reproduzir
               </>
             )}
-          </Button>
+          </button>
           <Show when={props.resumeSeconds > 0}>
-            <Button class="button secondary" type="button" onClick={() => props.onLaunch(0)}>
+            <button class="button secondary" type="button" onClick={() => props.onLaunch(0)}>
               Assistir do início
-            </Button>
+            </button>
           </Show>
         </div>
       </Show>

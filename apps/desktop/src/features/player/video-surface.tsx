@@ -1,6 +1,5 @@
 // Presents decoded frames independently of WebKit's native inline video layer on macOS.
 
-import { Button } from "@kobalte/core/button";
 import type { Playback } from "@popcorn/sdk";
 import { isTauri } from "@tauri-apps/api/core";
 import { createSignal, type JSX, onCleanup, onMount, Show } from "solid-js";
@@ -190,9 +189,9 @@ export function VideoSurface(props: {
         <Show when={pictureInPicture()}>
           <div class="video-pip-message" role="status">
             <p>O vídeo está em picture-in-picture</p>
-            <Button class="button secondary" type="button" onClick={() => present("inline")}>
+            <button class="button secondary" type="button" onClick={() => present("inline")}>
               Trazer vídeo de volta
-            </Button>
+            </button>
           </div>
         </Show>
         <Show when={!ready() && !pictureInPicture()}>
