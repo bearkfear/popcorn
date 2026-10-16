@@ -88,6 +88,25 @@ Para compilar o desktop:
 bun run desktop:build
 ```
 
+### Release para Windows pelo GitHub Actions
+
+O workflow `Release Windows` compila o aplicativo em um runner Windows, preserva
+o instalador NSIS e seu `SHA256SUMS.txt` como artifact da execução e publica os
+mesmos arquivos no GitHub Releases. A tag precisa coincidir com a versão de
+`apps/desktop/src-tauri/tauri.conf.json`.
+
+Para publicar a versão `0.1.0`:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Também é possível iniciar o workflow manualmente em **Actions → Release Windows
+→ Run workflow**, informando `v0.1.0`. Uma execução manual cria a tag no commit
+selecionado se ela ainda não existir. O instalador não é assinado nesta etapa e,
+por isso, o Windows SmartScreen pode exibir um aviso.
+
 Os targets iniciais de produto continuam Windows x64 e macOS ARM64. A configuração
 de bundle usa NSIS no Windows e app/DMG no macOS. Assinatura, notarização, instalação
 e atualização nesses sistemas ainda precisam de homologação; compilar não comprova
@@ -99,7 +118,7 @@ esses gates. Linux é ambiente adicional de desenvolvimento, com bundling desati
 instalar FFmpeg, codecs ou ferramentas de extração, e o aplicativo não procura
 FFmpeg no `PATH`. A preparação baixa builds estáticas de FFmpeg 9.0.2,
 fixadas no macOS em Martin Riedl `1789931890_9.0.2` e no Windows em Gyan
-`9.0.2-essentials_build`, verifica SHA256 dos ZIPs e dos executáveis antes de executá-los e
+`9.0.2-essentials_build`, verifica SHA256 dos arquivos e dos executáveis antes de executá-los e
 preserva licenças, avisos e proveniência. Os inputs revisados estão em
 `apps/desktop/scripts/media-tools.lock.ts`; nenhuma URL `latest` é usada.
 
@@ -115,9 +134,9 @@ bun apps/desktop/scripts/prepare-media-tools.ts --server-dir "$PWD/target/debug"
 
 O target padrão é `TAURI_ENV_TARGET_TRIPLE` ou a plataforma/arquitetura do Bun;
 o hook `prepare:sidecar` usa o target Rust escolhido para o servidor.
-São aceitos `aarch64-apple-darwin` e `x86_64-pc-windows-msvc`; Linux precisa de
-uma distribuição revisada antes de poder usar este preparo. Preparar um target
-estrangeiro verifica hash e arquitetura, mas não equivale à execução nesse SO.
+São aceitos `aarch64-apple-darwin`, `x86_64-pc-windows-msvc` e
+`x86_64-unknown-linux-gnu`. Preparar um target estrangeiro verifica hash e
+arquitetura, mas não equivale à execução nesse SO.
 No host nativo, o preparo executa `-version` sem `PATH`, valida versão/licença e
 confere os encoders `libx264`/`aac` e filtros `zscale`/`tonemap`;
 no macOS também recusa dependências fora de `/usr/lib` e `/System/Library`.
