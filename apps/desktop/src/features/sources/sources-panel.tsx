@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { createEffect, For, Show, untrack } from "solid-js";
 import { bytesLabel } from "../../shared/formatters";
 import { PlaybackSetup } from "../player/playback-setup";
 import type { PlayerViewModel } from "../player/player.viewmodel";
@@ -11,6 +11,23 @@ export function SourcesPanel(props: {
   readonly resumeSeconds: number;
   readonly onLaunch: (position: number) => void;
 }) {
+  let automaticSource = "";
+  createEffect(() => {
+    const sources = props.sources.sources();
+    if (props.sources.busy() || sources.length !== 1) return;
+    const source = sources[0];
+    if (!source || source.recommendedFileIndex === undefined) return;
+    const fileIndex = source.recommendedFileIndex;
+    const key = `${source.sourceId}:${fileIndex}`;
+    if (automaticSource === key) return;
+    automaticSource = key;
+    untrack(() => {
+      if (props.player.preparedFile()?.sourceId !== source.sourceId) {
+        props.onPrepare(source.sourceId, fileIndex);
+      }
+    });
+  });
+
   function submitMagnet(event: SubmitEvent) {
     event.preventDefault();
     void props.sources.addMagnet();
@@ -96,7 +113,7 @@ export function SourcesPanel(props: {
           {(source) => (
             <li>
               <div class="source-row">
-                <span>{source.files.length} arquivo(s)</span>
+                <span>Fonte {props.sources.sources().indexOf(source) + 1}</span>
                 <button
                   class="text-button"
                   type="button"
@@ -106,33 +123,55 @@ export function SourcesPanel(props: {
                   Remover
                 </button>
               </div>
-              <ul class="file-list">
-                <For each={source.files}>
-                  {(file) => (
-                    <li>
-                      <div>
-                        <strong>{file.name}</strong>
-                        <span>{bytesLabel(file.sizeBytes)}</span>
-                      </div>
-                      <Show when={file.likelyMedia}>
-                        <button
-                          class="button play-button"
-                          type="button"
-                          disabled={props.player.busy()}
-                          onClick={() => props.onPrepare(source.sourceId, file.fileIndex)}
-                        >
-                          {props.player.busy()
-                            ? "Preparando..."
-                            : props.player.preparedFile()?.sourceId === source.sourceId &&
-                                props.player.preparedFile()?.fileIndex === file.fileIndex
-                              ? "✓ Arquivo selecionado"
-                              : "Selecionar arquivo"}
-                        </button>
-                      </Show>
-                    </li>
-                  )}
-                </For>
-              </ul>
+              <Show
+                when={source.recommendedFileIndex !== undefined}
+                fallback={
+                  <>
+                    <p class="muted">
+                      Não foi possível identificar um único vídeo principal. Escolha entre os vídeos
+                      disponíveis.
+                    </p>
+                    <ul class="file-list">
+                      <For each={source.files.filter((file) => file.likelyMedia)}>
+                        {(file) => (
+                          <li>
+                            <div>
+                              <strong>{file.name}</strong>
+                              <span>{bytesLabel(file.sizeBytes)}</span>
+                            </div>
+                            <button
+                              class="button"
+                              type="button"
+                              disabled={props.player.busy()}
+                              onClick={() => props.onPrepare(source.sourceId, file.fileIndex)}
+                            >
+                              Usar este vídeo
+                            </button>
+                          </li>
+                        )}
+                      </For>
+                    </ul>
+                  </>
+                }
+              >
+                <Show when={props.sources.sources().length > 1 || props.player.error()}>
+                  <button
+                    class="button"
+                    type="button"
+                    disabled={props.player.busy()}
+                    onClick={() => {
+                      const index = source.recommendedFileIndex;
+                      if (index !== undefined) props.onPrepare(source.sourceId, index);
+                    }}
+                  >
+                    {props.player.busy()
+                      ? "Preparando..."
+                      : props.player.preparedFile()?.sourceId === source.sourceId
+                        ? "✓ Fonte selecionada"
+                        : "Usar esta fonte"}
+                  </button>
+                </Show>
+              </Show>
             </li>
           )}
         </For>
