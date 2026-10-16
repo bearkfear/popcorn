@@ -9,7 +9,7 @@ import {
 } from "./media-tools";
 
 const args = Bun.argv.slice(2);
-let target = Bun.env.TAURI_ENV_TARGET_TRIPLE;
+let target = Bun.env["TAURI_ENV_TARGET_TRIPLE"];
 let check = false;
 let serverDirectory: string | undefined;
 for (let index = 0; index < args.length; index += 1) {

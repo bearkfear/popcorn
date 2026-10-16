@@ -138,7 +138,7 @@ export async function stageMediaTools(targetName: string): Promise<void> {
   const target = parseTarget(targetName);
   const noticeDirectory = join(noticeRoot, target);
   const extension = target.includes("windows") ? ".exe" : "";
-  const explicit = [Bun.env.POPCORN_FFMPEG_PATH, Bun.env.POPCORN_FFPROBE_PATH];
+  const explicit = [Bun.env["POPCORN_FFMPEG_PATH"], Bun.env["POPCORN_FFPROBE_PATH"]];
   if (explicit.some(Boolean) && !explicit.every(Boolean)) {
     throw new MediaToolsError("Set both POPCORN_FFMPEG_PATH and POPCORN_FFPROBE_PATH, or neither.");
   }

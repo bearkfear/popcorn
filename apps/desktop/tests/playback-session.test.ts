@@ -1,5 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
-import { type Playback, PlaybackQuality, PlaybackState } from "@popcorn/sdk";
+import {
+  type Playback,
+  PlaybackQuality,
+  PlaybackState,
+  type StartPlaybackResponse,
+} from "@popcorn/sdk";
 import { createActor, SimulatedClock, waitFor } from "xstate";
 import {
   type PlaybackRequest,
@@ -61,7 +66,7 @@ function fixture(overrides: Partial<PlaybackClient> = {}) {
 
 describe("playback session lifecycle", () => {
   test("close aborts preparation and ignores its late response after a new session starts", async () => {
-    const old = deferred<{ playback: ReturnType<typeof playback> }>();
+    const old = deferred<StartPlaybackResponse>();
     let signal: AbortSignal | undefined;
     let calls = 0;
     const f = fixture({
@@ -71,7 +76,7 @@ describe("playback session lifecycle", () => {
           signal = options?.signal;
           return old.promise;
         }
-        return { playback: playback("two") } as never;
+        return { $typeName: "popcorn.v1.StartPlaybackResponse", playback: playback("two") };
       },
       getPlayback: async () => ({ playback: playback("two") }) as never,
     });
@@ -83,7 +88,10 @@ describe("playback session lifecycle", () => {
       expect(signal?.aborted).toBe(true);
       f.actor.send({ type: "START", request: f.request });
       await waitFor(f.actor, (state) => state.matches({ active: "waiting" }));
-      old.resolve({ playback: playback("obsolete") });
+      old.resolve({
+        $typeName: "popcorn.v1.StartPlaybackResponse",
+        playback: playback("obsolete"),
+      });
       await flush();
       expect(f.actor.getSnapshot().context.playback?.playbackId).toBe("two");
     } finally {

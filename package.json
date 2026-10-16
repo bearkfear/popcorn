@@ -15,7 +15,9 @@
     "format:desktop": "cd apps/desktop && bun run format",
     "format:desktop:check": "cd apps/desktop && bun run format:check",
     "check:desktop": "bun run --filter @popcorn/desktop check",
-    "check:sdk": "bun run --filter @popcorn/sdk check"
+    "check:sdk": "bun run --filter @popcorn/sdk check",
+    "check:scripts": "tsc -p tsconfig.json",
+    "typecheck": "bun run check:scripts && bun run check:sdk && bun run --filter @popcorn/desktop typecheck"
   },
   "devDependencies": {
     "@bufbuild/buf": "1.73.0",

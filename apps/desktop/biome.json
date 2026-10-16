@@ -22,6 +22,16 @@
     ],
     "rules": {
       "preset": "recommended",
+      "complexity": {
+        "useLiteralKeys": "off"
+      },
+      "style": {
+        "useConst": "error",
+        "noNonNullAssertion": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "error"
+      },
       "a11y": {
         "useButtonType": "warn",
         "useMediaCaption": "off"

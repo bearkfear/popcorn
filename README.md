@@ -351,9 +351,31 @@ cargo test -p popcorn-diagnostics
 
 ### Verificações do projeto
 
+O TypeScript compartilha as regras de `tsconfig.base.json`: modo estrito,
+índices e propriedades opcionais verificados, retornos e overrides explícitos,
+erros para código inalcançável, variáveis/parâmetros sem uso e imports de efeito
+colateral não resolvidos. Cada ambiente declara seus tipos globais; os tipos do
+Bun ficam nos scripts e testes, separados do frontend.
+
+`bun run typecheck` verifica SDK, frontend, testes, configuração Vite e scripts
+TypeScript. `bun run check:scripts` verifica somente os scripts da raiz.
+O SDK usa ES2022, alinhado ao desktop. `skipLibCheck` fica desativado na base;
+o frontend e seus testes mantêm essa opção ativada porque as declarações do
+XState 5.33.2 são incompatíveis com `exactOptionalPropertyTypes`. Os usos da
+biblioteca pela aplicação continuam sendo verificados. `erasableSyntaxOnly`
+não é habilitado porque o Protobuf gera enums TypeScript.
+
+Essas regras não proíbem `any` explícito, assertions (`as`, `!`) ou todas as
+Promises ignoradas, nem validam dados externos em runtime. Essas garantias
+exigem lint adicional e validação nas fronteiras; o compilador não oferece
+o modelo de ownership/borrowing do Rust.
+No Biome, `useLiteralKeys` fica desativado para não sugerir acesso por ponto
+onde `noPropertyAccessFromIndexSignature` exige colchetes.
+
 ```sh
 bun install --frozen-lockfile
 bun run generate:check
+bun run typecheck
 bun run check:sdk
 bun run check:desktop
 bun run --filter @popcorn/desktop build

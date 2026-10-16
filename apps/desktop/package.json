@@ -7,7 +7,7 @@
     "prepare:sidecar": "bun ./scripts/prepare-sidecar.ts",
     "dev": "bun --bun vite",
     "check": "bun run typecheck && bun --bun biome check .",
-    "typecheck": "bun --bun tsc --noEmit",
+    "typecheck": "bun --bun tsc -p tsconfig.json && bun --bun tsc -p tsconfig.tools.json && bun --bun tsc -p tsconfig.tests.json",
     "lint": "bun --bun biome lint .",
     "lint:fix": "bun --bun biome lint --write .",
     "format": "bun --bun biome format --write .",
