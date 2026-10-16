@@ -1,5 +1,6 @@
-import { createEffect, createMemo, onCleanup, onMount, type JSX } from "solid-js";
 import type { Playback } from "@popcorn/sdk";
+import { createEffect, createMemo, type JSX, onCleanup, onMount } from "solid-js";
+import { createPlayerMachine } from "./player.machine";
 
 class MediaPlaybackError extends Error {}
 
@@ -20,13 +21,25 @@ function mediaOperation(
       for (const event of failures) target.removeEventListener(event, failure);
       signal.removeEventListener("abort", cancelled);
     };
-    const success = () => { clean(); resolve(); };
-    const failure = () => { clean(); reject(new MediaPlaybackError("media operation failed")); };
-    const cancelled = () => { clean(); reject(signal.reason); };
+    const success = () => {
+      clean();
+      resolve();
+    };
+    const failure = () => {
+      clean();
+      reject(new MediaPlaybackError("media operation failed"));
+    };
+    const cancelled = () => {
+      clean();
+      reject(signal.reason);
+    };
     target.addEventListener(completed, success, { once: true });
     for (const event of failures) target.addEventListener(event, failure, { once: true });
     signal.addEventListener("abort", cancelled, { once: true });
-    if (signal.aborted) { cancelled(); return; }
+    if (signal.aborted) {
+      cancelled();
+      return;
+    }
     try {
       operation();
     } catch (error) {
@@ -52,16 +65,26 @@ function bufferedAhead(ranges: TimeRanges, time: number): number {
   return 0;
 }
 
-function waitForRoom(video: HTMLVideoElement, buffer: SourceBuffer, signal: AbortSignal): Promise<void> {
+function waitForRoom(
+  video: HTMLVideoElement,
+  buffer: SourceBuffer,
+  signal: AbortSignal,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const events = ["timeupdate", "seeking", "play", "abort"] as const;
     const clean = () => {
       for (const event of events) video.removeEventListener(event, check);
       signal.removeEventListener("abort", cancelled);
     };
-    const cancelled = () => { clean(); reject(signal.reason); };
+    const cancelled = () => {
+      clean();
+      reject(signal.reason);
+    };
     const check = () => {
-      if (bufferedAhead(buffer.buffered, video.currentTime) < 30) { clean(); resolve(); }
+      if (bufferedAhead(buffer.buffered, video.currentTime) < 30) {
+        clean();
+        resolve();
+      }
     };
     for (const event of events) video.addEventListener(event, check);
     signal.addEventListener("abort", cancelled, { once: true });
@@ -79,7 +102,11 @@ type MediaConfig = {
   readonly timestampOffsetSeconds: number;
 };
 
-function attachMse(video: HTMLVideoElement, config: MediaConfig, fail: (message: string) => void): () => void {
+function attachMse(
+  video: HTMLVideoElement,
+  config: MediaConfig,
+  fail: (message: string) => void,
+): () => void {
   let disposed = false;
   let failed = false;
   let generation = 0;
@@ -132,7 +159,8 @@ function attachMse(video: HTMLVideoElement, config: MediaConfig, fail: (message:
       URL.revokeObjectURL(objectUrl);
     };
 
-    async function stream() { // no-excuse-ok: catch — browser media boundary
+    async function stream() {
+      // no-excuse-ok: catch — browser media boundary
       try {
         await mediaOperation(source, "sourceopen", ["sourceclose"], controller.signal, () => {
           video.src = objectUrl;
@@ -154,7 +182,12 @@ function attachMse(video: HTMLVideoElement, config: MediaConfig, fail: (message:
           if (restored) await waitForRoom(video, buffer, controller.signal);
           if (!alive()) return;
           const trimTo = video.currentTime - 30;
-          if (restored && trimTo > 0 && buffer.buffered.length && buffer.buffered.start(0) < trimTo) {
+          if (
+            restored &&
+            trimTo > 0 &&
+            buffer.buffered.length &&
+            buffer.buffered.start(0) < trimTo
+          ) {
             await mediaOperation(buffer, "updateend", ["error", "abort"], controller.signal, () => {
               buffer?.remove(0, trimTo);
             });
@@ -227,24 +260,37 @@ export function MediaPlayer(props: {
   readonly onEnded: () => void;
 }) {
   let video: HTMLVideoElement | undefined;
+  const machine = createPlayerMachine();
   // Only transport identity changes recreate media, not one-second statistics.
-  const config = createMemo((): MediaConfig => ({
-    playbackId: props.playback.playbackId,
-    mediaUrl: props.playback.mediaUrl,
-    delivery: props.playback.delivery,
-    streamType: props.playback.streamType,
-    durationSeconds: props.playback.durationSeconds,
-    timestampOffsetSeconds: props.playback.timestampOffsetSeconds,
-  }), undefined, { equals: (a, b) => a.playbackId === b.playbackId && a.mediaUrl === b.mediaUrl
-    && a.delivery === b.delivery && a.streamType === b.streamType
-    && a.timestampOffsetSeconds === b.timestampOffsetSeconds });
+  const config = createMemo(
+    (): MediaConfig => ({
+      playbackId: props.playback.playbackId,
+      mediaUrl: props.playback.mediaUrl,
+      delivery: props.playback.delivery,
+      streamType: props.playback.streamType,
+      durationSeconds: props.playback.durationSeconds,
+      timestampOffsetSeconds: props.playback.timestampOffsetSeconds,
+    }),
+    undefined,
+    {
+      equals: (a, b) =>
+        a.playbackId === b.playbackId &&
+        a.mediaUrl === b.mediaUrl &&
+        a.delivery === b.delivery &&
+        a.streamType === b.streamType &&
+        a.durationSeconds === b.durationSeconds &&
+        a.timestampOffsetSeconds === b.timestampOffsetSeconds,
+    },
+  );
 
   createEffect(() => {
     const current = config();
     const element = video;
     if (!element) return;
+    machine.send("prepare");
     if (current.delivery === "mse") {
       if (typeof MediaSource === "undefined" || !MediaSource.isTypeSupported(current.streamType)) {
+        machine.send("fail");
         props.onError("Este sistema não oferece suporte ao formato de reprodução convertido.");
         return;
       }
@@ -252,10 +298,14 @@ export function MediaPlayer(props: {
       return;
     }
     if (current.delivery !== "direct") {
+      machine.send("fail");
       props.onError("O serviço não informou um modo de reprodução compatível.");
       return;
     }
-    const failed = () => props.onError("Não foi possível carregar ou decodificar este vídeo. Tente novamente.");
+    const failed = () => {
+      machine.send("fail");
+      props.onError("Não foi possível carregar ou decodificar este vídeo. Tente novamente.");
+    };
     element.addEventListener("error", failed);
     element.src = current.mediaUrl;
     element.load();
@@ -266,13 +316,36 @@ export function MediaPlayer(props: {
       element.load();
     });
   });
-  return <video ref={video} class="video-player" controls autoplay playsinline tabindex="0" onEnded={props.onEnded} />;
+  return (
+    <video
+      ref={video}
+      class="video-player"
+      data-player-state={machine.state()}
+      controls
+      autoplay
+      playsinline
+      tabindex="0"
+      onEnded={props.onEnded}
+      onLoadStart={() => machine.send("prepare")}
+      onWaiting={() => machine.send("buffer")}
+      onPlaying={() => machine.send("play")}
+      onPause={() => machine.send("pause")}
+      onSeeking={() => machine.send("seek")}
+      onSeeked={(event) => machine.send(event.currentTarget.paused ? "pause" : "play")}
+      onError={() => machine.send("fail")}
+    />
+  );
 }
 
-export function PlayerOverlay(props: { readonly children: JSX.Element; readonly onClose: () => void }) {
+export function PlayerOverlay(props: {
+  readonly children: JSX.Element;
+  readonly onClose: () => void;
+}) {
   let dialog: HTMLDivElement | undefined;
   const previousFocus = document.activeElement;
-  onMount(() => { dialog?.focus(); });
+  onMount(() => {
+    dialog?.focus();
+  });
   onCleanup(() => {
     if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus();
   });
@@ -282,17 +355,35 @@ export function PlayerOverlay(props: { readonly children: JSX.Element; readonly 
       props.onClose();
     }
     if (event.key !== "Tab" || !dialog) return;
-    const controls = Array.from(dialog.querySelectorAll<HTMLElement>("button:not(:disabled), video, [href], select, [tabindex='0']"))
-      .filter((element) => element.getClientRects().length > 0);
+    const controls = Array.from(
+      dialog.querySelectorAll<HTMLElement>(
+        "button:not(:disabled), video, [href], select, [tabindex='0']",
+      ),
+    ).filter((element) => element.getClientRects().length > 0);
     const first = controls[0];
     const last = controls.at(-1);
     if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
       event.preventDefault();
       last?.focus();
-    } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) {
+    } else if (
+      !event.shiftKey &&
+      (document.activeElement === last || document.activeElement === dialog)
+    ) {
       event.preventDefault();
       first?.focus();
     }
   };
-  return <div ref={dialog} class="player-overlay" role="dialog" aria-modal="true" aria-label="Reprodutor de vídeo" tabindex="-1" onKeyDown={keydown}>{props.children}</div>;
+  return (
+    <div
+      ref={dialog}
+      class="player-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Reprodutor de vídeo"
+      tabindex="-1"
+      onKeyDown={keydown}
+    >
+      {props.children}
+    </div>
+  );
 }

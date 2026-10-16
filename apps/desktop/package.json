@@ -6,10 +6,13 @@
   "scripts": {
     "prepare:sidecar": "bun ./scripts/prepare-sidecar.ts",
     "dev": "bun --bun vite",
-    "check": "bun --bun tsc --noEmit",
-    "typecheck": "bun run check",
-    "lint": "bun --bun biome lint src/",
-    "build": "bun run check && bun run lint && bun --bun vite build",
+    "check": "bun run typecheck && bun --bun biome check .",
+    "typecheck": "bun --bun tsc --noEmit",
+    "lint": "bun --bun biome lint .",
+    "lint:fix": "bun --bun biome lint --write .",
+    "format": "bun --bun biome format --write .",
+    "format:check": "bun --bun biome format .",
+    "build": "bun run check && bun --bun vite build",
     "preview": "bun --bun vite preview"
   },
   "dependencies": {

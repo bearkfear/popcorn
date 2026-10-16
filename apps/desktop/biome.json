@@ -1,38 +1,54 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "files": {
-    "includes": ["src/**/*.ts", "src/**/*.tsx"]
+    "ignoreUnknown": true,
+    "includes": ["**", "!!dist", "!!src-tauri", "!!scripts/media-tools.lock.ts"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 100
   },
   "linter": {
     "enabled": true,
+    "includes": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.css",
+      "scripts/**/*.ts",
+      "vite.config.ts"
+    ],
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "a11y": {
-        "useMediaCaption": "off",
-        "useButtonType": "warn"
-      },
-      "complexity": {
-        "useMaxParams": {
-          "level": "error",
-          "options": {
-            "max": 4
-          }
-        },
-        "noExcessiveLinesPerFunction": {
-          "level": "error",
-          "options": {
-            "maxLines": 60
-          }
-        }
-      },
-      "style": {
-        "noExcessiveLinesPerFile": {
-          "level": "error",
-          "options": {
-            "maxLines": 200
-          }
-        }
+        "useButtonType": "warn",
+        "useMediaCaption": "off"
       }
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "arrowParentheses": "always",
+      "bracketSpacing": true,
+      "jsxQuoteStyle": "double",
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   }
 }

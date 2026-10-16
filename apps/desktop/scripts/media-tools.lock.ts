@@ -8,12 +8,16 @@ export type MediaAsset = {
   readonly archive?: {
     readonly sha256: string;
     readonly member: string;
+    readonly format?: "zip" | "tar.xz";
   };
 };
 
 const macos = "https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2";
 const windows = "https://github.com/GyanD/codexffmpeg/releases/download/9.0.2/ffmpeg-9.0.2-essentials_build.zip";
 const windowsArchive = "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba";
+const linuxName = "ffmpeg-n9.0.2-10-g51c4a23d74-linux64-gpl-9.0";
+const linux = `https://bin.ffmpeg.download/btbn_ffmpeg_builds/linux/x86_64/gpl/9.0/n9.0.2-10/${linuxName}.tar.xz`;
+const linuxArchive = "da9ab8e49d4997594a3fd7504b8ba63fad02d4adf8111a64e79f3d8e60a2a4ac";
 
 export const mediaTargets = {
   "aarch64-apple-darwin": {
@@ -55,6 +59,34 @@ export const mediaTargets = {
       url: windows,
       sha256: "0342de6bb39dd421cbec2c00d89ad274b640d75ad3f2cab09ffd647ce2d8f949",
       archive: { member: "ffmpeg-9.0.2-essentials_build/README.txt", sha256: windowsArchive },
+    }],
+  },
+  "x86_64-unknown-linux-gnu": {
+    provider: "BtbN n9.0.2-10-g51c4a23d74, permanent ffmpeg.download mirror",
+    ffmpeg: {
+      name: "ffmpeg",
+      url: linux,
+      sha256: "1b6a0bdfef4105d7d1ec56b550fcba1275eb4371e218b1e2f9d974321648d997",
+      archive: {
+        member: `${linuxName}/bin/ffmpeg`,
+        sha256: linuxArchive,
+        format: "tar.xz",
+      },
+    },
+    ffprobe: {
+      name: "ffprobe",
+      url: linux,
+      sha256: "704ec0b3fbf8c5af455bfab34881892e5b5df07d12fb8e7e7a715c08bcbb2e34",
+      archive: {
+        member: `${linuxName}/bin/ffprobe`,
+        sha256: linuxArchive,
+        format: "tar.xz",
+      },
+    },
+    notices: [{
+      name: "provider-build.txt",
+      url: `${linux}.info`,
+      sha256: "40230eb3f2d7347929e6720b1863e44297ea383a10f3c4caf3c7c8fa6e48405d",
     }],
   },
 } as const;

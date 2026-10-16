@@ -47,6 +47,30 @@ Requer Rust 1.94 ou posterior, compilador C, Bun 1.3.14 e os pré-requisitos nat
 do Tauri 2 para o sistema em uso. Windows precisa das ferramentas C++ e WebView2;
 macOS precisa das ferramentas de desenvolvimento da Apple.
 
+### Devbox no WSL/Linux
+
+O repositório inclui um `devbox.json` com Bun 1.3, Rust 1.94, compilador C,
+SQLite e as bibliotecas de desenvolvimento WebKitGTK 4.1 usadas pelo Tauri.
+Depois de instalar o Devbox, execute:
+
+```sh
+devbox shell
+devbox run doctor
+devbox run web
+```
+
+Na primeira entrada, o shell instala as dependências JavaScript do lockfile se
+`node_modules` ainda não existir. `devbox run setup` força essa preparação e
+repete o diagnóstico; `devbox run check` executa geração, lint, typecheck e os
+testes de domínio. Em WSL, uma janela Linux requer WSLg e `DISPLAY` ou
+`WAYLAND_DISPLAY` configurado.
+
+O modo web permite trabalhar na interface, mas não disponibiliza IPC nem inicia o
+backend. Para executar o cliente gráfico completo no WSL com WSLg, use
+`devbox run desktop`. O preparo seguro inclui distribuições revisadas de
+FFmpeg/ffprobe para Linux x64, Windows x64 e macOS ARM64; os executáveis não são
+substituídos por cópias encontradas no `PATH`.
+
 ```sh
 bun install --frozen-lockfile
 bun run desktop:dev

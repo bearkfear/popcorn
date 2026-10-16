@@ -13,17 +13,23 @@ macOS arm64: Martin Riedl, build 1789931890_9.0.2
 https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/
 Windows x64: Gyan, 9.0.2 essentials_build
 https://github.com/GyanD/codexffmpeg/releases/tag/9.0.2
+Linux x64: BtbN, n9.0.2-10-g51c4a23d74 GPL static build
+https://github.com/BtbN/FFmpeg-Builds
+Permanent artifact mirror: https://ffmpeg.download/
 
-The accompanying provider-build.txt records the configuration, third-party
-libraries and versions used by this platform's provider. The full FFmpeg GPLv3
-license and original license notice are included. FFmpeg's LGPL-only parts
-retain their LGPL notices (see COPYING.LGPLv2.1).
+The accompanying provider-build.txt records the provider's release metadata,
+source commit or detailed build configuration, depending on the platform. The
+full FFmpeg GPLv3 license and original license notice are included. FFmpeg's
+LGPL-only parts retain their LGPL notices (see COPYING.LGPLv2.1).
 
 Upstream source and build locations:
 FFmpeg n9.0.2: https://git.ffmpeg.org/ffmpeg.git
 macOS build scripts: https://git.martin-riedl.de/ffmpeg/build-script
 Windows build information: https://www.gyan.dev/ffmpeg/builds/
 Windows FFmpeg source commit: 946fcce07b (also in provider-build.txt).
+Linux build scripts: https://github.com/BtbN/FFmpeg-Builds
+Linux FFmpeg source commit: 51c4a23d74ac2fbf2fb066e0ce274a966a16da23
+  (also in provider-build.txt).
 The provider's FFmpeg license covers its GPL-enabled executable, not an
 LGPL-only build; libx264 and libx265 are included as static GPL dependencies.
 

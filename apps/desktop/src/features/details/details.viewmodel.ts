@@ -1,118 +1,166 @@
 // ViewModel managing title details, seasons, and episode selections.
-import { createSignal } from "solid-js";
-import { MediaType, type ContentRef, type Episode, type Season, type Title } from "@popcorn/sdk";
-import type { CatalogClient } from "../../shared/types";
+
+import { type ContentRef, type Episode, MediaType, type Season, type Title } from "@popcorn/sdk";
+import { createEffect, createResource, createSignal } from "solid-js";
 import { catalogErrorText } from "../../catalog-ui";
+import type { CatalogClient } from "../../shared/types";
 
-function createSeriesDetail(getClient: () => CatalogClient | undefined, getSelected: () => Title | undefined) {
-  const [seasons, setSeasons] = createSignal<readonly Season[]>([]);
-  const [seasonsBusy, setSeasonsBusy] = createSignal(false);
-  const [seasonsError, setSeasonsError] = createSignal("");
-  const [seasonsStale, setSeasonsStale] = createSignal(false);
-  const [seasonNumber, setSeasonNumber] = createSignal<number>();
-  const [episodes, setEpisodes] = createSignal<readonly Episode[]>([]);
-  const [episodesBusy, setEpisodesBusy] = createSignal(false);
-  const [episodesError, setEpisodesError] = createSignal("");
-  const [episodesStale, setEpisodesStale] = createSignal(false);
-  let epCtrl: AbortController | undefined;
-  let epGen = 0;
+type DetailResult = {
+  readonly title: Title;
+  readonly stale: boolean;
+  readonly online: boolean;
+};
 
-  function resetSeries() {
-    epCtrl?.abort();
-    setSeasons([]); setSeasonsBusy(false); setSeasonsError(""); setSeasonsStale(false);
-    setSeasonNumber(undefined); setEpisodes([]); setEpisodesBusy(false); setEpisodesError("");
-  }
+type DetailRequest = {
+  readonly client: CatalogClient;
+  readonly title: Title;
+  readonly online: boolean;
+};
 
-  async function loadEpisodes(num: number) {
-    const client = getClient();
-    const seriesId = getSelected()?.content?.tmdbId;
-    if (!client || !seriesId) return;
-    epCtrl?.abort();
-    const ctrl = new AbortController(); epCtrl = ctrl; const gen = ++epGen;
-    setSeasonNumber(num); setEpisodes([]); setEpisodesBusy(true); setEpisodesError("");
-    try {
-      const res = await client.listEpisodes({ seriesId, seasonNumber: num }, { signal: ctrl.signal, timeoutMs: 10_000 });
-      if (gen !== epGen) return;
-      setEpisodes(res.episodes); setEpisodesStale(res.stale);
-    } catch (err) {
-      if (gen !== epGen) return;
-      setEpisodesError(catalogErrorText(err, true));
-    } finally {
-      if (gen === epGen) setEpisodesBusy(false);
-    }
-  }
+type SeriesRequest = {
+  readonly client: CatalogClient;
+  readonly seriesId: number;
+};
 
-  async function loadSeasons(seriesId: number, ctrl: AbortController, gen: number, getDetailGen: () => number) {
-    const client = getClient();
-    if (!client) return;
-    setSeasonsBusy(true); setSeasonsError("");
-    try {
-      const res = await client.listSeasons({ seriesId }, { signal: ctrl.signal, timeoutMs: 10_000 });
-      if (gen !== getDetailGen()) return;
-      setSeasons(res.seasons); setSeasonsStale(res.stale);
-      const first = res.seasons[0];
-      if (first) void loadEpisodes(first.seasonNumber);
-    } catch (err) {
-      if (gen !== getDetailGen()) return;
-      setSeasonsError(catalogErrorText(err, true));
-    } finally {
-      if (gen === getDetailGen()) setSeasonsBusy(false);
-    }
-  }
+type ResourceResult<T> = {
+  readonly items: readonly T[];
+  readonly stale: boolean;
+};
 
-  return {
-    seasons, seasonsBusy, seasonsError, seasonsStale,
-    seasonNumber, episodes, episodesBusy, episodesError, episodesStale,
-    resetSeries, loadEpisodes, loadSeasons,
-  };
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error ?? "");
 }
 
 export function createDetailsViewModel(getClient: () => CatalogClient | undefined) {
   const [selected, setSelected] = createSignal<Title>();
-  const [detail, setDetail] = createSignal<Title>();
-  const [detailBusy, setDetailBusy] = createSignal(false);
-  const [detailError, setDetailError] = createSignal("");
-  const [detailStale, setDetailStale] = createSignal(false);
-  let detailCtrl: AbortController | undefined;
-  let detailGen = 0;
-  const series = createSeriesDetail(getClient, selected);
+  const [seasonNumber, setSeasonNumber] = createSignal<number>();
+  const [detailRequest, setDetailRequest] = createSignal<DetailRequest>();
+  const [seasonRequest, setSeasonRequest] = createSignal<SeriesRequest>();
+  const [episodeRequest, setEpisodeRequest] = createSignal<SeriesRequest & { season: number }>();
+  const [detailResponse, detailActions] = createResource(detailRequest, async (request) => {
+    try {
+      const response = await request.client.getTitle(
+        { content: request.title.content, useTmdb: request.online },
+        { timeoutMs: 10_000 },
+      );
+      if (!response.title) throw new Error("O serviço não retornou os detalhes deste título.");
+      return {
+        title: response.title,
+        stale: response.stale,
+        online: request.online,
+      } satisfies DetailResult;
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("O serviço não retornou")) throw error;
+      throw new Error(catalogErrorText(error, request.online));
+    }
+  });
 
-  function resetDetail() {
-    detailGen++; detailCtrl?.abort();
-    setSelected(undefined); setDetail(undefined); setDetailBusy(false);
-    setDetailError(""); setDetailStale(false);
-    series.resetSeries();
+  const [seasonResponse, seasonActions] = createResource(seasonRequest, async (request) => {
+    try {
+      const response = await request.client.listSeasons(
+        { seriesId: request.seriesId },
+        { timeoutMs: 10_000 },
+      );
+      return { items: response.seasons, stale: response.stale } satisfies ResourceResult<Season>;
+    } catch (error) {
+      throw new Error(catalogErrorText(error, true));
+    }
+  });
+
+  const [episodeResponse, episodeActions] = createResource(episodeRequest, async (request) => {
+    try {
+      const response = await request.client.listEpisodes(
+        { seriesId: request.seriesId, seasonNumber: request.season },
+        { timeoutMs: 10_000 },
+      );
+      return { items: response.episodes, stale: response.stale } satisfies ResourceResult<Episode>;
+    } catch (error) {
+      throw new Error(catalogErrorText(error, true));
+    }
+  });
+
+  const detail = () => detailResponse.latest?.title;
+  const detailBusy = () => detailResponse.loading;
+  const detailError = () => errorMessage(detailResponse.error);
+  const detailStale = () => detailResponse.latest?.stale ?? false;
+  const seasons = () => seasonResponse.latest?.items ?? [];
+  const seasonsBusy = () => seasonResponse.loading;
+  const seasonsError = () => errorMessage(seasonResponse.error);
+  const seasonsStale = () => seasonResponse.latest?.stale ?? false;
+  const episodes = () => episodeResponse.latest?.items ?? [];
+  const episodesBusy = () => episodeResponse.loading;
+  const episodesError = () => errorMessage(episodeResponse.error);
+  const episodesStale = () => episodeResponse.latest?.stale ?? false;
+
+  function resetSeries() {
+    setSeasonRequest(undefined);
+    setEpisodeRequest(undefined);
+    setSeasonNumber(undefined);
+    seasonActions.mutate(undefined);
+    episodeActions.mutate(undefined);
   }
 
-  async function openTitle(title: Title, online: boolean, onContentSelect?: (c: ContentRef) => void) {
+  function resetDetail() {
+    setDetailRequest(undefined);
+    detailActions.mutate(undefined);
+    setSelected(undefined);
+    resetSeries();
+  }
+
+  function loadEpisodes(number: number) {
+    const client = getClient();
+    const seriesId = selected()?.content?.tmdbId;
+    if (!client || !seriesId) return;
+    episodeActions.mutate(undefined);
+    setSeasonNumber(number);
+    setEpisodeRequest({ client, seriesId, season: number });
+  }
+
+  function openTitle(
+    title: Title,
+    online: boolean,
+    onContentSelect?: (content: ContentRef) => void,
+  ) {
     const client = getClient();
     if (!client || !title.content) return;
     resetDetail();
-    const ctrl = new AbortController(); detailCtrl = ctrl; const gen = ++detailGen;
-    setSelected(title); setDetailBusy(true);
-    if (onContentSelect && title.content) onContentSelect(title.content);
-    try {
-      const res = await client.getTitle({ content: title.content, useTmdb: online }, { signal: ctrl.signal, timeoutMs: 10_000 });
-      if (gen !== detailGen) return;
-      if (res.title) {
-        setDetail(res.title); setDetailStale(res.stale);
-        if (online && title.content.mediaType === MediaType.TV) {
-          void series.loadSeasons(title.content.tmdbId, ctrl, gen, () => detailGen);
-        }
-      } else {
-        setDetailError("O serviço não retornou os detalhes deste título.");
-      }
-    } catch (err) {
-      if (gen !== detailGen) return;
-      setDetailError(catalogErrorText(err, online));
-    } finally {
-      if (gen === detailGen) setDetailBusy(false);
-    }
+    setSelected(title);
+    onContentSelect?.(title.content);
+    setDetailRequest({ client, title, online });
   }
 
+  createEffect(() => {
+    const result = detailResponse.latest;
+    const client = getClient();
+    const seriesId = result?.title.content?.tmdbId;
+    if (client && result?.online && result.title.content?.mediaType === MediaType.TV && seriesId) {
+      setSeasonRequest({ client, seriesId });
+    }
+  });
+
+  createEffect(() => {
+    const first = seasonResponse.latest?.items[0];
+    if (first) loadEpisodes(first.seasonNumber);
+  });
+
   return {
-    selected, detail, detailBusy, detailError, detailStale,
-    ...series, resetDetail, openTitle,
+    selected,
+    detail,
+    detailBusy,
+    detailError,
+    detailStale,
+    seasons,
+    seasonsBusy,
+    seasonsError,
+    seasonsStale,
+    seasonNumber,
+    episodes,
+    episodesBusy,
+    episodesError,
+    episodesStale,
+    resetDetail,
+    openTitle,
+    loadEpisodes,
   };
 }
 

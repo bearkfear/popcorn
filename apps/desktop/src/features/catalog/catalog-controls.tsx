@@ -1,6 +1,7 @@
 // UI component for catalog filtering, search input, and genre selection.
-import { For, Show } from "solid-js";
+
 import { CatalogCategory, MediaType } from "@popcorn/sdk";
+import { For, Show } from "solid-js";
 import type { CatalogViewModel } from "./catalog.viewmodel";
 
 interface CatalogControlsProps {
@@ -48,7 +49,9 @@ export function CatalogControls(props: CatalogControlsProps) {
             onInput={(e) => vm.setSearchInput(e.currentTarget.value)}
             placeholder={vm.mediaType() === MediaType.MOVIE ? "Nome do filme" : "Nome da série"}
           />
-          <button class="button" type="submit">Buscar</button>
+          <button class="button" type="submit">
+            Buscar
+          </button>
         </div>
       </form>
 
@@ -87,25 +90,23 @@ export function CatalogControls(props: CatalogControlsProps) {
           id="genre"
           value={vm.genreId()}
           disabled={vm.genresBusy()}
-          onChange={(e) => vm.changeCategory(CatalogCategory.POPULAR, Number(e.currentTarget.value))}
+          onChange={(e) =>
+            vm.changeCategory(CatalogCategory.POPULAR, Number(e.currentTarget.value))
+          }
         >
           <option value="0">
             {vm.genresBusy() ? "Carregando gêneros..." : "Todos os gêneros"}
           </option>
-          <For each={vm.genres()}>
-            {(genre) => <option value={genre.id}>{genre.name}</option>}
-          </For>
+          <For each={vm.genres()}>{(genre) => <option value={genre.id}>{genre.name}</option>}</For>
         </select>
         <Show when={vm.genresStale()}>
           <span class="cache-label">Gêneros: cache / offline</span>
         </Show>
         <Show when={vm.genresError()}>
-          <p class="error-text" role="alert">{vm.genresError()}</p>
-          <button
-            type="button"
-            class="button secondary"
-            onClick={() => void vm.loadGenres()}
-          >
+          <p class="error-text" role="alert">
+            {vm.genresError()}
+          </p>
+          <button type="button" class="button secondary" onClick={() => void vm.loadGenres()}>
             Tentar gêneros novamente
           </button>
         </Show>

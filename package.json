@@ -11,6 +11,9 @@
     "desktop:build": "cd apps/desktop && bun --bun tauri build",
     "lint:server": "bun scripts/lint-server.ts && cargo fmt --manifest-path apps/server/Cargo.toml -p popcorn-server --check && CLIPPY_CONF_DIR=\"$PWD/apps/server\" cargo clippy -p popcorn-server --lib --bins -- -D warnings",
     "lint:desktop": "cd apps/desktop && bun run lint",
+    "lint:desktop:fix": "cd apps/desktop && bun run lint:fix",
+    "format:desktop": "cd apps/desktop && bun run format",
+    "format:desktop:check": "cd apps/desktop && bun run format:check",
     "check:desktop": "bun run --filter @popcorn/desktop check",
     "check:sdk": "bun run --filter @popcorn/sdk check"
   },

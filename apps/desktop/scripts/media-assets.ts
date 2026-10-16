@@ -38,16 +38,25 @@ export async function stageAsset(destination: string, asset: MediaAsset): Promis
   }
   let bytes: Uint8Array;
   if (asset.archive) {
-    const archive = join(downloads, `${asset.archive.sha256}.zip`);
+    const format = asset.archive.format ?? "zip";
+    const archive = join(downloads, `${asset.archive.sha256}.${format}`);
     await stageAsset(archive, { name: asset.name, url: asset.url, sha256: asset.archive.sha256 });
-    const args = process.platform === "win32"
-      ? ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
-        "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.IO.Compression.FileSystem; " +
-        "$zip=[IO.Compression.ZipFile]::OpenRead($env:POPCORN_ARCHIVE); " +
-        "try { $stream=$zip.GetEntry($env:POPCORN_ARCHIVE_MEMBER).Open(); " +
-        "try { $stream.CopyTo([Console]::OpenStandardOutput()) } finally { $stream.Dispose() } " +
-        "} finally { $zip.Dispose() }"]
-      : ["/usr/bin/unzip", "-p", archive, asset.archive.member];
+    const args =
+      format === "tar.xz"
+        ? ["/usr/bin/tar", "-xOJf", archive, asset.archive.member]
+        : process.platform === "win32"
+          ? [
+              "powershell.exe",
+              "-NoProfile",
+              "-NonInteractive",
+              "-Command",
+              "$ErrorActionPreference='Stop'; Add-Type -AssemblyName System.IO.Compression.FileSystem; " +
+                "$zip=[IO.Compression.ZipFile]::OpenRead($env:POPCORN_ARCHIVE); " +
+                "try { $stream=$zip.GetEntry($env:POPCORN_ARCHIVE_MEMBER).Open(); " +
+                "try { $stream.CopyTo([Console]::OpenStandardOutput()) } finally { $stream.Dispose() } " +
+                "} finally { $zip.Dispose() }",
+            ]
+          : ["/usr/bin/unzip", "-p", archive, asset.archive.member];
     const extract = Bun.spawn(args, {
       stdout: "pipe",
       stderr: "pipe",
@@ -59,12 +68,13 @@ export async function stageAsset(destination: string, asset: MediaAsset): Promis
       new Response(extract.stderr).text(),
       extract.exited,
     ]);
-    if (code !== 0) throw new MediaToolsError(`ZIP extraction failed (${code}): ${stderr}`);
+    if (code !== 0) throw new MediaToolsError(`Archive extraction failed (${code}): ${stderr}`);
     bytes = new Uint8Array(buffer);
   } else {
     // Build-time fetch only: bounded request, explicit status check, pinned content.
     const response = await fetch(asset.url, { signal: AbortSignal.timeout(120_000) });
-    if (!response.ok) throw new MediaToolsError(`Download failed (${response.status}): ${asset.url}`);
+    if (!response.ok)
+      throw new MediaToolsError(`Download failed (${response.status}): ${asset.url}`);
     bytes = new Uint8Array(await response.arrayBuffer());
   }
   verifyHash(bytes, asset.sha256, asset.url);

@@ -1,9 +1,15 @@
 // Standalone staging/check entry point; the normal Tauri hook calls the same code.
 import { isAbsolute } from "node:path";
-import { copyMediaTools, hostTarget, MediaToolsError, stageMediaTools, validateMediaTools } from "./media-tools";
+import {
+  copyMediaTools,
+  hostTarget,
+  MediaToolsError,
+  stageMediaTools,
+  validateMediaTools,
+} from "./media-tools";
 
 const args = Bun.argv.slice(2);
-let target = Bun.env["TAURI_ENV_TARGET_TRIPLE"];
+let target = Bun.env.TAURI_ENV_TARGET_TRIPLE;
 let check = false;
 let serverDirectory: string | undefined;
 for (let index = 0; index < args.length; index += 1) {
@@ -17,11 +23,15 @@ for (let index = 0; index < args.length; index += 1) {
     serverDirectory = args[index + 1];
     index += 1;
   } else {
-    throw new MediaToolsError("Usage: bun scripts/prepare-media-tools.ts [--target <Rust triple>] [--check | --server-dir <absolute path>]");
+    throw new MediaToolsError(
+      "Usage: bun scripts/prepare-media-tools.ts [--target <Rust triple>] [--check | --server-dir <absolute path>]",
+    );
   }
 }
 if (serverDirectory && (check || !isAbsolute(serverDirectory))) {
-  throw new MediaToolsError("--server-dir requires an absolute path and cannot be combined with --check.");
+  throw new MediaToolsError(
+    "--server-dir requires an absolute path and cannot be combined with --check.",
+  );
 }
 const resolved = target ?? hostTarget();
 if (check) {

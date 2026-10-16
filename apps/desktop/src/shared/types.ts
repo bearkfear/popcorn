@@ -1,10 +1,10 @@
 // Common frontend domain types, view contracts and quality options.
 import {
+  type createCatalogClient,
+  type createPlaybackClient,
+  type createSourceClient,
+  type createStorageClient,
   PlaybackQuality,
-  createCatalogClient,
-  createPlaybackClient,
-  createSourceClient,
-  createStorageClient,
 } from "@popcorn/sdk";
 
 export type Bootstrap = {

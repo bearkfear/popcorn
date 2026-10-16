@@ -1,0 +1,64 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/main/.schema/devbox.schema.json",
+  "packages": {
+    "bash": "latest",
+    "bun": "1.3.13",
+    "cargo": "1.94.0",
+    "clippy": "1.94.0",
+    "curl": "latest",
+    "file": "latest",
+    "gcc": "latest",
+    "gst_all_1.gst-libav": "latest",
+    "gst_all_1.gst-plugins-bad": "latest",
+    "gst_all_1.gst-plugins-base": "latest",
+    "gst_all_1.gst-plugins-good": "latest",
+    "gst_all_1.gstreamer": "latest",
+    "libayatana-appindicator": {
+      "version": "latest",
+      "outputs": ["out", "dev"]
+    },
+    "librsvg": {
+      "version": "latest",
+      "outputs": ["out", "dev"]
+    },
+    "xdotool": "latest",
+    "openssl": {
+      "version": "latest",
+      "outputs": ["out", "dev"]
+    },
+    "pkg-config": "latest",
+    "rustc": "1.94.0",
+    "rustfmt": "1.94.0",
+    "sqlite": "latest",
+    "webkitgtk_4_1": {
+      "version": "latest",
+      "outputs": ["out", "dev"]
+    },
+    "wget": "latest"
+  },
+  "env": {
+    "RUST_BACKTRACE": "1"
+  },
+  "shell": {
+    "init_hook": [
+      "export GST_PLUGIN_SYSTEM_PATH_1_0=\"$DEVBOX_PACKAGES_DIR/lib/gstreamer-1.0${GST_PLUGIN_SYSTEM_PATH_1_0:+:$GST_PLUGIN_SYSTEM_PATH_1_0}\"",
+      "bash scripts/devbox-init.sh"
+    ],
+    "scripts": {
+      "setup": [
+        "bun install --frozen-lockfile",
+        "bash scripts/devbox-doctor.sh"
+      ],
+      "doctor": "bash scripts/devbox-doctor.sh",
+      "web": "bun run --filter @popcorn/desktop dev",
+      "desktop": "bun run desktop:dev",
+      "check": [
+        "bun run generate:check",
+        "bun run check:sdk",
+        "bun run check:desktop",
+        "bun run lint:server",
+        "cargo test -p popcorn-server --lib core::"
+      ]
+    }
+  }
+}

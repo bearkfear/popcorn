@@ -1,13 +1,14 @@
 // ViewModel managing Tauri IPC bootstrap lifecycle and backend connection status.
-import { createSignal, onCleanup } from "solid-js";
-import { invoke, isTauri } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+
 import {
   createCatalogClient,
   createPlaybackClient,
   createSourceClient,
   createStorageClient,
 } from "@popcorn/sdk";
+import { invoke, isTauri } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { createSignal, onCleanup } from "solid-js";
 import type {
   Bootstrap,
   CatalogClient,
@@ -17,16 +18,18 @@ import type {
   StorageClient,
 } from "../../shared/types";
 
+type Clients = {
+  readonly catalog?: CatalogClient;
+  readonly source?: SourceClient;
+  readonly playback?: PlaybackClient;
+  readonly storage?: StorageClient;
+};
+
 interface BootstrapSetters {
   setConnection: (c: Connection) => void;
   setConnectionError: (e: string | ((prev: string) => string)) => void;
   setCatalogVersion: (v: string) => void;
-  setClients: (clients: {
-    catalog?: CatalogClient;
-    source?: SourceClient;
-    playback?: PlaybackClient;
-    storage?: StorageClient;
-  }) => void;
+  setClients: (clients: Clients) => void;
 }
 
 interface BootstrapContext {
@@ -38,7 +41,7 @@ interface BootstrapContext {
 async function runBootstrap(
   ctx: BootstrapContext,
   setters: BootstrapSetters,
-  onReady?: () => void
+  onReady?: () => void,
 ) {
   try {
     const data = await invoke<Bootstrap>("bootstrap");
@@ -56,7 +59,9 @@ async function runBootstrap(
   } catch {
     if (ctx.isDisposed() || ctx.currentGen() !== ctx.gen) return;
     setters.setConnection("error");
-    setters.setConnectionError((cur) => cur || "Não foi possível iniciar o serviço local. Tente conectar novamente.");
+    setters.setConnectionError(
+      (cur) => cur || "Não foi possível iniciar o serviço local. Tente conectar novamente.",
+    );
   }
 }
 
@@ -64,18 +69,20 @@ export function createBootstrapViewModel() {
   const [connection, setConnection] = createSignal<Connection>("connecting");
   const [connectionError, setConnectionError] = createSignal("");
   const [catalogVersion, setCatalogVersion] = createSignal("");
-  let clients = {};
+  const [clients, setClients] = createSignal<Clients>({});
   let generation = 0;
   let disposed = false;
   let unlistenShutdown: UnlistenFn | undefined;
 
   async function listenForShutdown() {
     try {
-      unlistenShutdown = await listen<string>("backend-shutdown-error", (event) => {
+      const unlisten = await listen<string>("backend-shutdown-error", (event) => {
         if (disposed) return;
         setConnection("error");
         setConnectionError(event.payload || "Não foi possível encerrar o serviço local.");
       });
+      if (disposed) unlisten();
+      else unlistenShutdown = unlisten;
     } catch {
       if (!disposed) {
         setConnection("error");
@@ -85,16 +92,19 @@ export function createBootstrapViewModel() {
   }
 
   async function connect(onReady?: () => void) {
-    if (!isTauri()) return setConnection("browser");
+    if (!isTauri()) {
+      setConnection("browser");
+      return;
+    }
     const current = ++generation;
     setConnection("connecting");
     setConnectionError("");
-    clients = {};
+    setClients({});
     const setters: BootstrapSetters = {
       setConnection,
       setConnectionError,
       setCatalogVersion,
-      setClients: (c) => { clients = c; },
+      setClients,
     };
     const ctx: BootstrapContext = {
       gen: current,
@@ -104,13 +114,16 @@ export function createBootstrapViewModel() {
     await runBootstrap(ctx, setters, onReady);
   }
 
-  onCleanup(() => { disposed = true; unlistenShutdown?.(); });
+  onCleanup(() => {
+    disposed = true;
+    unlistenShutdown?.();
+  });
 
   return {
     connection,
     connectionError,
     catalogVersion,
-    getClients: () => clients,
+    getClients: clients,
     connect,
     listenForShutdown,
     setConnectionError,

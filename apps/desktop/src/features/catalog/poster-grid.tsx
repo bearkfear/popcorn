@@ -1,6 +1,7 @@
 // UI component for displaying the catalog poster grid, status states, and pagination.
-import { For, Show } from "solid-js";
+
 import { CatalogCategory, MediaType, type Title } from "@popcorn/sdk";
+import { For, Show } from "solid-js";
 import { Artwork } from "../../shared/ui/artwork";
 import type { CatalogViewModel } from "./catalog.viewmodel";
 
@@ -74,7 +75,9 @@ export function PosterGrid(props: PosterGridProps) {
 
         <Show when={vm.catalogLoaded() && vm.titles().length === 0 && !vm.catalogError()}>
           <div class="state-message">
-            <h3>{vm.query() ? "Nenhum resultado para esta busca" : "Nenhum título nesta coleção"}</h3>
+            <h3>
+              {vm.query() ? "Nenhum resultado para esta busca" : "Nenhum título nesta coleção"}
+            </h3>
             <p>
               {vm.source() === "local"
                 ? "O snapshot instalado está vazio. Explore o TMDB para consultar o catálogo online."
@@ -83,7 +86,11 @@ export function PosterGrid(props: PosterGridProps) {
             <button
               type="button"
               class="button secondary"
-              onClick={() => vm.source() === "local" ? vm.changeSource("online") : vm.changeCategory(CatalogCategory.POPULAR)}
+              onClick={() =>
+                vm.source() === "local"
+                  ? vm.changeSource("online")
+                  : vm.changeCategory(CatalogCategory.POPULAR)
+              }
             >
               {vm.source() === "local" ? "Explorar TMDB" : "Voltar aos populares"}
             </button>
@@ -116,7 +123,9 @@ export function PosterGrid(props: PosterGridProps) {
                     <strong>{title.title || "Título não informado"}</strong>
                     <span class="row-meta">
                       {title.releaseYear || "Ano não informado"}
-                      {title.voteAverage > 0 ? ` · ★ ${title.voteAverage.toFixed(1)}` : " · Sem avaliação"}
+                      {title.voteAverage > 0
+                        ? ` · ★ ${title.voteAverage.toFixed(1)}`
+                        : " · Sem avaliação"}
                     </span>
                   </span>
                 </button>

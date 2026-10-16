@@ -9,8 +9,11 @@ const rustc = Bun.spawn(["rustc", "-vV"], { stdout: "pipe", stderr: "inherit" })
 const version = await new Response(rustc.stdout).text();
 if ((await rustc.exited) !== 0) process.exit(1);
 const target =
-  Bun.env["TAURI_ENV_TARGET_TRIPLE"] ??
-  version.split("\n").find((line) => line.startsWith("host: "))?.slice(6);
+  Bun.env.TAURI_ENV_TARGET_TRIPLE ??
+  version
+    .split("\n")
+    .find((line) => line.startsWith("host: "))
+    ?.slice(6);
 if (!target) {
   console.error("Could not determine the Rust target triple.");
   process.exit(1);

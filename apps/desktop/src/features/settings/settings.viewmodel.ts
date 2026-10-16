@@ -1,38 +1,95 @@
 // ViewModel handling TMDB credentials and storage cache settings.
-import { createSignal } from "solid-js";
-import type { CacheSettings, TmdbStatus } from "@popcorn/sdk";
-import type { CatalogClient, StorageClient } from "../../shared/types";
+
+import type { TmdbStatus } from "@popcorn/sdk";
+import { createResource, createSignal } from "solid-js";
 import { catalogErrorText, needsConfiguration } from "../../catalog-ui";
+import type { CatalogClient, StorageClient } from "../../shared/types";
+
+type StatusRequest = {
+  readonly client: CatalogClient;
+  readonly settled: (status?: TmdbStatus) => void;
+};
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error ?? "");
+}
 
 function createTmdbSubViewModel(getCatalogClient: () => CatalogClient | undefined) {
-  const [status, setStatus] = createSignal<TmdbStatus>();
+  const [statusRequest, setStatusRequest] = createSignal<StatusRequest>();
   const [settingsOpen, setSettingsOpen] = createSignal(false);
   const [configurationBusy, setConfigurationBusy] = createSignal(false);
   const [configurationError, setConfigurationError] = createSignal("");
   const [remember, setRemember] = createSignal(true);
 
-  async function refreshStatus() {
-    const client = getCatalogClient();
-    if (!client) return;
+  const [statusResource, statusActions] = createResource(statusRequest, async (request) => {
+    let loaded: TmdbStatus | undefined;
     try {
-      const res = await client.getTmdbStatus({}, { timeoutMs: 10_000 });
-      if (res.status) setStatus(res.status);
-    } catch {}
+      const response = await request.client.getTmdbStatus({}, { timeoutMs: 10_000 });
+      if (!response.status) throw new Error("O serviço não retornou o status do TMDB.");
+      loaded = response.status;
+      return loaded;
+    } catch {
+      setSettingsOpen(true);
+      throw new Error("Não foi possível verificar a configuração do TMDB.");
+    } finally {
+      request.settled(loaded);
+    }
+  });
+
+  function refreshStatus(): Promise<TmdbStatus | undefined> {
+    const client = getCatalogClient();
+    if (!client) return Promise.resolve(undefined);
+    return new Promise((settled) => {
+      setStatusRequest({ client, settled });
+    });
   }
 
-  async function saveToken(token: string) {
+  async function saveToken(token: string): Promise<boolean> {
     const client = getCatalogClient();
-    if (!client || configurationBusy()) return;
+    if (!client || configurationBusy()) return false;
     setConfigurationBusy(true);
     setConfigurationError("");
     try {
-      const res = await client.setTmdbToken({ token, save: remember() }, { timeoutMs: 15_000 });
-      if (res.status) {
-        setStatus(res.status);
+      const response = await client.configureTmdb(
+        { readAccessToken: token, remember: remember() },
+        { timeoutMs: 15_000 },
+      );
+      if (response.status?.configured) {
+        statusActions.mutate(response.status);
         setSettingsOpen(false);
+        return true;
       }
-    } catch (e) {
-      setConfigurationError(catalogErrorText(e, true));
+      setConfigurationError("O serviço não confirmou a configuração TMDB. Tente novamente.");
+    } catch (error) {
+      setConfigurationError(catalogErrorText(error, true));
+    } finally {
+      setConfigurationBusy(false);
+    }
+    return false;
+  }
+
+  async function clearConfiguration(): Promise<boolean> {
+    const client = getCatalogClient();
+    if (!client || configurationBusy()) return false;
+    setConfigurationBusy(true);
+    setConfigurationError("");
+    try {
+      const response = await client.clearTmdbConfiguration({}, { timeoutMs: 10_000 });
+      if (!response.status) {
+        setConfigurationError("O serviço não confirmou a remoção da configuração.");
+        return false;
+      }
+      statusActions.mutate(response.status);
+      setSettingsOpen(true);
+      if (response.status.configured) {
+        setConfigurationError(
+          "A credencial do ambiente continua ativa. Para removê-la, altere TMDB_READ_ACCESS_TOKEN fora do aplicativo.",
+        );
+      }
+      return true;
+    } catch (error) {
+      setConfigurationError(catalogErrorText(error, true));
+      return false;
     } finally {
       setConfigurationBusy(false);
     }
@@ -46,82 +103,100 @@ function createTmdbSubViewModel(getCatalogClient: () => CatalogClient | undefine
   }
 
   return {
-    status, setStatus, settingsOpen, setSettingsOpen,
-    configurationBusy, configurationError, remember, setRemember,
-    refreshStatus, saveToken, handleCatalogError,
+    status: () => statusResource.latest,
+    settingsOpen,
+    setSettingsOpen,
+    configurationBusy,
+    configurationError: () => configurationError() || errorMessage(statusResource.error),
+    remember,
+    setRemember,
+    refreshStatus,
+    saveToken,
+    clearConfiguration,
+    handleCatalogError,
   };
 }
 
+type CacheRequest = { readonly client: StorageClient };
+
 function createCacheSubViewModel(getStorageClient: () => StorageClient | undefined) {
   const [cacheOpen, setCacheOpen] = createSignal(false);
-  const [cacheSettings, setCacheSettings] = createSignal<CacheSettings>();
+  const [cacheRequest, setCacheRequest] = createSignal<CacheRequest>();
   const [cacheLimitGb, setCacheLimitGb] = createSignal("20");
-  const [cacheBusy, setCacheBusy] = createSignal(false);
-  const [cacheError, setCacheError] = createSignal("");
+  const [cacheMutationBusy, setCacheMutationBusy] = createSignal(false);
+  const [cacheMutationError, setCacheMutationError] = createSignal("");
 
-  async function loadCacheSettings() {
-    const client = getStorageClient();
-    if (!client) return;
-    setCacheBusy(true);
-    setCacheError("");
+  const [cacheResource, cacheActions] = createResource(cacheRequest, async (request) => {
     try {
-      const res = await client.getCacheSettings({}, { timeoutMs: 10_000 });
-      if (res.settings) {
-        setCacheSettings(res.settings);
-        const gb = Number(res.settings.limitBytes / (1024n * 1024n * 1024n));
-        setCacheLimitGb(String(gb || 20));
-      }
+      const response = await request.client.getCacheSettings({}, { timeoutMs: 10_000 });
+      if (!response.settings) throw new Error("cache settings missing");
+      const gb = Number(response.settings.limitBytes / (1024n * 1024n * 1024n));
+      setCacheLimitGb(String(gb || 20));
+      return response.settings;
     } catch {
-      setCacheError("Não foi possível carregar as configurações do cache.");
-    } finally {
-      setCacheBusy(false);
+      throw new Error("Não foi possível carregar as configurações do cache.");
     }
+  });
+
+  function loadCacheSettings() {
+    const client = getStorageClient();
+    if (client) setCacheRequest({ client });
   }
 
   async function saveCacheLimit() {
     const client = getStorageClient();
     const gb = Number.parseInt(cacheLimitGb(), 10);
     if (!client || Number.isNaN(gb) || gb < 1 || gb > 1000) {
-      setCacheError("Defina um limite de cache entre 1 e 1000 GB.");
+      setCacheMutationError("Defina um limite de cache entre 1 e 1000 GB.");
       return;
     }
-    setCacheBusy(true);
-    setCacheError("");
+    setCacheMutationBusy(true);
+    setCacheMutationError("");
     try {
       const bytes = BigInt(gb) * 1024n * 1024n * 1024n;
-      const res = await client.setCacheLimit({ limitBytes: bytes }, { timeoutMs: 10_000 });
-      if (res.settings) setCacheSettings(res.settings);
+      const response = await client.setCacheLimit({ limitBytes: bytes }, { timeoutMs: 10_000 });
+      if (response.settings) cacheActions.mutate(response.settings);
     } catch {
-      setCacheError("Não foi possível salvar o limite de cache.");
+      setCacheMutationError("Não foi possível salvar o limite de cache.");
     } finally {
-      setCacheBusy(false);
+      setCacheMutationBusy(false);
     }
   }
 
   async function clearCache() {
     const client = getStorageClient();
-    if (!client || cacheBusy()) return;
-    setCacheBusy(true);
-    setCacheError("");
+    if (!client || cacheMutationBusy()) return;
+    setCacheMutationBusy(true);
+    setCacheMutationError("");
     try {
-      const res = await client.clearCache({}, { timeoutMs: 30_000 });
-      if (res.settings) setCacheSettings(res.settings);
+      const response = await client.clearCache({}, { timeoutMs: 30_000 });
+      if (response.settings) cacheActions.mutate(response.settings);
     } catch {
-      setCacheError("Não foi possível limpar o cache agora. Pare a reprodução e tente novamente.");
+      setCacheMutationError(
+        "Não foi possível limpar o cache agora. Pare a reprodução e tente novamente.",
+      );
     } finally {
-      setCacheBusy(false);
+      setCacheMutationBusy(false);
     }
   }
 
   return {
-    cacheOpen, setCacheOpen, cacheSettings, cacheLimitGb, setCacheLimitGb,
-    cacheBusy, cacheError, loadCacheSettings, saveCacheLimit, clearCache,
+    cacheOpen,
+    setCacheOpen,
+    cacheSettings: () => cacheResource.latest,
+    cacheLimitGb,
+    setCacheLimitGb,
+    cacheBusy: () => cacheResource.loading || cacheMutationBusy(),
+    cacheError: () => cacheMutationError() || errorMessage(cacheResource.error),
+    loadCacheSettings,
+    saveCacheLimit,
+    clearCache,
   };
 }
 
 export function createSettingsViewModel(
   getCatalogClient: () => CatalogClient | undefined,
-  getStorageClient: () => StorageClient | undefined
+  getStorageClient: () => StorageClient | undefined,
 ) {
   const tmdb = createTmdbSubViewModel(getCatalogClient);
   const cache = createCacheSubViewModel(getStorageClient);
