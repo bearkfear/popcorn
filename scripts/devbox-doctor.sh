@@ -47,7 +47,6 @@ require_command cargo-clippy
 require_command cc
 require_command gst-inspect-1.0
 require_command pkg-config
-require_command sqlite3
 
 if command -v bun >/dev/null 2>&1; then
   bun_version="$(bun --version)"
