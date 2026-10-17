@@ -3957,7 +3957,7 @@ dependencies = [
 
 [[package]]
 name = "popcorn-desktop"
-version = "2026.10.17"
+version = "2026.10.1702"
 dependencies = [
  "popcorn-diagnostics",
  "serde",
@@ -3973,7 +3973,7 @@ dependencies = [
 
 [[package]]
 name = "popcorn-diagnostics"
-version = "2026.10.17"
+version = "2026.10.1702"
 dependencies = [
  "regex",
  "serde_json",
@@ -3984,7 +3984,7 @@ dependencies = [
 
 [[package]]
 name = "popcorn-proto"
-version = "2026.10.17"
+version = "2026.10.1702"
 dependencies = [
  "buffa",
  "connectrpc",
@@ -3993,7 +3993,7 @@ dependencies = [
 
 [[package]]
 name = "popcorn-server"
-version = "2026.10.17"
+version = "2026.10.1702"
 dependencies = [
  "axum",
  "base64 0.22.1",

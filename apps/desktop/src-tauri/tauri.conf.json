@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Popcorn",
-  "version": "2026.10.17",
+  "version": "2026.10.1702",
   "identifier": "app.popcorn.desktop",
   "build": {
     "beforeDevCommand": "bun run prepare:sidecar && bun run dev",
