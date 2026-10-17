@@ -3,6 +3,7 @@ import type { Playback } from "@popcorn/sdk";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Icon } from "../../shared/ui/icon";
 import { SelectField } from "../../shared/ui/select-field";
+import { playerButtonStyles, playerRangeStyles } from "./player-controls.styles";
 import { type PlayerAction, playerShortcut } from "./player-shortcuts";
 
 function clock(seconds: number): string {
@@ -135,24 +136,28 @@ export function PlayerControls(props: {
   return (
     <fieldset
       ref={panel}
-      class={`video-controls${shown() ? " is-visible" : ""}`}
+      class={`video-controls absolute bottom-[clamp(18px,_5vh,_44px)] left-[50%] w-[min(600px,_calc(100%_-_32px))] m-0 min-w-0 p-[18px_22px_16px] border border-white-a2 rounded-[22px] bg-slate-3 shadow-[0_8px_32px_var(--black-a6),_inset_0_1px_0_var(--white-a1)] backdrop-blur-[24px] text-ink [transform:translateX(-50%)] opacity-0 pointer-events-none [transition:opacity_180ms_ease] [&.is-visible]:opacity-[1] [&.is-visible]:pointer-events-auto [&:focus-within]:opacity-[1] [&:focus-within]:pointer-events-auto max-[540px]:p-[14px_12px] max-[540px]:rounded-[16px] motion-reduce:[transition:none] ${shown() ? " is-visible " : ""}`}
       aria-label="Controles de reprodução"
       onFocusIn={reveal}
       onFocusOut={reveal}
     >
-      <div class="video-controls-top">
-        <div class="video-volume-group">
+      <div class="video-controls-top grid grid-cols-[1fr_auto_1fr] items-center gap-4 mb-[18px] max-[540px]:grid-cols-[1fr_auto] max-[540px]:gap-[6px]">
+        <div class="video-volume-group flex items-center gap-3 min-w-0 max-[540px]:gap-1">
           <button
+            class={`${playerButtonStyles} size-8`}
             type="button"
             aria-label={props.volume() === 0 ? "Ativar som" : "Silenciar"}
             title="Ativar/desativar som (M)"
             aria-keyshortcuts="m"
             onClick={() => act("mute")}
           >
-            <Icon name={props.volume() === 0 ? "speaker-slash" : "speaker-high"} />
+            <Icon
+              name={props.volume() === 0 ? "speaker-slash" : "speaker-high"}
+              class="size-6 text-2xl text-center"
+            />
           </button>
           <input
-            class="video-volume"
+            class={`${playerRangeStyles} video-volume h-[5px] w-[72px] min-w-[30px] max-[540px]:w-10`}
             type="range"
             aria-label="Volume"
             min="0"
@@ -169,42 +174,49 @@ export function PlayerControls(props: {
             }}
           />
         </div>
-        <div class="video-transport-group">
+        <div class="video-transport-group flex items-center gap-3 min-w-0 justify-center max-[540px]:gap-1">
           <button
+            class={`${playerButtonStyles} size-8`}
             type="button"
             aria-label="Voltar 10 segundos"
             title="Voltar 10 segundos (← / J)"
             aria-keyshortcuts="ArrowLeft j"
             onClick={() => act("back")}
           >
-            <Icon name="rewind" />
+            <Icon name="rewind" class="size-6 text-2xl text-center fill-current stroke-[1.5]" />
           </button>
           <button
-            class="video-play-toggle"
+            class={`${playerButtonStyles} size-10 video-play-toggle [&[aria-label=Reproduzir]_.app-icon]:translate-x-px`}
             type="button"
             aria-label={props.paused() ? "Reproduzir" : "Pausar"}
             title="Reproduzir/pausar (Espaço / K)"
             aria-keyshortcuts="Space k"
             onClick={() => act("play")}
           >
-            <Icon name={props.paused() ? "play" : "pause"} />
+            <Icon
+              name={props.paused() ? "play" : "pause"}
+              class="size-7 text-2xl text-center fill-current stroke-[1.5]"
+            />
           </button>
           <button
+            class={`${playerButtonStyles} size-8`}
             type="button"
             aria-label="Avançar 10 segundos"
             title="Avançar 10 segundos (→ / L)"
             aria-keyshortcuts="ArrowRight l"
             onClick={() => act("forward")}
           >
-            <Icon name="fast-forward" />
+            <Icon
+              name="fast-forward"
+              class="size-6 text-2xl text-center fill-current stroke-[1.5]"
+            />
           </button>
         </div>
-        <div class="video-presentation-group">
+        <div class="video-presentation-group flex items-center gap-2 min-w-0 justify-end max-[540px]:col-span-full max-[540px]:gap-1">
           <Show when={props.audioTracks.length > 1}>
             <SelectField
-              class="video-audio-field"
-              triggerClass="video-audio-select"
-              contentClass="video-audio-menu"
+              class="video-audio-field [flex:0_1_112px] min-w-0"
+              variant="player"
               placement="top-end"
               ariaLabel="Faixa de áudio"
               value={String(props.audioIndex ?? props.audioTracks[0]?.streamIndex ?? "")}
@@ -231,29 +243,35 @@ export function PlayerControls(props: {
             />
           </Show>
           <button
+            class={`${playerButtonStyles} size-8`}
             type="button"
             aria-label="Picture-in-picture"
             title="Picture-in-picture (P)"
             aria-keyshortcuts="p"
             onClick={() => act("pip")}
           >
-            <Icon name="picture-in-picture" />
+            <Icon name="picture-in-picture" class="size-6 text-2xl text-center" />
           </button>
           <button
+            class={`${playerButtonStyles} size-8`}
             type="button"
             aria-label="Tela cheia"
             title="Tela cheia (F)"
             aria-keyshortcuts="f"
             onClick={() => act("fullscreen")}
           >
-            <Icon name="corners-out" />
+            <Icon name="corners-out" class="size-6 text-2xl text-center" />
           </button>
         </div>
       </div>
-      <div class="video-timeline">
+      <div class="video-timeline flex items-center gap-[10px] text-[13px] font-semibold tabular-nums [&_span]:shrink-0">
         <span>{clock(position())}</span>
-        <div class="video-timeline-track" style={{ "--range-progress": `${progress()}%` }}>
+        <div
+          class="video-timeline-track [--timeline-scale:1] [--timeline-height:5px] [--timeline-transition:150ms] relative flex items-center [flex:1] min-w-[20px] h-[32px] [&:hover]:[--timeline-scale:1.5] [&:hover]:[--timeline-height:8px] [&:focus-within]:[--timeline-scale:1.5] [&:focus-within]:[--timeline-height:8px] [&:has([aria-busy=true])]:[--timeline-scale:1.5] [&:has([aria-busy=true])]:[--timeline-height:8px] [&_input]:w-full [&_input]:min-w-0 [&_input]:m-0 [&_input]:h-[var(--timeline-height)] [&_input]:[transition:height_var(--timeline-transition)_ease] [&_input::-webkit-slider-thumb]:[transform:scale(var(--timeline-scale))] [&_input::-webkit-slider-thumb]:[transition:transform_var(--timeline-transition)_ease] [&_input::-moz-range-thumb]:[transform:scale(var(--timeline-scale))] [&_input::-moz-range-thumb]:[transition:transform_var(--timeline-transition)_ease] motion-reduce:[--timeline-transition:0ms]"
+          style={{ "--range-progress": `${progress()}%` }}
+        >
           <input
+            class={playerRangeStyles}
             type="range"
             aria-label="Posição do vídeo"
             aria-busy={pendingSeek() !== undefined}
@@ -270,9 +288,16 @@ export function PlayerControls(props: {
             onPointerCancel={() => setDragging(undefined)}
           />
           <Show when={pendingSeek() !== undefined && dragging() === undefined}>
-            <div class="video-seek-indicators">
-              <span class="video-seek-loading" role="status" aria-label="Carregando trecho…">
-                <Icon name="loading" />
+            <div class="video-seek-indicators absolute inset-[0_8px] pointer-events-none">
+              <span
+                class="video-seek-loading absolute top-[50%] left-[var(--range-progress,_0%)] grid place-items-center w-[16px] h-[16px] rounded-full bg-ink text-slate-3 [transform:translate(-50%,_-50%)_scale(var(--timeline-scale))] [transition:transform_var(--timeline-transition)_ease]"
+                role="status"
+                aria-label="Carregando trecho…"
+              >
+                <Icon
+                  name="loading"
+                  class="size-3 text-2xl text-center stroke-[2.5] animate-[spin_800ms_linear_infinite] motion-reduce:animate-none"
+                />
               </span>
             </div>
           </Show>

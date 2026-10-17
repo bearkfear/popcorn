@@ -2,6 +2,7 @@ import { createEffect, Show } from "solid-js";
 import { playbackQualities } from "../../shared/types";
 import { Icon } from "../../shared/ui/icon";
 import { SelectField } from "../../shared/ui/select-field";
+import { buttonStyles } from "../../shared/ui/styles";
 import type { PlayerViewModel } from "./player.viewmodel";
 
 export function PlaybackSetup(props: {
@@ -43,12 +44,17 @@ export function PlaybackSetup(props: {
     );
   });
   return (
-    <section class="playback-setup" aria-label="Opções de reprodução">
+    <section
+      class="playback-setup mt-6 p-[clamp(18px,_3vw,_36px)] border border-line rounded-[12px] bg-surface"
+      aria-label="Opções de reprodução"
+    >
       <div>
-        <p class="eyebrow">DO SEU JEITO</p>
+        <p class="eyebrow text-accent-strong text-[11px] font-bold tracking-[0.13em]">
+          DO SEU JEITO
+        </p>
         <h3 ref={heading}>Prepare a sessão</h3>
       </div>
-      <div class="playback-options">
+      <div class="playback-options grid grid-cols-[1fr_1fr] gap-5 m-[20px_0] [&_label]:grid [&_label]:gap-2 [&_.select-field]:grid [&_.select-field]:gap-2 [&_.select-field-trigger]:w-full [&_.select-field-trigger]:min-w-0 max-[600px]:grid-cols-[1fr]">
         <SelectField
           label="Qualidade"
           value={String(props.vm.quality())}
@@ -85,16 +91,16 @@ export function PlaybackSetup(props: {
         />
       </div>
       <Show when={props.vm.preparedFile() && !props.vm.mediaReady() && !props.vm.displayError()}>
-        <p class="muted" role="status">
+        <p class="muted text-muted" role="status">
           Analisando vídeo e faixas de áudio…
         </p>
       </Show>
       <Show when={props.vm.displayError()}>
-        <p class="error-text" role="alert">
+        <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
           {props.vm.displayError()}
         </p>
         <button
-          class="button secondary"
+          class={`${buttonStyles} secondary`}
           type="button"
           disabled={props.vm.busy()}
           onClick={() => void props.vm.retry()}
@@ -103,9 +109,9 @@ export function PlaybackSetup(props: {
         </button>
       </Show>
       <Show when={props.vm.mediaReady()}>
-        <div class="cluster playback-launch">
+        <div class="cluster flex flex-wrap items-center justify-between gap-3 playback-launch justify-start">
           <button
-            class="button"
+            class={buttonStyles}
             type="button"
             disabled={props.vm.busy()}
             onClick={() => props.onLaunch(props.resumeSeconds)}
@@ -121,7 +127,11 @@ export function PlaybackSetup(props: {
             )}
           </button>
           <Show when={props.resumeSeconds > 0}>
-            <button class="button secondary" type="button" onClick={() => props.onLaunch(0)}>
+            <button
+              class={`${buttonStyles} secondary`}
+              type="button"
+              onClick={() => props.onLaunch(0)}
+            >
               Assistir do início
             </button>
           </Show>

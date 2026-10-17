@@ -1,6 +1,7 @@
 // View displaying local disk storage statistics and cache management controls.
 import { Show } from "solid-js";
 import { bytesLabel } from "../../shared/formatters";
+import { buttonStyles } from "../../shared/ui/styles";
 import type { SettingsViewModel } from "./settings.viewmodel";
 
 export function CachePanel(props: {
@@ -17,14 +18,17 @@ export function CachePanel(props: {
   }
 
   return (
-    <section class="cache-panel" aria-labelledby="cache-heading">
+    <section
+      class="cache-panel grid grid-cols-[minmax(240px,_1fr)_auto] gap-[16px_32px] mt-4 p-5 border border-line rounded-panel bg-slate-2 [&_h2]:m-[3px_0_5px] [&_.muted]:max-w-[62ch] [&_.muted]:text-[12px] max-[560px]:grid-cols-[1fr]"
+      aria-labelledby="cache-heading"
+    >
       <div>
         <h2 id="cache-heading">Armazenamento em disco</h2>
-        <p class="muted">
+        <p class="muted text-muted">
           Gerencie o espaço em disco reservado para reprodução progressiva e cache de dados.
         </p>
       </div>
-      <div class="cache-stats">
+      <div class="cache-stats flex items-center gap-6 [&_span]:block [&_span]:text-muted [&_span]:text-[11px] [&_strong]:block [&_strong]:text-[18px] [&_strong]:font-medium max-[560px]:[grid-column:1]">
         <div>
           <span>Em uso</span>
           <strong>{bytesLabel(usedBytes())}</strong>
@@ -34,10 +38,16 @@ export function CachePanel(props: {
           <strong>{bytesLabel(limitBytes())}</strong>
         </div>
       </div>
-      <p class="cache-path" title={path()}>
+      <p
+        class="cache-path col-span-full overflow-hidden text-muted [font:11px_/_1.4_ui-monospace,_monospace] text-ellipsis whitespace-nowrap max-[560px]:[grid-column:1]"
+        title={path()}
+      >
         Pasta: {path()}
       </p>
-      <form class="cache-form" onSubmit={handleLimitSubmit}>
+      <form
+        class="cache-form col-span-full [&_label]:block [&_label]:mb-[6px] [&_label]:text-muted [&_label]:text-[12px] [&_label]:font-bold [&_>_div]:flex [&_>_div]:max-w-[420px] [&_input]:min-w-0 [&_input]:w-full [&_input]:p-[8px_11px] [&_input]:border [&_input]:border-line [&_input]:rounded-[5px_0_0_5px] [&_input]:bg-canvas-deep [&_input]:text-ink [&_.button]:rounded-[0_5px_5px_0] max-[560px]:[grid-column:1]"
+        onSubmit={handleLimitSubmit}
+      >
         <label for="cache-limit-input">Limite máximo em gigabytes (GB)</label>
         <div>
           <input
@@ -49,14 +59,14 @@ export function CachePanel(props: {
             onInput={(e) => props.vm.setCacheLimitGb(e.currentTarget.value)}
             disabled={props.vm.cacheBusy()}
           />
-          <button class="button" type="submit" disabled={props.vm.cacheBusy()}>
+          <button class={buttonStyles} type="submit" disabled={props.vm.cacheBusy()}>
             Salvar limite
           </button>
         </div>
       </form>
-      <div class="cache-actions">
+      <div class="cache-actions col-span-full flex flex-wrap gap-3 max-[560px]:[grid-column:1]">
         <button
-          class="button secondary danger"
+          class={`${buttonStyles} secondary danger`}
           type="button"
           disabled={props.vm.cacheBusy() || props.playbackActive}
           title={
@@ -69,11 +79,15 @@ export function CachePanel(props: {
           Limpar cache agora
         </button>
       </div>
-      <button class="button secondary" type="button" onClick={() => props.vm.setCacheOpen(false)}>
+      <button
+        class={`${buttonStyles} secondary`}
+        type="button"
+        onClick={() => props.vm.setCacheOpen(false)}
+      >
         Fechar
       </button>
       <Show when={props.vm.cacheError()}>
-        <p class="error-text" role="alert">
+        <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
           {props.vm.cacheError()}
         </p>
       </Show>

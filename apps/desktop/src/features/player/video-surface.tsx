@@ -1,3 +1,4 @@
+import { buttonStyles } from "../../shared/ui/styles";
 // Presents decoded frames independently of WebKit's native inline video layer on macOS.
 
 import type { Playback } from "@popcorn/sdk";
@@ -208,25 +209,34 @@ export function VideoSurface(props: {
     }
   }
   return (
-    <div class={`video-surface${useCanvas ? " canvas-video-surface" : ""}`}>
+    <div
+      class={`video-surface absolute inset-0 bg-black-a12 ${useCanvas ? " canvas-video-surface [&_.video-player]:opacity-[0.001] [&_.video-player]:pointer-events-none [&_.video-player:fullscreen]:opacity-[1] [&_.video-player:fullscreen]:pointer-events-auto [&_.video-player:-webkit-full-screen]:opacity-[1] [&_.video-player:-webkit-full-screen]:pointer-events-auto" : ""}`}
+    >
       {props.children}
       <Show when={useCanvas}>
         <canvas
           ref={canvas}
-          class="video-canvas"
+          class="video-canvas absolute inset-0 w-full h-full object-contain pointer-events-none"
           hidden={fullscreen()}
           aria-label="Imagem do vídeo"
         />
         <Show when={pictureInPicture()}>
-          <div class="video-pip-message" role="status">
+          <div
+            class="video-pip-message absolute inset-0 flex flex-col items-center justify-center gap-[18px] bg-canvas-deep text-ink text-center p-6"
+            role="status"
+          >
             <p>O vídeo está em picture-in-picture</p>
-            <button class="button secondary" type="button" onClick={() => present("inline")}>
+            <button
+              class={`${buttonStyles} secondary`}
+              type="button"
+              onClick={() => present("inline")}
+            >
               Trazer vídeo de volta
             </button>
           </div>
         </Show>
         <Show when={!ready() && !pictureInPicture() && !fullscreen()}>
-          <span class="video-loading" role="status">
+          <span class="video-loading absolute inset-[45%_0_auto] text-center" role="status">
             Carregando imagem…
           </span>
         </Show>

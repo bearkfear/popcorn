@@ -464,7 +464,7 @@ export function MediaPlayer(props: {
     >
       <video
         ref={video}
-        class="video-player"
+        class="video-player absolute inset-0 block w-full h-full bg-transparent object-contain"
         data-player-state={machine.state()}
         controls
         autoplay

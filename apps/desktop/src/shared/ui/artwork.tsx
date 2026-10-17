@@ -11,10 +11,16 @@ export function Artwork(props: {
   const safeUrl = () => artworkUrl(props.url);
 
   return (
-    <div class={`artwork ${props.wide ? "artwork-wide" : ""}`}>
+    <div
+      class={`artwork relative grid w-full aspect-[2_/_3] place-items-center overflow-hidden rounded-[4px] [background:linear-gradient(145deg,_var(--slate-5),_var(--slate-3))] text-muted [&_img]:w-full [&_img]:h-full [&_img]:object-cover ${props.wide ? "artwork-wide " : ""}`}
+    >
       <Show
         when={safeUrl() && failed() !== props.url}
-        fallback={<span class="artwork-empty">Sem imagem</span>}
+        fallback={
+          <span class="artwork-empty p-3 text-muted text-[12px] font-bold tracking-[0.08em] text-center uppercase">
+            Sem imagem
+          </span>
+        }
       >
         <img
           src={safeUrl()}

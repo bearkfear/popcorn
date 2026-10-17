@@ -20,6 +20,7 @@ import { createSettingsViewModel } from "./features/settings/settings.viewmodel"
 import { SetupPanel } from "./features/settings/setup-panel";
 import { createSourcesViewModel } from "./features/sources/sources.viewmodel";
 import { Icon } from "./shared/ui/icon";
+import { buttonStyles } from "./shared/ui/styles";
 
 type WatchContext = Omit<WatchEntry, "key" | "status" | "position" | "duration" | "updatedAt">;
 type Page = "search" | "details";
@@ -241,27 +242,37 @@ export function App() {
         </Show>
       }
     >
-      <div class="app-shell">
-        <header class="app-header cluster">
+      <div class="app-shell min-h-screen">
+        <header class="app-header sticky z-[20] top-0 min-h-[64px] p-[0_clamp(18px,_4vw,_54px)] border-b border-slate-6 bg-slate-2 shadow-[0_2px_12px_var(--black-a4)] backdrop-blur-[14px] max-[560px]:min-h-[56px] cluster flex flex-wrap items-center justify-between gap-3">
           <button
-            class="brand-lockup brand-button"
+            class="brand-lockup flex items-center gap-[10px] brand-button border-0 p-0 text-inherit bg-transparent"
             type="button"
             onClick={backToSearch}
             aria-label="Ir para pesquisa"
           >
-            <span class="brand-mark" aria-hidden="true">
+            <span
+              class="brand-mark grid w-[32px] h-[32px] place-items-center rounded-full bg-accent text-accent-contrast text-[18px] font-bold shadow-[inset_0_-2px_0_var(--black-a4)] max-[560px]:w-[29px] max-[560px]:h-[29px] max-[560px]:text-[16px]"
+              aria-hidden="true"
+            >
               P
             </span>
-            <span class="wordmark">
-              popcorn<span class="wordmark-dot">.</span>
+            <span class="wordmark text-[22px] font-bold tracking-[-0.04em] lowercase max-[560px]:text-[20px]">
+              popcorn<span class="wordmark-dot text-accent">.</span>
             </span>
           </button>
-          <nav class="cluster" aria-label="Navegação principal">
-            <button class="text-button" type="button" onClick={backToSearch}>
+          <nav
+            class="cluster flex flex-wrap items-center justify-between gap-3"
+            aria-label="Navegação principal"
+          >
+            <button
+              class="text-button p-[3px_0] border-0 bg-transparent text-negative text-[11px]"
+              type="button"
+              onClick={backToSearch}
+            >
               Explorar
             </button>
             <button
-              class="text-button"
+              class="text-button p-[3px_0] border-0 bg-transparent text-negative text-[11px]"
               type="button"
               aria-expanded={serviceOpen()}
               onClick={() => setServiceOpen(!serviceOpen())}
@@ -270,25 +281,30 @@ export function App() {
             </button>
           </nav>
         </header>
-        <main class={`page ${page() === "details" ? "details-page" : "search-page"}`}>
+        <main
+          class={`page w-[min(1480px,_100%)] m-[0_auto] p-[32px_clamp(18px,_4vw,_54px)_24px] max-[820px]:pt-6 max-[560px]:px-[14px] ${page() === "details" ? "details-page max-w-[1120px]" : "search-page max-w-[1500px]"}`}
+        >
           <Show when={serviceOpen()}>
-            <section class="connection-panel cluster" aria-label="Configurações">
+            <section
+              class="connection-panel p-[12px_16px] border border-line rounded-panel bg-surface [&_strong]:text-[13px] max-[560px]:items-start max-[560px]:[&_>_.cluster]:w-full cluster flex flex-wrap items-center justify-between gap-3"
+              aria-label="Configurações"
+            >
               <div>
                 <strong>Popcorn</strong>
-                <p class="connection-caption muted">
+                <p class="connection-caption mt-[2px] text-[12px] wrap-anywhere muted text-muted">
                   {bootstrap.connection() === "ready" ? "Conectado" : "Conectando ao aplicativo…"}
                 </p>
               </div>
-              <div class="cluster">
+              <div class="cluster flex flex-wrap items-center justify-between gap-3">
                 <button
-                  class="button secondary"
+                  class={`${buttonStyles} secondary`}
                   type="button"
                   onClick={() => settings.setSettingsOpen(!settings.settingsOpen())}
                 >
                   Configurar TMDB
                 </button>
                 <button
-                  class="button secondary"
+                  class={`${buttonStyles} secondary`}
                   type="button"
                   disabled={settings.cacheBusy()}
                   onClick={() => {
@@ -299,7 +315,7 @@ export function App() {
                   Armazenamento
                 </button>
                 <button
-                  class="button secondary"
+                  class={`${buttonStyles} secondary`}
                   type="button"
                   disabled={bootstrap.connection() === "connecting"}
                   onClick={() => void connect()}
@@ -316,18 +332,24 @@ export function App() {
             />
           </Show>
           <Show when={bootstrap.connectionError()}>
-            <p class="service-error" role="alert">
+            <p
+              class="service-error mt-3 p-[12px_16px] border border-tomato-7 rounded-control bg-negative-bg text-negative"
+              role="alert"
+            >
               {bootstrap.connectionError()}
             </p>
           </Show>
           <Show when={bootstrap.connection() === "browser"}>
-            <section class="state-message">
+            <section class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5">
               <h2>Abra o Popcorn no desktop</h2>
               <p>O aplicativo conecta o catálogo e prepara a reprodução.</p>
             </section>
           </Show>
           <Show when={bootstrap.connection() === "connecting"}>
-            <p class="state-message" role="status">
+            <p
+              class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5"
+              role="status"
+            >
               Iniciando o Popcorn…
             </p>
           </Show>
@@ -346,15 +368,22 @@ export function App() {
               when={page() === "search"}
               fallback={
                 <>
-                  <nav class="detail-navigation cluster" aria-label="Navegação do título">
-                    <button class="button secondary" type="button" onClick={backToSearch}>
+                  <nav
+                    class="detail-navigation mb-6 max-[600px]:items-start max-[600px]:gap-4 cluster flex flex-wrap items-center justify-between gap-3"
+                    aria-label="Navegação do título"
+                  >
+                    <button
+                      class={`${buttonStyles} secondary`}
+                      type="button"
+                      onClick={backToSearch}
+                    >
                       <Icon name="arrow-left" /> Voltar à pesquisa
                     </button>
                     <Show when={details.detail()?.content}>
                       {(content) => (
-                        <div class="cluster">
+                        <div class="cluster flex flex-wrap items-center justify-between gap-3">
                           <Toggle.Root
-                            class="button secondary"
+                            class={`${buttonStyles} secondary`}
                             type="button"
                             pressed={selectedEntry()?.status === "want"}
                             onPressedChange={(pressed) => {
@@ -366,7 +395,7 @@ export function App() {
                             <Icon name="plus" /> Quero assistir
                           </Toggle.Root>
                           <Toggle.Root
-                            class="button secondary"
+                            class={`${buttonStyles} secondary`}
                             type="button"
                             pressed={selectedEntry()?.status === "watched"}
                             onPressedChange={(pressed) => {
@@ -392,17 +421,24 @@ export function App() {
                     onLaunch={(position) => void launch(position)}
                   />
                   <Show when={history.error()}>
-                    <p class="error-text" role="alert">
+                    <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
                       {history.error()}
                     </p>
                   </Show>
                 </>
               }
             >
-              <section class="introduction" aria-labelledby="library-title">
-                <p class="eyebrow">SEU CINEMA, SEU TEMPO</p>
+              <section
+                class="introduction mb-6 [&_h1]:m-[4px_0_8px] [&_h1]:text-[clamp(30px,_4vw,_46px)] [&_h1]:font-normal [&_h1]:leading-[1.12] [&_h1]:tracking-[-0.035em] [&_>_.muted]:max-w-[620px] max-[560px]:[&_h1]:text-[31px]"
+                aria-labelledby="library-title"
+              >
+                <p class="eyebrow text-accent-strong text-[11px] font-bold tracking-[0.13em]">
+                  SEU CINEMA, SEU TEMPO
+                </p>
                 <h1 id="library-title">O que vamos assistir?</h1>
-                <p class="muted">Encontre uma nova história ou continue de onde parou.</p>
+                <p class="muted text-muted">
+                  Encontre uma nova história ou continue de onde parou.
+                </p>
               </section>
               <CatalogControls vm={catalog} />
               <HistoryShelf
@@ -418,12 +454,16 @@ export function App() {
               />
             </Show>
           </Show>
-          <footer class="page-footer" role="contentinfo" aria-label="Sobre e créditos">
+          <footer
+            class="page-footer grid grid-cols-[1fr_auto] gap-6 items-end mt-12 p-[24px_0] border-t border-line text-muted text-[11px] [&_>_.cluster]:justify-start max-[820px]:grid-cols-[1fr]"
+            role="contentinfo"
+            aria-label="Sobre e créditos"
+          >
             <div>
               <span>Popcorn · Filmes e séries</span>
-              <p class="muted">Seu progresso fica salvo neste dispositivo.</p>
+              <p class="muted text-muted">Seu progresso fica salvo neste dispositivo.</p>
             </div>
-            <div class="attribution">
+            <div class="attribution flex items-center justify-end gap-3 max-w-[440px] text-right [&_img]:w-[80px] [&_img]:h-auto [&_img]:flex-none max-[820px]:justify-start max-[820px]:text-left">
               <img src={tmdbLogo} width="80" height="11" alt="TMDB" />
               <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
             </div>

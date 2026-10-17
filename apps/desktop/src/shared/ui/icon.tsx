@@ -39,7 +39,7 @@ export function Icon(props: { readonly name: IconName; readonly class?: string }
   return (
     <Dynamic
       component={icons[props.name]}
-      class={`app-icon${props.class ? ` ${props.class}` : ""}`}
+      class={`app-icon inline-block flex-none align-[-0.125em] ${props.class ?? "size-[1em]"}`}
       aria-hidden="true"
       stroke-width={2}
     />

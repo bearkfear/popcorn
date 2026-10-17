@@ -75,11 +75,18 @@ export function PlayerWindow() {
   });
 
   return (
-    <Show when={session()} fallback={<p class="state-message">Preparando reprodução…</p>}>
+    <Show
+      when={session()}
+      fallback={
+        <p class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5">
+          Preparando reprodução…
+        </p>
+      }
+    >
       {(current) => (
         <>
           <Show when={error() || bootstrap.connectionError()}>
-            <p class="error-text" role="alert">
+            <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
               {error() || bootstrap.connectionError()}
             </p>
           </Show>

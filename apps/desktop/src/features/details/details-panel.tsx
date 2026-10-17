@@ -5,6 +5,7 @@ import { artworkUrl } from "../../catalog-ui";
 import { Artwork } from "../../shared/ui/artwork";
 import { Icon } from "../../shared/ui/icon";
 import { SelectField } from "../../shared/ui/select-field";
+import { buttonStyles } from "../../shared/ui/styles";
 import type { PlayerViewModel } from "../player/player.viewmodel";
 import type { SourcesViewModel } from "../sources/sources.viewmodel";
 import { SourcesPanel } from "../sources/sources-panel";
@@ -34,19 +35,27 @@ export function DetailsPanel(props: {
   });
 
   return (
-    <section class="detail-panel" aria-label="Detalhes do título" aria-busy={props.vm.detailBusy()}>
-      <h2 ref={heading} class="detail-heading" tabindex="-1">
+    <section
+      class="detail-panel min-w-0 border border-line rounded-panel bg-slate-2 wrap-anywhere p-[clamp(18px,3vw,40px)] shadow-[0_18px_50px_var(--black-a4)] [&_.artwork-wide]:aspect-video [&_.artwork-wide]:mb-4 [&_>_.artwork-wide]:aspect-[21/9] [&_>_.artwork-wide]:max-h-[390px] [&_>_.artwork-wide]:rounded-xl"
+      aria-label="Detalhes do título"
+      aria-busy={props.vm.detailBusy()}
+    >
+      <h2
+        ref={heading}
+        class="detail-heading mt-2 mb-4 text-[clamp(32px,5vw,62px)] font-semibold leading-[1.1] tracking-[-0.03em] scroll-mt-[100px] focus:outline-none"
+        tabindex="-1"
+      >
         {props.vm.selected()?.title || "Detalhes"}
       </h2>
       <Show when={props.vm.detailBusy()}>
         <p role="status">Carregando detalhes...</p>
       </Show>
       <Show when={props.vm.detailError()}>
-        <p class="error-text" role="alert">
+        <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
           {props.vm.detailError()}
         </p>
         <button
-          class="button secondary"
+          class={`${buttonStyles} secondary`}
           type="button"
           onClick={() => {
             const selected = props.vm.selected();
@@ -61,12 +70,14 @@ export function DetailsPanel(props: {
         {(title) => (
           <>
             <Show when={props.vm.detailStale()}>
-              <p class="cache-label">Detalhes: cache / offline</p>
+              <p class="cache-label text-amber-11 text-[12px] font-[650]">
+                Detalhes: cache / offline
+              </p>
             </Show>
             <Show when={artworkUrl(title().backdropUrl)}>
               <Artwork url={title().backdropUrl} title={`Cena de ${title().title}`} wide />
             </Show>
-            <p class="detail-meta">
+            <p class="detail-meta mt-5 mb-4 text-muted text-[14px]">
               {title().content?.mediaType === MediaType.TV ? "Série" : "Filme"} ·{" "}
               {title().releaseYear || "Ano não informado"} ·{" "}
               {title().runtimeMinutes ? `${title().runtimeMinutes} min` : "Duração não informada"} ·{" "}
@@ -75,16 +86,22 @@ export function DetailsPanel(props: {
                 : "Sem avaliação"}
             </p>
             <Show when={title().genres.length}>
-              <ul class="genre-tags">
+              <ul class="genre-tags flex flex-wrap gap-[6px] m-[0_0_20px] p-0 list-none [&_li]:p-[3px_8px] [&_li]:border [&_li]:border-line [&_li]:rounded-[14px] [&_li]:text-ink [&_li]:text-[11px]">
                 <For each={title().genres}>{(genre) => <li>{genre.name}</li>}</For>
               </ul>
             </Show>
-            <h3 class="synopsis-label">Sinopse</h3>
-            <p class="overview">{title().overview || "Sinopse não disponível."}</p>
+            <h3 class="synopsis-label m-[20px_0_8px] text-ink text-[13px] uppercase tracking-[0.08em]">
+              Sinopse
+            </h3>
+            <p class="overview max-w-[780px] text-ink text-base leading-[1.65]">
+              {title().overview || "Sinopse não disponível."}
+            </p>
             <Show
               when={title().trailerKey}
               fallback={
-                <p class="muted trailer-unavailable">Trailer não disponível para este título.</p>
+                <p class="muted text-muted trailer-unavailable mt-4 text-[13px]">
+                  Trailer não disponível para este título.
+                </p>
               }
             >
               <Collapsible.Root
@@ -93,8 +110,8 @@ export function DetailsPanel(props: {
                 lazyMount
                 unmountOnExit
               >
-                <section class="trailer-section" aria-label="Trailer">
-                  <Collapsible.Trigger class="button secondary">
+                <section class="trailer-section m-[24px_0]" aria-label="Trailer">
+                  <Collapsible.Trigger class={`${buttonStyles} secondary`}>
                     {trailerOpen() ? (
                       <>Fechar trailer</>
                     ) : (
@@ -105,7 +122,7 @@ export function DetailsPanel(props: {
                   </Collapsible.Trigger>
                   <Collapsible.Content>
                     <iframe
-                      class="trailer-frame"
+                      class="trailer-frame block w-full aspect-[16_/_9] mt-4 border-0 rounded-[10px]"
                       title={`Trailer de ${title().title}`}
                       src={`https://www.youtube-nocookie.com/embed/${title().trailerKey}`}
                       allow="encrypted-media; picture-in-picture; fullscreen"
@@ -116,14 +133,21 @@ export function DetailsPanel(props: {
                 </section>
               </Collapsible.Root>
             </Show>
-            <h3 class="section-label">Elenco</h3>
-            <Show when={title().cast.length} fallback={<p class="muted">Elenco não disponível.</p>}>
-              <ul class="cast-list">
+            <h3 class="section-label m-[20px_0_8px] text-ink text-[13px] uppercase tracking-[0.08em]">
+              Elenco
+            </h3>
+            <Show
+              when={title().cast.length}
+              fallback={<p class="muted text-muted">Elenco não disponível.</p>}
+            >
+              <ul class="cast-list grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2 m-0 p-0 list-none [&_li]:min-w-0 [&_li]:p-2 [&_li]:rounded-[4px] [&_li]:bg-slate-2 [&_strong]:block [&_strong]:overflow-hidden [&_strong]:text-ellipsis [&_strong]:whitespace-nowrap [&_strong]:text-[12px] [&_span]:block [&_span]:overflow-hidden [&_span]:text-ellipsis [&_span]:whitespace-nowrap [&_span]:text-[11px]">
                 <For each={title().cast}>
                   {(member) => (
                     <li>
                       <strong>{member.name}</strong>
-                      <span class="muted">{member.character || "Personagem não informado"}</span>
+                      <span class="muted text-muted">
+                        {member.character || "Personagem não informado"}
+                      </span>
                     </li>
                   )}
                 </For>
@@ -137,16 +161,23 @@ export function DetailsPanel(props: {
               onLaunch={props.onLaunch}
             />
             <Show when={props.online && title().content?.mediaType === MediaType.TV}>
-              <section class="episodes-section" aria-label="Temporadas e episódios">
-                <h3 class="section-label">Temporadas e episódios</h3>
+              <section
+                class="episodes-section [&_>_label]:block [&_>_label]:mb-[6px] [&_>_label]:text-muted [&_>_label]:text-[12px] [&_>_label]:font-bold mt-6 pt-4 border-t border-line [&_.select-field]:mb-3"
+                aria-label="Temporadas e episódios"
+              >
+                <h3 class="section-label m-[20px_0_8px] text-ink text-[13px] uppercase tracking-[0.08em]">
+                  Temporadas e episódios
+                </h3>
                 <Show when={props.vm.seasonsBusy()}>
                   <p role="status">Consultando temporadas...</p>
                 </Show>
                 <Show when={props.vm.seasonsStale()}>
-                  <p class="cache-label">Temporadas: cache / offline</p>
+                  <p class="cache-label text-amber-11 text-[12px] font-[650]">
+                    Temporadas: cache / offline
+                  </p>
                 </Show>
                 <Show when={props.vm.seasonsError()}>
-                  <p class="error-text" role="alert">
+                  <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
                     {props.vm.seasonsError()}
                   </p>
                 </Show>
@@ -157,7 +188,7 @@ export function DetailsPanel(props: {
                     !props.vm.seasons().length
                   }
                 >
-                  <p class="muted">Temporadas não disponíveis.</p>
+                  <p class="muted text-muted">Temporadas não disponíveis.</p>
                 </Show>
                 <Show when={props.vm.seasons().length}>
                   <SelectField
@@ -171,7 +202,7 @@ export function DetailsPanel(props: {
                     }))}
                     onChange={(value) => void props.vm.loadEpisodes(Number(value))}
                   />
-                  <p class="season-overview">
+                  <p class="season-overview text-muted text-[13px]">
                     {
                       props.vm
                         .seasons()
@@ -182,14 +213,16 @@ export function DetailsPanel(props: {
                     <p role="status">Consultando episódios...</p>
                   </Show>
                   <Show when={props.vm.episodesStale()}>
-                    <p class="cache-label">Episódios: cache / offline</p>
+                    <p class="cache-label text-amber-11 text-[12px] font-[650]">
+                      Episódios: cache / offline
+                    </p>
                   </Show>
                   <Show when={props.vm.episodesError()}>
-                    <p class="error-text" role="alert">
+                    <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
                       {props.vm.episodesError()}
                     </p>
                     <button
-                      class="button secondary"
+                      class={`${buttonStyles} secondary`}
                       type="button"
                       onClick={() => {
                         const number = props.vm.seasonNumber();
@@ -206,9 +239,9 @@ export function DetailsPanel(props: {
                       !props.vm.episodes().length
                     }
                   >
-                    <p class="muted">Episódios não disponíveis nesta temporada.</p>
+                    <p class="muted text-muted">Episódios não disponíveis nesta temporada.</p>
                   </Show>
-                  <ol class="episode-list">
+                  <ol class="episode-list m-[16px_0_0] pl-7 [&_li]:p-[16px_0] [&_li]:border-t [&_li]:border-line [&_.artwork-wide]:mb-3 [&_h4]:mb-[3px] [&_h4]:text-[14px] [&_p]:text-[13px]">
                     <For each={props.vm.episodes()}>
                       {(episode) => (
                         <li>
@@ -225,7 +258,7 @@ export function DetailsPanel(props: {
                               : ""}
                             {episode.name || "Nome não informado"}
                           </h4>
-                          <p class="muted">
+                          <p class="muted text-muted">
                             {episode.airDate
                               ? `Exibição: ${episode.airDate.split("-").reverse().join("/")}`
                               : "Data não informada"}
@@ -235,7 +268,7 @@ export function DetailsPanel(props: {
                           <Show when={episode.content}>
                             {(content) => (
                               <button
-                                class="button secondary episode-source-button"
+                                class={`${buttonStyles} secondary episode-source-button min-h-[36px] mt-3 p-[6px_10px] [&[aria-pressed=true]]:border-accent [&[aria-pressed=true]]:text-ink`}
                                 type="button"
                                 aria-pressed={
                                   props.sources.content()?.seasonNumber ===

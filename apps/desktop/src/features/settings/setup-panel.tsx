@@ -4,6 +4,7 @@ import { Checkbox } from "@ark-ui/solid/checkbox";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { Show } from "solid-js";
 import { Icon } from "../../shared/ui/icon";
+import { buttonStyles } from "../../shared/ui/styles";
 import type { SettingsViewModel } from "./settings.viewmodel";
 
 export function SetupPanel(props: {
@@ -33,10 +34,13 @@ export function SetupPanel(props: {
   }
 
   return (
-    <section class="setup-panel" aria-labelledby="setup-heading">
-      <div class="setup-copy">
+    <section
+      class="setup-panel grid grid-cols-[minmax(0,_1.2fr)_minmax(300px,_0.8fr)] gap-[clamp(28px,_6vw,_72px)] mt-8 p-[clamp(24px,_5vw,_56px)] border border-line rounded-[10px] [background:linear-gradient(135deg,_var(--slate-3),_var(--slate-2))] shadow-[0_24px_70px_var(--black-a4)] max-[820px]:grid-cols-1"
+      aria-labelledby="setup-heading"
+    >
+      <div class="setup-copy [&_h2]:m-[8px_0_12px] [&_h2]:text-[clamp(28px,_4vw,_42px)] [&_h2]:font-normal [&_ol]:m-[24px_0] [&_ol]:pl-[22px] [&_ol]:text-muted [:where(&)_li_+_li]:mt-2">
         <h2 id="setup-heading">Configuração do TMDB</h2>
-        <p class="muted">
+        <p class="muted text-muted">
           Para navegar pelo catálogo completo com posters e detalhes, informe seu token de leitura
           da API.
         </p>
@@ -51,7 +55,7 @@ export function SetupPanel(props: {
           when={isTauri()}
           fallback={
             <a
-              class="button secondary external-link"
+              class={`${buttonStyles} secondary external-link inline-flex items-center no-underline`}
               href="https://www.themoviedb.org/settings/api"
               target="_blank"
               rel="noopener noreferrer"
@@ -61,7 +65,7 @@ export function SetupPanel(props: {
           }
         >
           <button
-            class="button secondary"
+            class={`${buttonStyles} secondary`}
             type="button"
             onClick={() => {
               void openTmdbSettings();
@@ -70,10 +74,15 @@ export function SetupPanel(props: {
             Abrir configurações TMDB
           </button>
         </Show>
-        <p class="settings-address">https://www.themoviedb.org/settings/api</p>
+        <p class="settings-address mt-2 text-muted text-[12px] wrap-anywhere">
+          https://www.themoviedb.org/settings/api
+        </p>
       </div>
 
-      <form class="setup-form" onSubmit={handleSubmit}>
+      <form
+        class="setup-form self-center p-6 border border-line rounded-panel bg-black-a7 [&_>_label:not(.checkbox-label)]:block [&_>_label:not(.checkbox-label)]:mb-[6px] [&_>_label:not(.checkbox-label)]:text-muted [&_>_label:not(.checkbox-label)]:text-[12px] [&_>_label:not(.checkbox-label)]:font-bold [&_input[type=password]]:w-full [&_input[type=password]]:min-h-[44px] [&_input[type=password]]:p-[9px_12px] [&_input[type=password]]:border [&_input[type=password]]:border-line [&_input[type=password]]:rounded-control [&_input[type=password]]:bg-slate-2 [&_input[type=password]]:text-ink [&_>_.muted]:m-[8px_0_16px] [&_>_.muted]:text-[12px] max-[560px]:p-4"
+        onSubmit={handleSubmit}
+      >
         <label for="tmdb-token-input">API Read Access Token</label>
         <input
           ref={tokenInput}
@@ -84,15 +93,17 @@ export function SetupPanel(props: {
           disabled={props.vm.configurationBusy()}
           autocomplete="off"
         />
-        <p class="muted">O token é mantido em memória e validado diretamente com o TMDB.</p>
+        <p class="muted text-muted">
+          O token é mantido em memória e validado diretamente com o TMDB.
+        </p>
         <Checkbox.Root
-          class="checkbox-label"
+          class="checkbox-label flex items-center gap-2 text-[14px] [&_input]:absolute [&_input]:w-[1px] [&_input]:h-[1px] [&_input]:overflow-hidden [&_input]:[clip:rect(0_0_0_0)] [&_input]:[clip-path:inset(50%)] [&_input]:whitespace-nowrap [&:has(input:focus-visible)_.checkbox-control]:[outline:2px_solid_var(--focus)] [&:has(input:focus-visible)_.checkbox-control]:outline-offset-[3px] [&[data-disabled]]:cursor-default [&[data-disabled]]:opacity-[0.55]"
           checked={props.vm.remember()}
           onCheckedChange={(details) => props.vm.setRemember(details.checked === true)}
           disabled={props.vm.configurationBusy()}
         >
           <Checkbox.HiddenInput />
-          <Checkbox.Control class="checkbox-control">
+          <Checkbox.Control class="checkbox-control grid w-[18px] h-[18px] flex-none place-items-center border border-line rounded-[4px] bg-slate-2 text-ink text-[12px] [&[data-state=checked]]:text-accent-contrast [&[data-state=checked]]:border-accent [&[data-state=checked]]:bg-accent">
             <Checkbox.Indicator aria-hidden="true">
               <Icon name="check" />
             </Checkbox.Indicator>
@@ -100,17 +111,17 @@ export function SetupPanel(props: {
           <Checkbox.Label>Salvar neste dispositivo</Checkbox.Label>
         </Checkbox.Root>
         <Show when={props.vm.configurationError()}>
-          <p class="error-text" role="alert">
+          <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
             {props.vm.configurationError()}
           </p>
         </Show>
-        <button class="button" type="submit" disabled={props.vm.configurationBusy()}>
+        <button class={buttonStyles} type="submit" disabled={props.vm.configurationBusy()}>
           {props.vm.configurationBusy() ? "Validando acesso..." : "Salvar e continuar"}
         </button>
         <Show when={props.vm.status()?.configured}>
-          <div class="cluster">
+          <div class="cluster flex flex-wrap items-center justify-between gap-3">
             <button
-              class="button secondary"
+              class={`${buttonStyles} secondary`}
               type="button"
               disabled={props.vm.configurationBusy()}
               onClick={props.onConfigured}
@@ -118,7 +129,7 @@ export function SetupPanel(props: {
               Voltar ao catálogo
             </button>
             <button
-              class="button secondary danger"
+              class={`${buttonStyles} secondary danger`}
               type="button"
               disabled={props.vm.configurationBusy()}
               onClick={() => {

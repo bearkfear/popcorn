@@ -10,6 +10,8 @@
 
 /* Only Radix colors are available to Tailwind color utilities. */
 @theme inline {
+  --radius-control: 5px;
+  --radius-panel: 8px;
   --font-sans: var(--font-ui);
   --color-*: initial;
   --color-slate-1: var(--slate-1);
@@ -72,6 +74,18 @@
   --color-blue-10: var(--blue-10);
   --color-blue-11: var(--blue-11);
   --color-blue-12: var(--blue-12);
+  --color-tomato-a1: var(--tomato-a1);
+  --color-tomato-a2: var(--tomato-a2);
+  --color-tomato-a3: var(--tomato-a3);
+  --color-tomato-a4: var(--tomato-a4);
+  --color-tomato-a5: var(--tomato-a5);
+  --color-tomato-a6: var(--tomato-a6);
+  --color-tomato-a7: var(--tomato-a7);
+  --color-tomato-a8: var(--tomato-a8);
+  --color-tomato-a9: var(--tomato-a9);
+  --color-tomato-a10: var(--tomato-a10);
+  --color-tomato-a11: var(--tomato-a11);
+  --color-tomato-a12: var(--tomato-a12);
   --color-black-a1: var(--black-a1);
   --color-black-a2: var(--black-a2);
   --color-black-a3: var(--black-a3);
@@ -117,6 +131,7 @@
 /* Radix: 1–2 canvas, 3–5 controls, 6–8 borders, 9–10 fills, 11–12 text. */
 :root {
   color-scheme: dark;
+  --font-ui: "Google Sans", "Segoe UI", Helvetica, Arial, sans-serif;
   --canvas: var(--slate-2);
   --canvas-deep: var(--slate-1);
   --surface: var(--slate-3);

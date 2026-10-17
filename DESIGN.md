@@ -1,8 +1,16 @@
 # Popcorn - TMDB catalog
 
+## Tailwind styling contract (October 16, 2026)
+
+- All component layouts, typography, responsive breakpoints, hover/focus/disabled feedback, Ark data states, and player controls use Tailwind utilities in TSX. Use arbitrary values and variants where the existing design needs them.
+- `src/styles.css` contains only imports and global base rules, expressed with `@apply`. Font faces remain in `src/fonts.css`; Radix colors, the Google Sans stack, and shared radii remain in `src/theme.css`.
+- Shared button utilities live in `src/shared/ui/styles.ts`; native player buttons and range inputs share `src/features/player/player-controls.styles.ts`. The player select uses an explicit appearance variant so its sizing does not depend on utility ordering.
+- Semantic classes retained in markup identify components for contextual variants and browser validation; there are no component selector rules in the global stylesheet. Dynamic range progress stays in CSS custom properties supplied by the player.
+- Validation uses the production build and isolated browser IPC/protobuf fixtures for catalog/details, portaled menus, keyboard selection, checkbox, trailer, history, audio switching, seek feedback, and mobile overflow. These checks do not replace native Tauri playback verification.
+
 ## Progressive playback extension contract (October 15, 2026)
 
-This narrow extension supersedes older paper/ink and no-playback restrictions. The current `apps/desktop/src/styles.css` is the visual authority: preserve the dark cinema canvas (`--canvas: #17191d`, `--canvas-deep: #101216`), charcoal surfaces, red action accent, sans-serif UI, existing spacing, radii, and responsive catalog. No redesign, dependencies, or Lighthouse expansion.
+This narrow extension supersedes older paper/ink and no-playback restrictions. The Tailwind classes in `apps/desktop/src` and the Radix tokens in `src/theme.css` are the visual authority: preserve the dark cinema canvas, charcoal surfaces, Tomato action accent, Google Sans UI, existing spacing, radii, and responsive catalog. No redesign, dependencies, or Lighthouse expansion.
 
 - Before Assistir, a labelled native quality select offers Auto (até 1080p), 1080p, and 720p; Auto is the initial choice. Quality applies to a newly started playback, not a running session.
 - Retain the full-screen cinema overlay, download statistics, close action, and native video controls for seeking, volume, pause/play, and fullscreen. A wrapping toolbar and independently scrollable status area must remain usable on narrow or short windows. Overlay focus is contained and returns to the invoking control on close; Escape closes outside native fullscreen.
