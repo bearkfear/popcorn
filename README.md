@@ -111,29 +111,50 @@ Para compilar o desktop:
 bun run desktop:build
 ```
 
-### Release para Windows pelo GitHub Actions
+### Release desktop pelo GitHub Actions
 
-O workflow `Release Windows` compila o aplicativo em um runner Windows, preserva
-o instalador NSIS e seu `SHA256SUMS.txt` como artifact da execução e publica os
-mesmos arquivos no GitHub Releases. A tag precisa coincidir com a versão de
-`apps/desktop/src-tauri/tauri.conf.json`.
+O workflow `Release Desktop` compila os dois targets prioritários em runners
+nativos e publica uma única GitHub Release com:
 
-Para publicar a versão `0.1.0`:
+- `Popcorn_<versão>_windows_x64_setup.exe`, instalador NSIS autocontido com o
+  instalador offline do WebView2 (aproximadamente 127 MB adicionais para permitir
+  instalação sem rede);
+- `Popcorn_<versão>_macos_arm64.dmg`, imagem para Apple Silicon;
+- checksums SHA-256 separados para cada plataforma.
+
+Ambos os pacotes incluem o backend, FFmpeg, ffprobe, catálogo e licenças. A tag
+precisa coincidir com a versão CalVer `AAAA.MM.DD` de
+`apps/desktop/src-tauri/tauri.conf.json`. Para publicar a versão `2026.10.17`:
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+git tag v2026.10.17
+git push origin v2026.10.17
 ```
 
-Também é possível iniciar o workflow manualmente em **Actions → Release Windows
-→ Run workflow**, informando `v0.1.0`. Uma execução manual cria a tag no commit
-selecionado se ela ainda não existir. O instalador não é assinado nesta etapa e,
-por isso, o Windows SmartScreen pode exibir um aviso.
+Também é possível iniciar o workflow manualmente em **Actions → Release Desktop
+→ Run workflow**, informando `v2026.10.17`. Uma execução manual cria a tag no
+commit selecionado ao criar a GitHub Release, caso ela ainda não exista.
+
+Sem credenciais, o Windows é empacotado sem assinatura e o macOS usa assinatura
+ad-hoc; isso permite testar os instaladores, mas ainda pode produzir alertas do
+SmartScreen e Gatekeeper. Para uma release pública, configure todos os secrets do
+grupo correspondente:
+
+- Windows: `WINDOWS_CERTIFICATE` (PFX em base64) e
+  `WINDOWS_CERTIFICATE_PASSWORD`;
+- macOS: `APPLE_CERTIFICATE` (certificado Developer ID Application em P12/base64),
+  `APPLE_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_PASSWORD` (senha específica
+  de app) e `APPLE_TEAM_ID`.
+
+Com todos os secrets Apple, o workflow assina e notariza o DMG. Credenciais
+parciais fazem o job falhar para impedir uma release com estado de assinatura
+ambíguo.
 
 Os targets iniciais de produto continuam Windows x64 e macOS ARM64. A configuração
-de bundle usa NSIS no Windows e app/DMG no macOS. Assinatura, notarização, instalação
-e atualização nesses sistemas ainda precisam de homologação; compilar não comprova
-esses gates. Linux é ambiente adicional de desenvolvimento, com bundling desativado.
+de bundle usa NSIS no Windows e app/DMG no macOS. Instalação, execução, desinstalação
+e atualização nesses sistemas ainda precisam de homologação; compilar, assinar e
+notarizar não comprovam esses gates. Linux é ambiente adicional de desenvolvimento,
+com bundling desativado.
 
 ### Empacotamento de FFmpeg e ffprobe
 

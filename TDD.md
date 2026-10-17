@@ -342,7 +342,7 @@ Atualizações do catálogo acompanham novas versões do aplicativo. Com cliente
 
 Windows e macOS são prioritários e ambos devem passar pelos gates de instalação e reprodução antes do release inicial. Linux é posterior. Targets iniciais propostos: `x86_64-pc-windows-msvc` e `aarch64-apple-darwin`; macOS Intel e Windows ARM64 permanecem candidatos posteriores, sem suporte presumido por emulação.
 
-A primeira execução de desenvolvimento pode ocorrer no macOS ARM64 disponível, mas não substitui QA de Windows. Versões mínimas dos sistemas, estratégia de installer Windows/WebView2 e assinatura/notarização permanecem pendentes até a validação G4. Tauri usa WebView2 no Windows e WKWebView no macOS [R5]; validar RPC, origins e reprodução em cada runtime, não somente em um navegador de desenvolvimento.
+A primeira execução de desenvolvimento pode ocorrer no macOS ARM64 disponível, mas não substitui QA de Windows. O instalador Windows inclui o runtime offline do WebView2; assinatura/notarização são executadas pelo CI quando os certificados de distribuição estão configurados. Versões mínimas, instalação e comportamento em máquinas limpas permanecem pendentes até a validação G4. Tauri usa WebView2 no Windows e WKWebView no macOS [R5]; validar RPC, origins e reprodução em cada runtime, não somente em um navegador de desenvolvimento.
 
 O pacote FFmpeg, sua configuração e licenças precisam ser registrados junto às dependências. Usar builds e lockfiles reproduzíveis; não depender de FFmpeg instalado globalmente para um perfil anunciado como suportado.
 

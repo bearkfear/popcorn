@@ -14,7 +14,7 @@
     },
     "apps/desktop": {
       "name": "@popcorn/desktop",
-      "version": "0.1.0",
+      "version": "2026.10.17",
       "dependencies": {
         "@ark-ui/solid": "^5.39.3",
         "@popcorn/sdk": "workspace:*",
@@ -37,7 +37,7 @@
     },
     "packages/sdk": {
       "name": "@popcorn/sdk",
-      "version": "0.1.0",
+      "version": "2026.10.17",
       "dependencies": {
         "@bufbuild/protobuf": "2.16.0",
         "@connectrpc/connect": "2.2.0",

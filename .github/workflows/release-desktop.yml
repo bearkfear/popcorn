@@ -1,0 +1,352 @@
+name: Release Desktop
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Tag CalVer da release (por exemplo v2026.10.17)"
+        required: true
+        type: string
+
+concurrency:
+  group: release-desktop-${{ github.event.inputs.release_tag || github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
+
+jobs:
+  validate:
+    name: Validate release version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      app_version: ${{ steps.version.outputs.app_version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate CalVer and project versions
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_version="$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)"
+          expected_tag="v${app_version}"
+
+          if [[ ! "$app_version" =~ ^[0-9]{4}\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01])$ ]]; then
+            echo "Tauri version '$app_version' is not YYYY.MM.DD CalVer." >&2
+            exit 1
+          fi
+          if [[ "$RELEASE_TAG" != "$expected_tag" ]]; then
+            echo "Release tag '$RELEASE_TAG' does not match '$expected_tag'." >&2
+            exit 1
+          fi
+
+          test "$(jq -r .version apps/desktop/package.json)" = "$app_version"
+          test "$(jq -r .version packages/sdk/package.json)" = "$app_version"
+          grep -Fq "version = \"$app_version\"" Cargo.toml
+          echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
+
+  quality:
+    name: Typecheck, lint and test
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust 1.94 toolchain
+        shell: bash
+        run: |
+          rustup toolchain install 1.94.0 --profile minimal --component rustfmt --component clippy
+          rustup default 1.94.0
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install JavaScript dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check TypeScript and frontend formatting
+        run: |
+          bun run typecheck
+          bun run check:desktop
+
+      - name: Run frontend domain tests
+        run: bun test apps/desktop/tests
+
+      - name: Lint and test backend domain
+        run: |
+          bun run lint:server
+          cargo test -p popcorn-server --lib core::
+
+  windows:
+    name: Build Windows x64 installer
+    needs: [validate, quality]
+    runs-on: windows-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust 1.94 MSVC toolchain
+        shell: pwsh
+        run: |
+          rustup toolchain install 1.94.0-x86_64-pc-windows-msvc --profile minimal
+          rustup default 1.94.0-x86_64-pc-windows-msvc
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install JavaScript dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Configure optional Windows signing
+        id: signing
+        shell: pwsh
+        run: |
+          $hasCertificate = -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE)
+          $hasPassword = -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)
+          if ($hasCertificate -xor $hasPassword) {
+            throw "Configure both WINDOWS_CERTIFICATE and WINDOWS_CERTIFICATE_PASSWORD, or neither."
+          }
+          if (-not $hasCertificate) {
+            "config=" >> $env:GITHUB_OUTPUT
+            Write-Host "No Windows signing certificate configured; building an unsigned installer."
+            exit 0
+          }
+
+          $certificatePath = Join-Path $env:RUNNER_TEMP "popcorn-certificate.pfx"
+          $certificateBase64 = $env:WINDOWS_CERTIFICATE `
+            -replace '-----[^-]+-----', '' `
+            -replace '\s', ''
+          [IO.File]::WriteAllBytes(
+            $certificatePath,
+            [Convert]::FromBase64String($certificateBase64)
+          )
+          $password = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $certificate = @(
+            Import-PfxCertificate `
+              -FilePath $certificatePath `
+              -CertStoreLocation Cert:\CurrentUser\My `
+              -Password $password
+          ) | Where-Object HasPrivateKey | Select-Object -First 1
+          if ($null -eq $certificate) {
+            throw "The Windows signing certificate could not be imported."
+          }
+
+          $configPath = Join-Path $env:RUNNER_TEMP "tauri.windows-signing.json"
+          @{
+            bundle = @{
+              windows = @{
+                certificateThumbprint = $certificate.Thumbprint
+                digestAlgorithm = "sha256"
+                timestampUrl = "http://timestamp.sectigo.com"
+              }
+            }
+          } | ConvertTo-Json -Depth 5 | Set-Content $configPath -Encoding utf8
+          "config=--config `"$configPath`"" >> $env:GITHUB_OUTPUT
+
+      - name: Build self-contained NSIS installer
+        shell: pwsh
+        working-directory: apps/desktop
+        run: bun --bun tauri build ${{ steps.signing.outputs.config }}
+
+      - name: Collect Windows release assets
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ needs.validate.outputs.app_version }}
+        run: |
+          $installers = @(
+            Get-ChildItem -Path target,apps/desktop/src-tauri/target -Recurse -File -Filter "*-setup.exe" -ErrorAction SilentlyContinue |
+              Where-Object { $_.FullName -match '[\\/]bundle[\\/]nsis[\\/]' }
+          )
+          if ($installers.Count -ne 1) {
+            throw "Expected exactly one NSIS installer, found $($installers.Count)."
+          }
+          New-Item -ItemType Directory -Force release | Out-Null
+          $name = "Popcorn_$env:APP_VERSION`_windows_x64_setup.exe"
+          $destination = Join-Path (Resolve-Path release) $name
+          Copy-Item $installers[0].FullName $destination
+          $hash = (Get-FileHash $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $name" | Set-Content release/SHA256SUMS-windows.txt -Encoding ascii
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: popcorn-windows-${{ needs.validate.outputs.app_version }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14
+
+  macos:
+    name: Build macOS Apple Silicon image
+    needs: [validate, quality]
+    runs-on: macos-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust 1.94 Apple Silicon toolchain
+        shell: bash
+        run: |
+          rustup toolchain install 1.94.0 --profile minimal --target aarch64-apple-darwin
+          rustup default 1.94.0
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install JavaScript dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Configure signing and notarization
+        id: signing
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          values=(
+            "$APPLE_CERTIFICATE"
+            "$APPLE_CERTIFICATE_PASSWORD"
+            "$APPLE_ID"
+            "$APPLE_PASSWORD"
+            "$APPLE_TEAM_ID"
+          )
+          configured=0
+          for value in "${values[@]}"; do
+            if [[ -n "$value" ]]; then configured=$((configured + 1)); fi
+          done
+          if [[ "$configured" -ne 0 && "$configured" -ne "${#values[@]}" ]]; then
+            echo "Configure all Apple signing/notarization secrets, or none." >&2
+            exit 1
+          fi
+          if [[ "$configured" -eq 0 ]]; then
+            echo "APPLE_SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "No Apple certificate configured; using ad-hoc signing without notarization."
+            exit 0
+          fi
+
+          certificate_path="$RUNNER_TEMP/popcorn-certificate.p12"
+          keychain_path="$RUNNER_TEMP/popcorn-build.keychain-db"
+          keychain_password="$(uuidgen)$(uuidgen)"
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$certificate_path"
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$certificate_path" -k "$keychain_path" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$keychain_password" "$keychain_path"
+          security list-keychains -d user -s "$keychain_path" login.keychain
+          identity="$(security find-identity -v -p codesigning "$keychain_path" | \
+            awk -F\" '/Developer ID Application:/ { print $2; exit }')"
+          if [[ -z "$identity" ]]; then
+            echo "No valid Apple code-signing identity was imported." >&2
+            exit 1
+          fi
+          echo "APPLE_SIGNING_IDENTITY=$identity" >> "$GITHUB_ENV"
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Build ad-hoc signed DMG with bundled sidecars
+        if: steps.signing.outputs.signed == 'false'
+        shell: bash
+        working-directory: apps/desktop
+        run: bun --bun tauri build --target aarch64-apple-darwin
+
+      - name: Build signed and notarized DMG with bundled sidecars
+        if: steps.signing.outputs.signed == 'true'
+        shell: bash
+        working-directory: apps/desktop
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: bun --bun tauri build --target aarch64-apple-darwin
+
+      - name: Collect macOS release assets
+        shell: bash
+        env:
+          APP_VERSION: ${{ needs.validate.outputs.app_version }}
+        run: |
+          set -euo pipefail
+          images="$(find target apps/desktop/src-tauri/target \
+            -type f -path '*/bundle/dmg/*.dmg' 2>/dev/null || true)"
+          count="$(printf '%s\n' "$images" | awk 'NF { count++ } END { print count + 0 }')"
+          if [[ "$count" -ne 1 ]]; then
+            echo "Expected exactly one DMG, found $count." >&2
+            exit 1
+          fi
+          mkdir -p release
+          name="Popcorn_${APP_VERSION}_macos_arm64.dmg"
+          cp "$images" "release/$name"
+          shasum -a 256 "release/$name" | sed 's#  release/#  #' > release/SHA256SUMS-macos.txt
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: popcorn-macos-${{ needs.validate.outputs.app_version }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish GitHub Release
+    needs: [validate, windows, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: popcorn-*-${{ needs.validate.outputs.app_version }}
+          path: release
+          merge-multiple: true
+
+      - name: Create or update GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_VERSION: ${{ needs.validate.outputs.app_version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --clobber
+          else
+            gh release create "$RELEASE_TAG" release/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "Popcorn $APP_VERSION" \
+              --generate-notes
+          fi
