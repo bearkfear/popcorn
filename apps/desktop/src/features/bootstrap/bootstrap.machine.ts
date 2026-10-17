@@ -1,12 +1,14 @@
 import { assign, fromCallback, fromPromise, setup } from "xstate";
 import type {
   CatalogClient,
+  HistoryClient,
   PlaybackClient,
   SourceClient,
   StorageClient,
 } from "../../shared/types";
 
 export type Clients = {
+  readonly history?: HistoryClient;
   readonly catalog?: CatalogClient;
   readonly source?: SourceClient;
   readonly playback?: PlaybackClient;

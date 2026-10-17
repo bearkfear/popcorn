@@ -13,6 +13,7 @@ export type WatchEntry = {
   fileIndex?: number;
   audioStreamIndex?: number;
   quality: PlaybackQuality;
+  resumeSeconds?: number;
 };
 
 export function contentKey(content: ContentRef): string {
@@ -25,10 +26,10 @@ export function watchProgress(position: number, duration: number) {
 }
 
 export function resumePosition(entry: WatchEntry | undefined): number {
-  return entry?.status === "watching" && entry.position >= 5 ? entry.position : 0;
+  return entry?.resumeSeconds ?? 0;
 }
 
-// Persist presentation and playback choices only; no service credentials or media URLs.
+// Read the legacy WebView format solely for migration to backend storage.
 export function readHistory(value: string | null): WatchEntry[] {
   if (!value) return [];
   try {

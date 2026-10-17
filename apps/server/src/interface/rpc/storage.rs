@@ -77,6 +77,8 @@ fn encode_settings(value: CacheSettings) -> proto::CacheSettings {
         directory: value.directory,
         limit_bytes: value.limit_bytes,
         used_bytes: value.used_bytes,
+        min_limit_bytes: crate::core::media::rules::cache::MIN_CACHE_LIMIT,
+        max_limit_bytes: crate::core::media::rules::cache::MAX_CACHE_LIMIT,
         ..Default::default()
     }
 }

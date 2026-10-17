@@ -102,7 +102,7 @@ export function createCatalogViewModel(
   const genresStale = () => genreResponseValue()?.stale ?? false;
   const page = () => catalogValue()?.page ?? 0;
   const totalPages = () => catalogValue()?.totalPages ?? 0;
-  const hasMore = () => page() < Math.min(totalPages(), 500);
+  const hasMore = () => page() < totalPages();
 
   function resetCatalog() {
     setCatalogRequest(undefined);

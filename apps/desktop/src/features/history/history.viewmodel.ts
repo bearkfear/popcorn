@@ -1,84 +1,94 @@
-import type { ContentRef, Title } from "@popcorn/sdk";
+import type { ContentRef, Title, WatchEntry as WireEntry } from "@popcorn/sdk";
 import { PlaybackQuality } from "@popcorn/sdk";
-import { createSignal } from "solid-js";
-import {
-  contentKey,
-  readHistory,
-  type WatchEntry,
-  type WatchStatus,
-  watchProgress,
-} from "./history.model";
+import { createEffect, createSignal, on } from "solid-js";
+import type { HistoryClient } from "../../shared/types";
+import { loadHistory } from "./history.migration";
+import { contentKey, type WatchEntry, type WatchStatus } from "./history.model";
 
-const STORAGE_KEY = "popcorn.watch-history.v1";
+type WatchContext = Omit<WatchEntry, "key" | "position" | "duration" | "status" | "updatedAt">;
 
-export function createHistoryViewModel() {
+function fromWire(entry: WireEntry): WatchEntry[] {
+  if (!entry.content || !entry.title) return [];
+  return [
+    {
+      position: entry.position,
+      duration: entry.duration,
+      updatedAt: entry.updatedAt,
+      quality: entry.quality,
+      resumeSeconds: entry.resumeSeconds,
+      content: entry.content,
+      title: entry.title,
+      key: contentKey(entry.content),
+      status: entry.status as WatchStatus,
+      ...(entry.sourceId !== undefined ? { sourceId: entry.sourceId } : {}),
+      ...(entry.fileIndex !== undefined ? { fileIndex: entry.fileIndex } : {}),
+      ...(entry.audioStreamIndex !== undefined ? { audioStreamIndex: entry.audioStreamIndex } : {}),
+    },
+  ];
+}
+
+export function createHistoryViewModel(getClient: () => HistoryClient | undefined) {
+  const [entries, setEntries] = createSignal<WatchEntry[]>([]);
   const [error, setError] = createSignal("");
-  let initial: WatchEntry[] = [];
-  try {
-    initial = readHistory(localStorage.getItem(STORAGE_KEY));
-  } catch {
-    setError("Não foi possível ler seu histórico neste dispositivo.");
+  let pending = Promise.resolve();
+  function enqueue(work: (client: HistoryClient) => Promise<void>) {
+    const client = getClient();
+    if (!client) return pending;
+    pending = pending.then(async () => {
+      try {
+        await work(client);
+        if (getClient() === client) setError("");
+      } catch {
+        if (getClient() === client)
+          setError("Não foi possível acessar ou salvar seu histórico. Tente novamente.");
+      }
+    });
+    return pending;
   }
-  const [entries, setEntries] = createSignal(initial);
-
+  function accept(client: HistoryClient, values: WireEntry[]) {
+    if (getClient() === client) setEntries(values.flatMap(fromWire));
+  }
   function refresh() {
-    try {
-      setEntries(readHistory(localStorage.getItem(STORAGE_KEY)));
-    } catch {
-      setError("Não foi possível atualizar seu histórico neste dispositivo.");
-    }
+    return enqueue(async (client) => accept(client, (await client.listHistory({})).entries));
   }
-
-  function save(entry: WatchEntry) {
-    refresh();
-    const next = [entry, ...entries().filter((item) => item.key !== entry.key)].slice(0, 500);
-    setEntries(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      setError("");
-    } catch {
-      setError("Não foi possível salvar seu progresso neste dispositivo.");
-    }
-  }
-
+  createEffect(
+    on(getClient, (client) => {
+      setEntries([]);
+      if (!client) return;
+      void enqueue(async (current) => {
+        accept(current, (await loadHistory(current)).entries);
+      });
+    }),
+  );
   const find = (content: ContentRef | undefined) =>
     content ? entries().find((item) => item.key === contentKey(content)) : undefined;
 
   function mark(title: Title, content: ContentRef, status: WatchStatus) {
-    const old = find(content);
-    save({
-      ...old,
-      key: contentKey(content),
-      title,
-      content,
-      status,
-      position: old?.position ?? 0,
-      duration: old?.duration ?? 0,
-      updatedAt: Date.now(),
-      quality: old?.quality ?? PlaybackQuality.AUTO,
+    return enqueue(async (client) => {
+      const response = await client.updateHistory({
+        entry: { title, content, status: "want", quality: PlaybackQuality.AUTO },
+        markStatus: status,
+      });
+      accept(client, response.entries);
     });
   }
-
-  function progress(
-    context: Omit<WatchEntry, "key" | "position" | "duration" | "status" | "updatedAt">,
-    position: number,
-    duration: number,
-    ended = false,
-  ) {
-    if (!Number.isFinite(position) || !Number.isFinite(duration) || duration <= 0) return;
-    const old = find(context.content);
-    // A failed/new load at zero must not erase a previously saved resume point.
-    if (!ended && position < 1 && (old?.position ?? 0) > 5) return;
-    save({
-      ...context,
-      key: contentKey(context.content),
-      position,
-      duration,
-      status: ended || watchProgress(position, duration) >= 0.95 ? "watched" : "watching",
-      updatedAt: Date.now(),
+  function progress(context: WatchContext, position: number, duration: number, ended = false) {
+    return enqueue(async (client) => {
+      const response = await client.updateHistory({
+        entry: { ...context, position, duration, status: "watching" },
+        ended,
+      });
+      accept(client, response.entries);
     });
   }
-
-  return { entries, error, find, mark, progress, refresh };
+  async function flush() {
+    let current: Promise<void>;
+    do {
+      current = pending;
+      await current;
+    } while (current !== pending);
+    return !error();
+  }
+  return { entries, error, find, mark, progress, refresh, flush };
 }
 export type HistoryViewModel = ReturnType<typeof createHistoryViewModel>;

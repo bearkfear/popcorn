@@ -1,6 +1,7 @@
 // Common frontend domain types, view contracts and quality options.
 import {
   type createCatalogClient,
+  type createHistoryClient,
   type createPlaybackClient,
   type createSourceClient,
   type createStorageClient,
@@ -15,6 +16,7 @@ export type Bootstrap = {
   readonly catalogVersion: string;
 };
 
+export type HistoryClient = ReturnType<typeof createHistoryClient>;
 export type CatalogClient = ReturnType<typeof createCatalogClient>;
 export type PlaybackClient = ReturnType<typeof createPlaybackClient>;
 export type SourceClient = ReturnType<typeof createSourceClient>;

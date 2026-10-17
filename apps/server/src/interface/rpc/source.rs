@@ -104,7 +104,7 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> SourceSer
     }
 }
 
-fn decode_content(value: &proto::ContentRef) -> Result<Content, MediaError> {
+pub(super) fn decode_content(value: &proto::ContentRef) -> Result<Content, MediaError> {
     let kind = match value.media_type.to_i32() {
         1 => MediaKind::Movie,
         2 => MediaKind::Tv,

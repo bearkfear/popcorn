@@ -292,6 +292,8 @@ message CacheSettings {
   string directory = 1;
   uint64 limit_bytes = 2;
   uint64 used_bytes = 3;
+  uint64 min_limit_bytes = 4;
+  uint64 max_limit_bytes = 5;
 }
 message GetCacheSettingsRequest {}
 message GetCacheSettingsResponse { CacheSettings settings = 1; }
@@ -331,4 +333,36 @@ service StorageService {
   rpc GetCacheSettings(GetCacheSettingsRequest) returns (GetCacheSettingsResponse);
   rpc SetCacheLimit(SetCacheLimitRequest) returns (SetCacheLimitResponse);
   rpc ClearCache(ClearCacheRequest) returns (ClearCacheResponse);
+}
+
+// User library state. Decisions and resume points are computed by the backend.
+message WatchEntry {
+  ContentRef content = 1;
+  Title title = 2;
+  string status = 3;
+  double position = 4;
+  double duration = 5;
+  double updated_at = 6;
+  optional string source_id = 7;
+  optional uint32 file_index = 8;
+  optional uint32 audio_stream_index = 9;
+  PlaybackQuality quality = 10;
+  double resume_seconds = 11;
+}
+message ListHistoryRequest {}
+message ListHistoryResponse { repeated WatchEntry entries = 1; }
+message UpdateHistoryRequest {
+  WatchEntry entry = 1;
+  // Absent reports progress; present marks "want" or "watched".
+  optional string mark_status = 2;
+  bool ended = 3;
+}
+message UpdateHistoryResponse { repeated WatchEntry entries = 1; }
+message ImportHistoryRequest { repeated WatchEntry entries = 1; }
+message ImportHistoryResponse { repeated WatchEntry entries = 1; }
+service HistoryService {
+  rpc ListHistory(ListHistoryRequest) returns (ListHistoryResponse);
+  rpc UpdateHistory(UpdateHistoryRequest) returns (UpdateHistoryResponse);
+  // Inserts missing legacy entries only; retries never overwrite server progress.
+  rpc ImportHistory(ImportHistoryRequest) returns (ImportHistoryResponse);
 }

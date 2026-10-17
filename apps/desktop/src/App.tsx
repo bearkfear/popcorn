@@ -31,7 +31,7 @@ export function App() {
   const details = createDetailsViewModel(catalogClient);
   const sources = createSourcesViewModel(() => bootstrap.getClients().source);
   const player = createPlayerViewModel(() => bootstrap.getClients().playback);
-  const history = createHistoryViewModel();
+  const history = createHistoryViewModel(() => bootstrap.getClients().history);
   const [page, setPage] = createSignal<Page>("search");
   const [session, setSession] = createSignal<WatchContext>();
   let settingsReturnPage: Page = "search";

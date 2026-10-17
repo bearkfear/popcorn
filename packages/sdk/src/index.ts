@@ -2,6 +2,7 @@ import { createClient, type Client } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import {
   CatalogService,
+  HistoryService,
   PlaybackService,
   SourceService,
   StorageService,
@@ -54,4 +55,9 @@ function authenticatedTransport(baseUrl: string, token: string) {
         },
       ],
     });
+}
+
+/** Creates the authenticated user library client. */
+export function createHistoryClient(baseUrl: string, token: string): Client<typeof HistoryService> {
+  return createClient(HistoryService, authenticatedTransport(baseUrl, token));
 }

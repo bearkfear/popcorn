@@ -87,6 +87,13 @@ pub mod __buffa {
         reg.register_json_any(super::__SET_CACHE_LIMIT_RESPONSE_JSON_ANY);
         reg.register_json_any(super::__CLEAR_CACHE_REQUEST_JSON_ANY);
         reg.register_json_any(super::__CLEAR_CACHE_RESPONSE_JSON_ANY);
+        reg.register_json_any(super::__WATCH_ENTRY_JSON_ANY);
+        reg.register_json_any(super::__LIST_HISTORY_REQUEST_JSON_ANY);
+        reg.register_json_any(super::__LIST_HISTORY_RESPONSE_JSON_ANY);
+        reg.register_json_any(super::__UPDATE_HISTORY_REQUEST_JSON_ANY);
+        reg.register_json_any(super::__UPDATE_HISTORY_RESPONSE_JSON_ANY);
+        reg.register_json_any(super::__IMPORT_HISTORY_REQUEST_JSON_ANY);
+        reg.register_json_any(super::__IMPORT_HISTORY_RESPONSE_JSON_ANY);
     }
 }
 #[doc(inline)]
@@ -309,5 +316,33 @@ pub use self::__buffa::view::ClearCacheRequestOwnedView;
 pub use self::__buffa::view::ClearCacheResponseView;
 #[doc(inline)]
 pub use self::__buffa::view::ClearCacheResponseOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::WatchEntryView;
+#[doc(inline)]
+pub use self::__buffa::view::WatchEntryOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::ListHistoryRequestView;
+#[doc(inline)]
+pub use self::__buffa::view::ListHistoryRequestOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::ListHistoryResponseView;
+#[doc(inline)]
+pub use self::__buffa::view::ListHistoryResponseOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::UpdateHistoryRequestView;
+#[doc(inline)]
+pub use self::__buffa::view::UpdateHistoryRequestOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::UpdateHistoryResponseView;
+#[doc(inline)]
+pub use self::__buffa::view::UpdateHistoryResponseOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::ImportHistoryRequestView;
+#[doc(inline)]
+pub use self::__buffa::view::ImportHistoryRequestOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::ImportHistoryResponseView;
+#[doc(inline)]
+pub use self::__buffa::view::ImportHistoryResponseOwnedView;
 #[doc(inline)]
 pub use self::__buffa::register_types;

@@ -5,3 +5,5 @@ pub mod catalog;
 pub mod health;
 pub mod media;
 pub mod storage;
+
+pub mod history;

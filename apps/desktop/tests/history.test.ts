@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { type ContentRef, MediaType, PlaybackQuality, type Title } from "@popcorn/sdk";
+import { loadHistory } from "../src/features/history/history.migration";
 import {
   contentKey,
   readHistory,
@@ -8,6 +9,7 @@ import {
   watchProgress,
 } from "../src/features/history/history.model";
 import { createHistoryViewModel } from "../src/features/history/history.viewmodel";
+import type { HistoryClient } from "../src/shared/types";
 
 const content: ContentRef = {
   $typeName: "popcorn.v1.ContentRef",
@@ -37,6 +39,7 @@ const entry: WatchEntry = {
   position: 120,
   duration: 5400,
   updatedAt: 1,
+  resumeSeconds: 120,
   quality: PlaybackQuality.AUTO,
   sourceId: "source-42",
   fileIndex: 0,
@@ -49,10 +52,10 @@ describe("watch history", () => {
     expect(contentKey(episode)).not.toBe(contentKey({ ...episode, episodeNumber: 2 }));
     expect(contentKey(episode)).not.toBe(contentKey({ ...episode, seasonNumber: 2 }));
   });
-  test("only an unfinished session resumes; invalid times cannot create progress", () => {
+  test("resume uses the backend decision and progress formatting is bounded", () => {
     expect(resumePosition(entry)).toBe(120);
-    expect(resumePosition({ ...entry, status: "watched" })).toBe(0);
-    expect(resumePosition({ ...entry, status: "want" })).toBe(0);
+    expect(resumePosition({ ...entry, resumeSeconds: 0 })).toBe(0);
+    expect(resumePosition(undefined)).toBe(0);
     expect(watchProgress(Number.NaN, 100)).toBe(0);
     expect(watchProgress(20, 0)).toBe(0);
     expect(watchProgress(200, 100)).toBe(1);
@@ -64,41 +67,66 @@ describe("watch history", () => {
       readHistory(JSON.stringify([entry, { ...entry, position: -1 }, { ...entry, key: "wrong" }])),
     ).toEqual([entry]);
   });
-  test("progress survives reopening and a failed load at zero cannot erase it", () => {
-    const data = new Map<string, string>();
-    Object.defineProperty(globalThis, "localStorage", {
-      configurable: true,
-      value: {
-        getItem: (key: string) => data.get(key) ?? null,
-        setItem: (key: string, value: string) => data.set(key, value),
+  test("mutations send observations and intents in order and await the final save", async () => {
+    const calls: string[] = [];
+    const client = {
+      updateHistory: async (request: { markStatus?: string; entry: { position?: number } }) => {
+        await Promise.resolve();
+        calls.push(request.markStatus ?? String(request.entry.position));
+        return { entries: [] };
       },
-    });
-    const history = createHistoryViewModel();
-    history.progress(entry, 120, 5400);
-    history.progress(entry, 0, 5400);
-    expect(createHistoryViewModel().find(content)?.position).toBe(120);
-    history.progress(entry, 5350, 5400);
-    expect(createHistoryViewModel().find(content)?.status).toBe("watched");
-    expect(data.values().next().value).not.toContain("mediaUrl");
+    } as unknown as HistoryClient;
+    const history = createHistoryViewModel(() => client);
+    void history.progress(entry, 120, 5400);
+    void history.progress(entry, 0, 5400);
+    void history.mark(title, content, "watched");
+    expect(await history.flush()).toBe(true);
+    expect(calls).toEqual(["120", "0", "watched"]);
   });
 
-  test("two windows merge different titles and refresh the saved resume point", () => {
-    const data = new Map<string, string>();
+  test("failed writes are visible and the queue can recover", async () => {
+    let fail = true;
+    const client = {
+      updateHistory: async () => {
+        if (fail) throw new Error("offline");
+        return { entries: [] };
+      },
+    } as unknown as HistoryClient;
+    const history = createHistoryViewModel(() => client);
+    await history.progress(entry, 120, 5400);
+    expect(await history.flush()).toBe(false);
+    expect(history.error()).not.toBe("");
+    fail = false;
+    await history.progress(entry, 125, 5400);
+    expect(await history.flush()).toBe(true);
+  });
+
+  test("legacy history is removed only after a successful import", async () => {
+    const data = new Map([["popcorn.watch-history.v1", JSON.stringify([entry])]]);
     Object.defineProperty(globalThis, "localStorage", {
       configurable: true,
       value: {
         getItem: (key: string) => data.get(key) ?? null,
-        setItem: (key: string, value: string) => data.set(key, value),
+        removeItem: (key: string) => data.delete(key),
       },
     });
-    const main = createHistoryViewModel();
-    const player = createHistoryViewModel();
-    player.progress(entry, 240, 5400);
-    const other = { ...content, tmdbId: 99 };
-    main.mark({ ...title, content: other }, other, "want");
-    player.progress(entry, 245, 5400);
-    main.refresh();
-    expect(main.find(content)?.position).toBe(245);
-    expect(main.find(other)?.status).toBe("want");
+    let fail = true;
+    let imported = 0;
+    const client = {
+      importHistory: async (request: { entries: unknown[] }) => {
+        if (fail) throw new Error("offline");
+        imported += request.entries.length;
+        return { entries: [] };
+      },
+      listHistory: async () => ({ entries: [] }),
+    } as unknown as HistoryClient;
+    await expect(loadHistory(client)).rejects.toThrow("offline");
+    expect(data.size).toBe(1);
+    fail = false;
+    await loadHistory(client);
+    expect(imported).toBe(1);
+    expect(data.size).toBe(0);
+    await loadHistory(client);
+    expect(imported).toBe(1);
   });
 });

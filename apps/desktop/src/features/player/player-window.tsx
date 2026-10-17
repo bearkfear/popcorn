@@ -16,7 +16,7 @@ export type WindowSession = {
 export function PlayerWindow() {
   const bootstrap = createBootstrapViewModel();
   const player = createPlayerViewModel(() => bootstrap.getClients().playback);
-  const history = createHistoryViewModel();
+  const history = createHistoryViewModel(() => bootstrap.getClients().history);
   const [session, setSession] = createSignal<WindowSession>();
   const [error, setError] = createSignal("");
   let closing = false;
@@ -27,6 +27,9 @@ export function PlayerWindow() {
     // Flush the last position before stopping the stream and destroying its webview.
     document.querySelector("video")?.pause();
     window.dispatchEvent(new Event("pagehide"));
+    if (!(await history.flush())) {
+      diagnostic("history.flush_failed", {}, { error: history.error() });
+    }
     const current = player.playback();
     player.close(false);
     try {
@@ -85,9 +88,9 @@ export function PlayerWindow() {
     >
       {(current) => (
         <>
-          <Show when={error() || bootstrap.connectionError()}>
+          <Show when={error() || bootstrap.connectionError() || history.error()}>
             <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
-              {error() || bootstrap.connectionError()}
+              {error() || bootstrap.connectionError() || history.error()}
             </p>
           </Show>
           <PlayerPage

@@ -53,17 +53,21 @@ faixas. Depois escolha a qualidade e o áudio disponível e clique em **Reproduz
 Arquivos com múltiplas faixas passam pelo conversor para respeitar o áudio escolhido.
 O player ocupa uma página própria, sem o catálogo ou um modal atrás do vídeo.
 
-O progresso é salvo a cada cinco segundos e ao pausar/sair do player, no
-armazenamento persistente do WebView, sem URLs de transmissão ou credenciais.
+O desktop informa o progresso a cada cinco segundos e ao pausar/sair do player.
+O backend persiste o histórico no `user.sqlite`, decide a conclusão aos 95%,
+protege o ponto salvo contra um carregamento falho em zero e calcula a retomada.
 A pesquisa tem **Continuar assistindo**, **Já assistidos** e **Quero assistir**.
-Cada episódio mantém seu próprio ponto de retomada; ao concluir 95% da duração,
-o título passa para assistidos. O histórico pertence a este dispositivo e à
-instalação/origem do aplicativo, sem sincronização entre dispositivos.
+Cada episódio mantém seu próprio ponto. O histórico antigo do WebView é importado
+na conexão e removido somente depois da confirmação do servidor; repetir a
+importação não sobrescreve registros existentes. As duas janelas usam a mesma API.
+O histórico pertence ao diretório de dados do backend, sem sincronização entre dispositivos.
+A janela do player aguarda os salvamentos pendentes antes de fechar.
 
 Para verificar as regras de histórico e retomada:
 
 ```sh
 bun test apps/desktop/tests
+cargo test -p popcorn-server --lib core::history::
 ```
 
 Requer Rust 1.94 ou posterior, compilador C, Bun 1.3.14 e os pré-requisitos nativos
@@ -282,7 +286,7 @@ Use o endereço real emitido e envie `Authorization: Bearer <token>` para consul
 `GET /health`. O endpoint verifica acesso aos dois bancos; não é uma API de catálogo.
 O protocolo `bootstrap.v1` é exclusivo do bootstrap; os contratos de domínio usam
 o pacote Protobuf `popcorn.v1`. O SDK exporta `createCatalogClient`,
-`createSourceClient` e `createPlaybackClient`, todos recebendo `(baseUrl, token)`.
+`createSourceClient`, `createPlaybackClient`, `createStorageClient` e `createHistoryClient`, todos recebendo `(baseUrl, token)`.
 
 Standalone recusa requisições com `Origin`, mas permite clientes autenticados sem
 Origin. Ctrl-C encerra o servidor; em macOS/Linux, SIGTERM também. Um timeout de
@@ -427,3 +431,9 @@ Os gates G2–G5 permanecem parciais: o caminho direto foi implementado, mas ain
 precisa do seeder controlado, da matriz de runtimes WebView de Windows/macOS, de
 FFmpeg, quota/limpeza e homologação dos instaladores. O código atual ainda não é
 o MVP completo definido no PRD.
+
+As regras de negócio pertencem ao backend. O desktop coleta intenções e eventos
+do player, apresenta respostas e integra o WebView e o sistema operacional.
+Limites de cache vêm da API; o servidor também determina o total de páginas
+acessíveis do catálogo. Critérios e divisão de responsabilidades estão no
+[ADR 0003](docs/adr/0003-backend-business-rules.md).

@@ -1,5 +1,6 @@
 import {
   createCatalogClient,
+  createHistoryClient,
   createPlaybackClient,
   createSourceClient,
   createStorageClient,
@@ -21,6 +22,7 @@ export function createBootstrapViewModel() {
         const baseUrl = `http://${data.address}`;
         return {
           clients: {
+            history: createHistoryClient(baseUrl, data.token),
             catalog: createCatalogClient(baseUrl, data.token),
             source: createSourceClient(baseUrl, data.token),
             playback: createPlaybackClient(baseUrl, data.token),

@@ -18,14 +18,17 @@ pub(crate) fn router<
     S: SnapshotQueries + 'static,
     R: Sources + 'static,
     T: Transfers + 'static,
+    H: crate::application::history::HistoryStore + 'static,
     C: Cache + 'static,
 >(
+    history: Arc<crate::application::history::History<H>>,
     metadata: Arc<M>,
     snapshot: Arc<S>,
     media: Arc<MediaContext<R, T, C>>,
 ) -> connectrpc::Router {
     let media = Arc::new(MediaRpc::new(media));
     connectrpc::Router::new()
+        .add_service(Arc::new(super::history::HistoryRpc(history)))
         .add_service(Arc::new(CatalogRpc::new(metadata, snapshot)))
         .add_service::<MediaRpc<R, T, C>, SourceServiceRegisterMarker>(media.clone())
         .add_service::<MediaRpc<R, T, C>, PlaybackServiceRegisterMarker>(media.clone())

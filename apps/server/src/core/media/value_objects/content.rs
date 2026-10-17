@@ -1,20 +1,22 @@
 //! Validated title identity and optional television episode coordinates.
 
+use serde::{Deserialize, Serialize};
+
 use crate::core::media::InvalidMedia;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum MediaKind {
     Movie,
     Tv,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Coordinates {
     Title,
     Episode { season: u32, episode: u32 },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct Content {
     kind: MediaKind,
     tmdb_id: u32,

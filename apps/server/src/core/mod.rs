@@ -3,3 +3,5 @@
 pub mod auth;
 pub mod catalog;
 pub mod media;
+
+pub mod history;

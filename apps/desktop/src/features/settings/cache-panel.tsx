@@ -104,8 +104,10 @@ export function CachePanel(props: {
           Limite de armazenamento
         </label>
         <p id="cache-limit-help" class="mb-4 mt-2 text-[13px] text-muted">
-          Escolha quanto espaço o Popcorn pode usar. De 1 a 1.000 GB. Ao reduzir o limite, os itens
-          temporários mais antigos serão removidos para liberar espaço.
+          Escolha quanto espaço o Popcorn pode usar. De{" "}
+          {Number(props.vm.cacheSettings()?.minLimitBytes ?? 0n) / 1024 ** 3} a{" "}
+          {Number(props.vm.cacheSettings()?.maxLimitBytes ?? 0n) / 1024 ** 3} GB. Ao reduzir o
+          limite, os itens temporários mais antigos serão removidos para liberar espaço.
         </p>
         <div class="flex flex-wrap items-center gap-3">
           <div class="flex items-center gap-3 rounded-control border border-line bg-canvas-deep pr-3">
@@ -114,9 +116,9 @@ export function CachePanel(props: {
               id="cache-limit-input"
               aria-describedby="cache-limit-help"
               type="number"
-              min="1"
-              max="1000"
-              step="1"
+              min={Number(props.vm.cacheSettings()?.minLimitBytes ?? 0n) / 1024 ** 3}
+              max={Number(props.vm.cacheSettings()?.maxLimitBytes ?? 0n) / 1024 ** 3}
+              step="any"
               required
               value={props.vm.cacheLimitGb()}
               onInput={(event) => props.vm.setCacheLimitGb(event.currentTarget.value)}

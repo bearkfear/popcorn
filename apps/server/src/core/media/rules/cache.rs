@@ -2,10 +2,13 @@
 
 use crate::core::media::InvalidMedia;
 
+pub(crate) const MIN_CACHE_LIMIT: u64 = 512 * 1024 * 1024;
+pub(crate) const MAX_CACHE_LIMIT: u64 = 1024 * 1024 * 1024 * 1024;
+
 pub(crate) const DEFAULT_CACHE_LIMIT: u64 = 20 * 1024 * 1024 * 1024;
 
 pub(crate) fn validate_cache_limit(value: u64) -> Result<(), InvalidMedia> {
-    if (512 * 1024 * 1024..=1024 * 1024 * 1024 * 1024).contains(&value) {
+    if (MIN_CACHE_LIMIT..=MAX_CACHE_LIMIT).contains(&value) {
         Ok(())
     } else {
         Err(InvalidMedia)

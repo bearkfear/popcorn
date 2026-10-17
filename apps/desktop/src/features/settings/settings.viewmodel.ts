@@ -121,7 +121,7 @@ type CacheRequest = { readonly client: StorageClient };
 
 function createCacheSubViewModel(getStorageClient: () => StorageClient | undefined) {
   const [cacheRequest, setCacheRequest] = createSignal<CacheRequest>();
-  const [cacheLimitGb, setCacheLimitGb] = createSignal("20");
+  const [cacheLimitGb, setCacheLimitGb] = createSignal("");
   const [cacheMutationBusy, setCacheMutationBusy] = createSignal(false);
   const [cacheMutationError, setCacheMutationError] = createSignal("");
   const [cacheMessage, setCacheMessage] = createSignal("");
@@ -130,8 +130,8 @@ function createCacheSubViewModel(getStorageClient: () => StorageClient | undefin
     try {
       const response = await request.client.getCacheSettings({}, { timeoutMs: 10_000 });
       if (!response.settings) throw new Error("cache settings missing");
-      const gb = Number(response.settings.limitBytes / (1024n * 1024n * 1024n));
-      setCacheLimitGb(String(gb || 20));
+      const gb = Number(response.settings.limitBytes) / 1024 ** 3;
+      setCacheLimitGb(String(gb));
       return response.settings;
     } catch {
       throw new Error("Não foi possível carregar as configurações do cache.");
@@ -152,14 +152,14 @@ function createCacheSubViewModel(getStorageClient: () => StorageClient | undefin
     if (!client || cacheResource.loading || cacheMutationBusy()) return;
     const gb = Number(cacheLimitGb());
     setCacheMessage("");
-    if (!Number.isInteger(gb) || gb < 1 || gb > 1000) {
-      setCacheMutationError("Defina um limite de cache entre 1 e 1000 GB.");
+    if (!cacheLimitGb().trim() || !Number.isSafeInteger(Math.round(gb * 1024 ** 3)) || gb < 0) {
+      setCacheMutationError("Informe um limite válido em GB.");
       return;
     }
     setCacheMutationBusy(true);
     setCacheMutationError("");
     try {
-      const bytes = BigInt(gb) * 1024n * 1024n * 1024n;
+      const bytes = BigInt(Math.round(gb * 1024 ** 3));
       const response = await client.setCacheLimit({ limitBytes: bytes }, { timeoutMs: 30_000 });
       if (!response.settings) throw new Error("cache settings missing");
       cacheActions.mutate(response.settings);
@@ -168,7 +168,9 @@ function createCacheSubViewModel(getStorageClient: () => StorageClient | undefin
       setCacheMutationError(
         error instanceof ConnectError && error.rawMessage === "SOURCE_IN_USE"
           ? "Feche a reprodução antes de reduzir o limite. O valor anterior foi mantido para proteger os arquivos em uso."
-          : "Não foi possível aplicar o limite de armazenamento. Tente novamente.",
+          : error instanceof ConnectError && error.rawMessage === "SOURCE_INVALID"
+            ? "O limite está fora do intervalo permitido pelo serviço."
+            : "Não foi possível aplicar o limite de armazenamento. Tente novamente.",
       );
     } finally {
       setCacheMutationBusy(false);

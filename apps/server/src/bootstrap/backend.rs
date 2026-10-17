@@ -148,6 +148,9 @@ impl Backend {
     ) -> Result<(), Error> {
         let media = interface::media::router(self.media.clone(), self.access.origin.clone());
         let rpc = interface::rpc::router(
+            Arc::new(crate::application::history::History::new(
+                crate::infra::history::SqliteHistory(self.storage.user.clone()),
+            )),
             self.catalog.metadata.clone(),
             self.catalog.snapshot.clone(),
             self.media.clone(),
