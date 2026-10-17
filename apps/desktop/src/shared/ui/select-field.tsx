@@ -17,6 +17,8 @@ interface SelectFieldProps {
   readonly disabled?: boolean;
   readonly class?: string;
   readonly triggerClass?: string;
+  readonly contentClass?: string;
+  readonly placement?: "bottom-start" | "top-end";
 }
 
 export function SelectField(props: SelectFieldProps) {
@@ -28,12 +30,13 @@ export function SelectField(props: SelectFieldProps) {
       collection={collection()}
       value={[props.value]}
       disabled={props.disabled ?? false}
-      positioning={{ placement: "bottom-start" }}
+      positioning={{ placement: props.placement ?? "bottom-start", gutter: 8 }}
       onValueChange={({ value }) => value[0] !== undefined && props.onChange(value[0])}
     >
       {props.label && <Select.Label class="select-field-label">{props.label}</Select.Label>}
       <Select.Trigger
         class={`select-field-trigger${props.triggerClass ? ` ${props.triggerClass}` : ""}`}
+        title={props.options.find((option) => option.value === props.value)?.label}
         {...(props.ariaLabel ? { "aria-label": props.ariaLabel } : {})}
       >
         <Select.ValueText />
@@ -43,7 +46,9 @@ export function SelectField(props: SelectFieldProps) {
       </Select.Trigger>
       <Portal>
         <Select.Positioner>
-          <Select.Content class="select-field-content select-field-listbox">
+          <Select.Content
+            class={`select-field-content select-field-listbox${props.contentClass ? ` ${props.contentClass}` : ""}`}
+          >
             <For each={collection().items}>
               {(item) => (
                 <Select.Item class="select-field-item" item={item}>

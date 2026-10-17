@@ -144,6 +144,9 @@ export function VideoSurface(props: {
       video.removeEventListener("webkitpresentationmodechanged", presentation);
       video.style.opacity = "";
       video.controls = nativeControls;
+      // Release the canvas backing store and its last decoded frame immediately.
+      surface.width = 0;
+      surface.height = 0;
     });
   });
 

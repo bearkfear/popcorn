@@ -4,6 +4,11 @@
     reason = "Keep native binary commands private to the crate"
 )]
 
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 use tokio::sync::Mutex;
 
@@ -44,14 +49,51 @@ pub(crate) async fn open_player_window(
             .min_inner_size(480.0, 300.0)
             .background_color(tauri::webview::Color(0, 0, 0, 255))
             .build();
-    if let Err(error) = result {
-        *pending = None;
-        drop(pending);
-        return Err(error.to_string());
+    match result {
+        Ok(window) => {
+            let watched = window.clone();
+            let destroyed = Arc::new(AtomicBool::new(false));
+            window.on_window_event(move |event| close_fallback(&watched, event, &destroyed));
+        }
+        Err(error) => {
+            *pending = None;
+            drop(pending);
+            return Err(error.to_string());
+        }
     }
     drop(pending);
     popcorn_diagnostics::record("desktop.player_window_opened", serde_json::json!({}));
     Ok(())
+}
+
+// Tauri prevents native close while a JS close listener exists. A hung WebView
+// cannot acknowledge that event, so keep the escape hatch on the native runtime.
+fn close_fallback(
+    window: &tauri::WebviewWindow,
+    event: &tauri::WindowEvent,
+    destroyed: &Arc<AtomicBool>,
+) {
+    match event {
+        tauri::WindowEvent::Destroyed => destroyed.store(true, Ordering::Release),
+        tauri::WindowEvent::CloseRequested { .. } => {
+            let window = window.clone();
+            let destroyed = destroyed.clone();
+            tauri::async_runtime::spawn(async move {
+                // The normal JS path has a five-second deadline to flush and stop playback.
+                tokio::time::sleep(std::time::Duration::from_secs(6)).await;
+                if !destroyed.load(Ordering::Acquire) {
+                    popcorn_diagnostics::record(
+                        "desktop.player_close_fallback",
+                        serde_json::json!({}),
+                    );
+                    if let Err(error) = window.destroy() {
+                        eprintln!("could not destroy unresponsive player: {error}");
+                    }
+                }
+            });
+        }
+        _ => {}
+    }
 }
 
 fn window_title(session: &serde_json::Value) -> String {

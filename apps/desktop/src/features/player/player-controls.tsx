@@ -179,7 +179,9 @@ export function PlayerControls(props: {
             <SelectField
               class="video-audio-field"
               triggerClass="video-audio-select"
-              aria-label="Faixa de áudio"
+              contentClass="video-audio-menu"
+              placement="top-end"
+              ariaLabel="Faixa de áudio"
               value={String(props.audioIndex ?? props.audioTracks[0]?.streamIndex ?? "")}
               options={props.audioTracks.map((track) => {
                 const languages: Record<string, string> = {
@@ -190,9 +192,14 @@ export function PlayerControls(props: {
                   spa: "Espanhol",
                   es: "Espanhol",
                 };
+                const language =
+                  languages[track.language.toLowerCase()] ||
+                  track.language ||
+                  `Faixa ${track.streamIndex}`;
+                const title = track.title.trim();
                 return {
                   value: String(track.streamIndex),
-                  label: `${languages[track.language.toLowerCase()] || track.language || `Faixa ${track.streamIndex}`}${track.title ? ` · ${track.title}` : ""}`,
+                  label: `${language}${title && title.toLowerCase() !== language.toLowerCase() ? ` · ${title}` : ""}`,
                 };
               })}
               onChange={(value) => props.onAudioChange(Number(value))}

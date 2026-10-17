@@ -2,6 +2,7 @@ import type { Playback } from "@popcorn/sdk";
 import { createEffect, createMemo, onCleanup, onMount } from "solid-js";
 import { createActor } from "xstate";
 import { bufferedPosition } from "./buffer-position";
+import { mediaChunks } from "./media-chunks";
 import {
   bufferSnapshot,
   diagnostic,
@@ -190,6 +191,7 @@ function attachMse(
       activeBuffer = undefined;
       video.removeEventListener("error", mediaFailed);
       source.removeEventListener("sourceclose", mediaFailed);
+      video.pause();
       try {
         if (buffer && source.readyState !== "closed") {
           if (buffer.updating && source.readyState === "open") buffer.abort();
@@ -235,6 +237,7 @@ function attachMse(
         }
         if (!response.body) throw new MediaPlaybackError("media response body missing");
         reader = response.body.getReader();
+        const chunks = mediaChunks(reader, controller.signal);
         while (alive()) {
           if (restored) await waitForRoom(video, buffer, controller.signal);
           if (!alive()) return;
@@ -252,7 +255,7 @@ function attachMse(
           }
           if (!alive()) return;
           phase = "receber os dados do vídeo";
-          const chunk = await reader.read();
+          const chunk = await chunks.next();
           if (!alive()) return;
           if (chunk.done) {
             if (!restored) throw new MediaPlaybackError("requested position not buffered");

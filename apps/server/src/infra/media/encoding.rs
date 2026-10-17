@@ -31,6 +31,14 @@ impl MediaTools {
                 "http,tcp",
                 "-format_whitelist",
                 "matroska,webm,mov,avi,mpegts,ogg",
+                // WebKit can drain HTTP into its fetch queue even when JS stops reading.
+                // Pace at the producer so remux cannot queue an entire movie in memory.
+                "-readrate",
+                "1",
+                "-readrate_initial_burst",
+                "5",
+                "-readrate_catchup",
+                "1",
                 "-i",
                 url,
                 "-map",
