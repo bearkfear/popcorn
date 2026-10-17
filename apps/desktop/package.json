@@ -18,6 +18,7 @@
   "dependencies": {
     "@ark-ui/solid": "^5.39.3",
     "@popcorn/sdk": "workspace:*",
+    "@radix-ui/colors": "^3.0.0",
     "@tauri-apps/api": "2.12.4",
     "@xstate/solid": "^2.0.0",
     "lucide-solid": "^1.58.0",

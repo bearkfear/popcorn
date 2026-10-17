@@ -1,0 +1,15 @@
+@font-face {
+  font-family: "Google Sans";
+  src: url("./assets/fonts/google-sans-variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Google Sans";
+  src: url("./assets/fonts/google-sans-italic-variable.ttf") format("truetype");
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+}

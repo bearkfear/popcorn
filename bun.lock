@@ -18,6 +18,7 @@
       "dependencies": {
         "@ark-ui/solid": "^5.39.3",
         "@popcorn/sdk": "workspace:*",
+        "@radix-ui/colors": "^3.0.0",
         "@tauri-apps/api": "2.12.4",
         "@xstate/solid": "^2.0.0",
         "lucide-solid": "^1.58.0",
@@ -151,6 +152,8 @@
     "@popcorn/desktop": ["@popcorn/desktop@workspace:apps/desktop"],
 
     "@popcorn/sdk": ["@popcorn/sdk@workspace:packages/sdk"],
+
+    "@radix-ui/colors": ["@radix-ui/colors@3.0.0", "", {}, "sha512-FUOsGBkHrYJwCSEtWRCIfQbZG7q1e6DgxCIOe1SUQzDe/7rXXeA47s8yCn6fuTNQAj1Zq4oTFi9Yjp3wzElcxg=="],
 
     "@rolldown/binding-android-arm-eabi": ["@rolldown/binding-android-arm-eabi@1.2.14", "", { "os": "android", "cpu": "arm" }, "sha512-aWR+XKH9+rW7m5fWq/5360J3mHycrx/o6xZM2DQFdJnTMdyP7/WzxPjhtLbVWdKo2y612/4U1bWqb3HQhiF7vg=="],
 

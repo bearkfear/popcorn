@@ -46,28 +46,31 @@ A quiet film-library reading room: paper-toned canvas, ink typography, and a ser
 
 ## 2. Color
 
-| Token | Light | Dark | Role |
-| --- | --- | --- | --- |
-| `--canvas` | `#f6f5f1` | `#191a18` | Page |
-| `--surface` | `#ffffff` | `#222320` | Reading panels |
-| `--soft` | `#eeede8` | `#2c2e29` | Selected and hover wash |
-| `--ink` | `#292b26` | `#efeee8` | Primary text, control |
-| `--muted` | `#65665e` | `#b1b2a8` | Secondary text |
-| `--line` | `#deded5` | `#404239` | Neutral dividers |
-| `--positive` | `#346538` | `#b4d5af` | Connected label |
-| `--positive-bg` | `#edf3ec` | `#29382b` | Connected badge |
-| `--negative` | `#9f2f2d` | `#f0b8b3` | Error label |
-| `--negative-bg` | `#fdebec` | `#402b29` | Error badge |
-| `--focus` | `#1f6c9f` | `#9ccbea` | Keyboard ring only |
+The desktop uses only `@radix-ui/colors` for interface colors. `src/theme.css` imports the dark scales and maps semantic tokens into Tailwind v4 with `@theme inline`. The default Tailwind color palette is cleared. The `dark` class on the HTML root activates Radix variables in the app, portals, and dedicated player window.
 
-Color never stands alone as the status indicator. No colored selection edges.
+| Tokens | Radix scale | Role |
+| --- | --- | --- |
+| `--canvas-deep`, `--canvas` | Slate 1–2 | Page and subtle panels |
+| `--surface`, `--soft` | Slate 3–4 | Controls and hover |
+| Selected controls | Slate 5 | Pressed state |
+| Dividers / `--line` / hovered borders | Slate 6 / 7 / 8 | Separators and control borders |
+| `--ink`, `--muted` | Slate 12 / 11 | Primary and secondary text |
+| `--accent`, `--accent-hover`, `--accent-strong` | Tomato 9 / 10 / 11 | Solid fills, hover, accent text |
+| `--accent-contrast` | Black A12 | Text on solid accent fills |
+| `--positive`, `--positive-bg` | Green 11 / 3 | Success |
+| `--negative`, `--negative-bg` | Tomato 11 / 3 | Errors |
+| Cache warning | Amber 11 | Warning text |
+| `--focus` | Blue 11 | Keyboard focus |
+| Shadows and overlays | Black / White / Tomato alpha scales | Depth and translucent states |
+
+Use Radix steps 11–12 for text rather than solid-fill steps 9–10. Solid Tomato controls use a dark foreground for readable small labels. Color never stands alone as the status indicator. Media artwork and the approved TMDB logo retain their source colors.
 
 ## 3. Typography
 
-- UI: `Helvetica Neue`, `Arial`, system sans-serif; body 16px/1.6.
-- Editorial: `Georgia`, `Times New Roman`, serif; page title fluid 36-56px/1.1, tracking -0.035em; detail title 28px/1.2.
-- Scale: label 12px/1.5 with 0.08em tracking; secondary and button 14px/1.5; row title 18px/1.4; section title 22px/1.3. Body text is never below 14px.
-- No network fonts; no proprietary fonts. Long titles wrap, including unbroken strings.
+- UI, headings, and player controls use locally bundled Google Sans, with system sans-serif fallbacks. Tailwind's `font-sans` maps to the same `--font-ui` token.
+- Variable normal and italic fonts support weights 400–700, with automatic optical sizing. Headings use regular weight; semibold and intermediate weights retain the existing hierarchy without synthetic bold.
+- Font definitions live in `src/fonts.css`; assets and their OFL license live in `src/assets/fonts`, with a distribution copy of the license in `public/Google-Sans-OFL.txt`. The normal face is preloaded and both faces use `font-display: swap`.
+- Technical paths retain the monospace stack. Existing font sizes and line heights remain authoritative.
 
 ## 4. Spacing & Layout
 
