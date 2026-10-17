@@ -108,9 +108,7 @@ function scrollToDownload(event: MouseEvent) {
 
 	event.preventDefault();
 	downloadSection.scrollIntoView({
-		behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-			? "auto"
-			: "smooth",
+		behavior: "auto",
 		block: "start",
 	});
 	window.history.replaceState(null, "", "#download");

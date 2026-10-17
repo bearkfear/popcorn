@@ -30,7 +30,7 @@ export const downloadCard = tv({
 
 export const downloads = tv({
 	slots: {
-		section: "bg-surface px-[clamp(1.5rem,8vw,8.125rem)] py-[clamp(5.5rem,10vw,9.375rem)] max-[47.5rem]:px-5 max-[47.5rem]:py-20",
+		section: "bg-surface px-[var(--site-gutter)] py-[clamp(5.5rem,10vw,9.375rem)] max-[47.5rem]:py-20",
 		heading: "max-w-[49.375rem] [&_h2]:m-0 [&_h2]:text-[clamp(2.625rem,5vw,4.5rem)] [&_h2]:font-[580] [&_h2]:leading-[1.04] [&_h2]:tracking-[-.06em] max-[47.5rem]:[&_h2]:text-[2.75rem] [&>p:last-child]:max-w-[40.625rem] [&>p:last-child]:text-base [&>p:last-child]:leading-[1.6] [&>p:last-child]:text-text-muted",
 		status: "my-6 flex min-h-9 w-max max-w-full items-center gap-2 rounded-full border border-line bg-[var(--slate-a2)] px-3 py-2 text-xs text-text-muted max-[47.5rem]:flex-wrap max-[47.5rem]:items-start max-[47.5rem]:rounded-xl [&>svg:not(.animate-spin)]:text-success [&_a]:ml-2 [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1 [&_a]:text-accent-text max-[47.5rem]:[&_a]:ml-6 max-[47.5rem]:[&_a]:w-full",
 		grid: "grid grid-cols-[1fr_1fr_.72fr] gap-3.5 max-[65.625rem]:grid-cols-2 max-[47.5rem]:grid-cols-1",

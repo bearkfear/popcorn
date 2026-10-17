@@ -34,7 +34,7 @@ export const page = tv({
 		skipLink:
 			"fixed left-4 top-3 z-[100] -translate-y-[160%] rounded-lg bg-paper-surface px-3.5 py-2.5 text-paper-text transition-transform duration-200 focus:translate-y-0",
 		header:
-			"fixed inset-x-0 top-0 z-50 grid h-19 grid-cols-[1fr_auto_1fr] items-center border-b border-line bg-[color-mix(in_oklab,var(--slate-1)_78%,transparent)] px-[clamp(1.5rem,7vw,6.875rem)] backdrop-blur-lg max-[47.5rem]:h-16 max-[47.5rem]:grid-cols-[1fr_auto] max-[47.5rem]:px-5",
+			"fixed inset-x-0 top-0 z-50 grid h-19 grid-cols-[1fr_auto_1fr] items-center border-b border-line bg-[color-mix(in_oklab,var(--slate-1)_78%,transparent)] px-[var(--site-gutter)] backdrop-blur-lg max-[47.5rem]:h-16 max-[47.5rem]:grid-cols-[1fr_auto]",
 		brand:
 			"inline-flex w-max items-center gap-3 text-lg font-[680] tracking-[-.03em]",
 		brandMark: "size-9 rounded-lg shadow-[0_6px_18px_var(--black-a6)]",
@@ -42,19 +42,19 @@ export const page = tv({
 		headerDownload:
 			"justify-self-end inline-flex items-center gap-2 rounded-full border border-line-strong bg-[var(--slate-a3)] px-4 py-2.5 text-sm font-[650] transition-colors duration-200 hover:bg-paper-surface hover:text-paper-text max-[47.5rem]:px-3 max-[47.5rem]:py-2",
 		hero:
-			"relative grid min-h-svh grid-cols-[minmax(22.5rem,.78fr)_minmax(33.75rem,1.22fr)] items-center gap-[clamp(2.5rem,6vw,6.25rem)] overflow-hidden bg-[radial-gradient(circle_at_74%_38%,var(--slate-a5),transparent_35%),linear-gradient(135deg,var(--slate-3)_0%,var(--slate-1)_55%,var(--slate-1)_100%)] px-[clamp(1.5rem,7vw,6.875rem)] pb-[6.625rem] pt-[9.625rem] before:absolute before:left-[-19.375rem] before:top-[22%] before:size-[32.5rem] before:rounded-full before:border before:border-[var(--amber-a4)] before:shadow-[0_0_0_110px_var(--amber-a2),0_0_0_220px_var(--amber-a2)] max-[65.625rem]:grid-cols-1 max-[65.625rem]:pt-[8.875rem] max-[47.5rem]:gap-8 max-[47.5rem]:px-5 max-[47.5rem]:pb-19 max-[47.5rem]:pt-30",
+			"relative grid min-h-svh grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] items-center gap-[clamp(2rem,4vw,4rem)] overflow-hidden bg-[radial-gradient(circle_at_74%_38%,var(--slate-a5),transparent_35%),linear-gradient(135deg,var(--slate-3)_0%,var(--slate-1)_55%,var(--slate-1)_100%)] px-[var(--site-gutter)] pb-20 pt-32 before:absolute before:left-[-19.375rem] before:top-[22%] before:size-[32.5rem] before:rounded-full before:border before:border-[var(--amber-a4)] before:shadow-[0_0_0_110px_var(--amber-a2),0_0_0_220px_var(--amber-a2)] max-[65.625rem]:grid-cols-1 max-[65.625rem]:pt-[8.875rem] max-[47.5rem]:gap-8 max-[47.5rem]:pb-19 max-[47.5rem]:pt-30",
 		heroNoise: "hero-noise pointer-events-none absolute inset-0 opacity-15",
 		heroCopy: "relative z-[2] max-[65.625rem]:max-w-3xl",
 		heroTitle:
-			"m-0 text-[clamp(3.875rem,7.1vw,6.75rem)] font-[650] leading-[.91] tracking-[-.068em] max-[47.5rem]:text-[clamp(3.3125rem,16vw,4.75rem)] [&_em]:font-serif [&_em]:font-normal [&_em]:tracking-[-.055em] [&_em]:text-gold",
+			"m-0 text-[clamp(3.25rem,5.5vw,5.5rem)] font-[650] leading-[.91] tracking-[-.068em] max-[47.5rem]:text-[clamp(3.3125rem,16vw,4.75rem)] [&_em]:font-serif [&_em]:font-normal [&_em]:tracking-[-.055em] [&_em]:text-gold",
 		heroLede:
 			"mt-8 max-w-xl text-[clamp(1.0625rem,1.6vw,1.3125rem)] leading-[1.55] text-text-muted max-[47.5rem]:mt-6 max-[47.5rem]:text-base",
 		heroActions: "mt-9 flex flex-wrap gap-3",
 		heroNotes:
 			"mt-8 flex flex-wrap gap-x-6 gap-y-4 text-xs text-text-subtle max-[47.5rem]:gap-3 [&_span]:inline-flex [&_span]:items-center [&_span]:gap-2",
 		scrollCue:
-			"absolute bottom-8 left-[clamp(1.5rem,7vw,6.875rem)] z-[2] flex items-center gap-2.5 text-[0.625rem] font-bold uppercase tracking-[.14em] text-text-subtle max-[65.625rem]:hidden",
-		section: "px-[clamp(1.5rem,8vw,8.125rem)] py-[clamp(5.5rem,10vw,9.375rem)] max-[47.5rem]:px-5 max-[47.5rem]:py-20",
+			"absolute bottom-8 left-[var(--site-gutter)] z-[2] flex items-center gap-2.5 text-[0.625rem] font-bold uppercase tracking-[.14em] text-text-subtle max-[65.625rem]:hidden",
+		section: "px-[var(--site-gutter)] py-[clamp(5.5rem,10vw,9.375rem)] max-[47.5rem]:py-20",
 		paperSection: "bg-paper text-paper-text",
 		sectionHeading:
 			"[&_h2]:m-0 [&_h2]:text-[clamp(2.625rem,5vw,4.5rem)] [&_h2]:font-[580] [&_h2]:leading-[1.04] [&_h2]:tracking-[-.06em] max-[47.5rem]:[&_h2]:text-[2.75rem]",
@@ -71,7 +71,7 @@ export const page = tv({
 		featureCopy:
 			"max-[47.5rem]:col-start-2 [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-[650] [&_h3]:tracking-[-.035em] max-[47.5rem]:[&_h3]:text-lg [&_p]:max-w-[41.875rem] [&_p]:leading-[1.6] [&_p]:text-paper-muted",
 		localSection:
-			"grid min-h-[43.125rem] grid-cols-2 items-center gap-[9vw] overflow-hidden bg-accent px-[clamp(1.5rem,9vw,9.0625rem)] py-[clamp(5.5rem,9vw,8.75rem)] max-[65.625rem]:gap-[4vw] max-[47.5rem]:grid-cols-1 max-[47.5rem]:gap-12 max-[47.5rem]:px-5 max-[47.5rem]:py-20",
+			"grid min-h-[43.125rem] grid-cols-2 items-center gap-[9vw] overflow-hidden bg-accent px-[var(--site-gutter)] py-[clamp(5.5rem,9vw,8.75rem)] max-[65.625rem]:gap-[4vw] max-[47.5rem]:grid-cols-1 max-[47.5rem]:gap-12 max-[47.5rem]:py-20",
 		localCopy:
 			"text-accent-contrast [&_h2]:m-0 [&_h2]:text-[clamp(2.625rem,5vw,4.5rem)] [&_h2]:font-[580] [&_h2]:leading-[1.04] [&_h2]:tracking-[-.06em] max-[47.5rem]:[&_h2]:text-[2.75rem] [&>p:last-of-type]:my-8 [&>p:last-of-type]:max-w-[36.875rem] [&>p:last-of-type]:text-base [&>p:last-of-type]:leading-[1.65] [&>p:last-of-type]:text-[var(--tomato-3)] [&>a]:inline-flex [&>a]:items-center [&>a]:gap-2 [&>a]:border-b [&>a]:border-[var(--tomato-5)] [&>a]:pb-1 [&>a]:text-sm [&>a]:font-bold",
 		localDiagram:
@@ -100,7 +100,7 @@ export const page = tv({
 		closingTitle:
 			"m-0 max-w-[53.125rem] text-[clamp(3rem,6vw,5.25rem)] font-[580] leading-[1.04] tracking-[-.06em] [&_em]:font-serif [&_em]:font-normal [&_em]:tracking-[-.055em] [&_em]:text-gold",
 		footer:
-			"grid grid-cols-[1fr_auto_1fr] items-center gap-8 border-t border-line bg-canvas px-[clamp(1.5rem,7vw,6.875rem)] py-11 text-text-subtle max-[65.625rem]:grid-cols-[1fr_auto] max-[47.5rem]:grid-cols-1",
+			"grid grid-cols-[1fr_auto_1fr] items-center gap-8 border-t border-line bg-canvas px-[var(--site-gutter)] py-11 text-text-subtle max-[65.625rem]:grid-cols-[1fr_auto] max-[47.5rem]:grid-cols-1",
 		footerBrand:
 			"flex items-center gap-3 [&_strong]:block [&_strong]:text-sm [&_strong]:text-text [&_span]:mt-0.5 [&_span]:block [&_span]:text-[0.625rem]",
 		footerMark: "w-10 rounded-lg",
