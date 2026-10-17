@@ -29,4 +29,11 @@ describe("native video presentation", () => {
     expect(videoPresentation({ webkitDisplayingFullscreen: false })).toBe("inline");
     expect(videoPresentation({})).toBe("inline");
   });
+
+  test("reads standard fullscreen and picture-in-picture state used by WebView2", () => {
+    const video = {};
+    expect(videoPresentation(video, { fullscreenElement: {} })).toBe("fullscreen");
+    expect(videoPresentation(video, { pictureInPictureElement: video })).toBe("picture-in-picture");
+    expect(videoPresentation(video, {})).toBe("inline");
+  });
 });

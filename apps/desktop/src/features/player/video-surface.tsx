@@ -1,20 +1,23 @@
-import { buttonStyles } from "../../shared/ui/styles";
-// Presents decoded frames independently of WebKit's native inline video layer on macOS.
-
 import type { Playback } from "@popcorn/sdk";
 import { isTauri } from "@tauri-apps/api/core";
 import { createMemo, createSignal, type JSX, onCleanup, onMount, Show } from "solid-js";
+import { buttonStyles } from "../../shared/ui/styles";
 import { diagnostic, errorDetails } from "./media-diagnostics";
 import { PlayerControls } from "./player-controls";
 import { bufferSegments, downloadSegments, type TimelineRange } from "./timeline-ranges";
 import { videoPresentation } from "./video-presentation";
 
 type NativeVideo = HTMLVideoElement & {
+  requestPictureInPicture?: () => Promise<unknown>;
   webkitEnterFullscreen?: () => void;
   webkitDisplayingFullscreen?: boolean;
   webkitPresentationMode?: string;
   webkitSetPresentationMode?: (mode: string) => void;
-  webkitSupportsPresentationMode?: (mode: string) => boolean;
+};
+
+type PresentationDocument = Document & {
+  exitPictureInPicture?: () => Promise<void>;
+  pictureInPictureElement?: Element | null;
 };
 
 export function VideoSurface(props: {
@@ -28,6 +31,7 @@ export function VideoSurface(props: {
   readonly audioIndex: number | undefined;
   readonly onAudioChange: (index: number) => void;
 }) {
+  // WKWebView needs a canvas to avoid its inline compositing issue. WebView2 can render directly.
   const useCanvas = isTauri() && /Mac/.test(navigator.platform);
   const [paused, setPaused] = createSignal(true);
   const [position, setPosition] = createSignal(0);
@@ -39,30 +43,32 @@ export function VideoSurface(props: {
   const [pictureInPicture, setPictureInPicture] = createSignal(false);
   const [fullscreen, setFullscreen] = createSignal(false);
   let canvas: HTMLCanvasElement | undefined;
+  let surface: HTMLDivElement | undefined;
 
   function setPresentation(mode: string | undefined) {
     const video = props.video();
     if (!video) return;
-    const external = mode === "fullscreen" || mode === "picture-in-picture";
-    video.style.opacity = external ? "1" : "";
-    // Inline canvas mode disables video hit testing. Native controls need it back.
-    video.style.pointerEvents = external ? "auto" : "";
-    video.controls = external;
+    const nativePresentation =
+      useCanvas && (mode === "fullscreen" || mode === "picture-in-picture");
+    video.style.opacity = nativePresentation ? "1" : "";
+    video.style.pointerEvents = nativePresentation ? "auto" : "";
+    video.controls = nativePresentation;
     setFullscreen(mode === "fullscreen");
     setPictureInPicture(mode === "picture-in-picture");
   }
 
   onMount(() => {
     const video = props.video();
-    if (!useCanvas || !video || !canvas) return;
-    const surface = canvas;
-    const context = surface.getContext("2d", { alpha: false });
-    const playbackId = props.playbackId();
-    const identity = () => ({ playbackId });
-    if (!context) {
+    if (!video) return;
+    const canvasSurface = canvas;
+    const context = useCanvas ? canvasSurface?.getContext("2d", { alpha: false }) : undefined;
+    if (useCanvas && (!canvasSurface || !context)) {
       props.onError("Não foi possível iniciar a superfície de vídeo.");
       return;
     }
+
+    const playbackId = props.playbackId();
+    const identity = () => ({ playbackId });
     const nativeControls = video.controls;
     video.controls = false;
     let disposed = false;
@@ -70,8 +76,12 @@ export function VideoSurface(props: {
     let frame = 0;
     let animation = 0;
     let count = 0;
+
     const draw = () => {
       if (
+        !useCanvas ||
+        !canvasSurface ||
+        !context ||
         disposed ||
         failed ||
         fullscreen() ||
@@ -82,17 +92,20 @@ export function VideoSurface(props: {
       )
         return;
       try {
-        if (surface.width !== video.videoWidth || surface.height !== video.videoHeight) {
-          surface.width = video.videoWidth;
-          surface.height = video.videoHeight;
+        if (
+          canvasSurface.width !== video.videoWidth ||
+          canvasSurface.height !== video.videoHeight
+        ) {
+          canvasSurface.width = video.videoWidth;
+          canvasSurface.height = video.videoHeight;
         }
-        context.drawImage(video, 0, 0, surface.width, surface.height);
+        context.drawImage(video, 0, 0, canvasSurface.width, canvasSurface.height);
         if (count++ === 0) {
           setReady(true);
           diagnostic("media.surface_first_frame", identity(), {
             renderer: "canvas2d",
-            width: surface.width,
-            height: surface.height,
+            width: canvasSurface.width,
+            height: canvasSurface.height,
             media_time: video.currentTime,
           });
         }
@@ -108,7 +121,6 @@ export function VideoSurface(props: {
       setPaused(video.paused);
       setPosition(video.currentTime);
       // MSE briefly loses metadata when an unbuffered seek replaces the source.
-      // Preserve the timeline scale until the replacement publishes its duration.
       if (Number.isFinite(video.duration) && video.duration > 0) setDuration(video.duration);
       setBuffered(bufferSegments(video.buffered, duration()));
       setVolume(video.muted ? 0 : video.volume);
@@ -124,14 +136,17 @@ export function VideoSurface(props: {
       if (!video.paused) draw();
       animation = requestAnimationFrame(fallback);
     };
-    if (typeof video.requestVideoFrameCallback === "function") {
-      frame = video.requestVideoFrameCallback(nextFrame);
-    } else animation = requestAnimationFrame(fallback);
+    if (useCanvas) {
+      if (typeof video.requestVideoFrameCallback === "function") {
+        frame = video.requestVideoFrameCallback(nextFrame);
+      } else animation = requestAnimationFrame(fallback);
+    }
+
     const presentation = () => {
-      const mode = videoPresentation(video as NativeVideo);
+      const mode = videoPresentation(video as NativeVideo, document as PresentationDocument);
       setPresentation(mode);
-      if (mode === "picture-in-picture") {
-        context.clearRect(0, 0, surface.width, surface.height);
+      if (mode === "picture-in-picture" && canvasSurface && context) {
+        context.clearRect(0, 0, canvasSurface.width, canvasSurface.height);
       } else draw();
     };
     const beginFullscreen = () => setPresentation("fullscreen");
@@ -142,6 +157,9 @@ export function VideoSurface(props: {
     video.addEventListener("webkitpresentationmodechanged", presentation);
     video.addEventListener("webkitbeginfullscreen", beginFullscreen);
     video.addEventListener("webkitendfullscreen", endFullscreen);
+    video.addEventListener("enterpictureinpicture", presentation);
+    video.addEventListener("leavepictureinpicture", presentation);
+    document.addEventListener("fullscreenchange", presentation);
     const events = [
       "play",
       "pause",
@@ -155,32 +173,38 @@ export function VideoSurface(props: {
       "emptied",
     ];
     for (const event of events) video.addEventListener(event, sync);
-    const timer = window.setInterval(() => {
-      diagnostic("media.surface_progress", identity(), {
-        renderer: "canvas2d",
-        drawn_frames: count,
-        media_time: video.currentTime,
-        width: surface.width,
-        height: surface.height,
-        failed,
-      });
-    }, 5_000);
+    const timer = useCanvas
+      ? window.setInterval(() => {
+          diagnostic("media.surface_progress", identity(), {
+            renderer: "canvas2d",
+            drawn_frames: count,
+            media_time: video.currentTime,
+            width: canvasSurface?.width ?? 0,
+            height: canvasSurface?.height ?? 0,
+            failed,
+          });
+        }, 5_000)
+      : undefined;
     sync();
     onCleanup(() => {
       disposed = true;
       video.cancelVideoFrameCallback?.(frame);
       cancelAnimationFrame(animation);
-      window.clearInterval(timer);
+      if (timer !== undefined) window.clearInterval(timer);
       for (const event of events) video.removeEventListener(event, sync);
       video.removeEventListener("webkitpresentationmodechanged", presentation);
       video.removeEventListener("webkitbeginfullscreen", beginFullscreen);
       video.removeEventListener("webkitendfullscreen", endFullscreen);
+      video.removeEventListener("enterpictureinpicture", presentation);
+      video.removeEventListener("leavepictureinpicture", presentation);
+      document.removeEventListener("fullscreenchange", presentation);
       video.style.opacity = "";
       video.style.pointerEvents = "";
       video.controls = nativeControls;
-      // Release the canvas backing store and its last decoded frame immediately.
-      surface.width = 0;
-      surface.height = 0;
+      if (canvasSurface) {
+        canvasSurface.width = 0;
+        canvasSurface.height = 0;
+      }
     });
   });
 
@@ -201,23 +225,51 @@ export function VideoSurface(props: {
   }
 
   function present(mode: "fullscreen" | "picture-in-picture" | "inline") {
-    const video = props.video() as NativeVideo | undefined;
-    if (!video) return;
-    try {
-      setPresentation(mode);
-      if (mode === "fullscreen") video.webkitEnterFullscreen?.();
-      else video.webkitSetPresentationMode?.(mode);
-    } catch (error) {
-      setPresentation("inline");
-      diagnostic(
-        "media.surface_presentation_failed",
-        { playbackId: props.playbackId() },
-        errorDetails(error),
-      );
-    }
+    void (async () => {
+      const video = props.video() as NativeVideo | undefined;
+      if (!video) return;
+      try {
+        if (useCanvas) {
+          setPresentation(mode);
+          if (mode === "fullscreen") video.webkitEnterFullscreen?.();
+          else video.webkitSetPresentationMode?.(mode);
+          return;
+        }
+        const presentationDocument = document as PresentationDocument;
+        if (mode === "fullscreen") {
+          if (document.fullscreenElement) await document.exitFullscreen();
+          else {
+            if (!surface?.requestFullscreen) throw new Error("Fullscreen API unavailable");
+            await surface.requestFullscreen();
+          }
+        } else if (mode === "picture-in-picture") {
+          if (!video.requestPictureInPicture) throw new Error("Picture-in-picture API unavailable");
+          await video.requestPictureInPicture();
+        } else if (presentationDocument.pictureInPictureElement === video) {
+          await presentationDocument.exitPictureInPicture?.();
+        } else if (document.fullscreenElement) {
+          await document.exitFullscreen();
+        }
+        setPresentation(videoPresentation(video, presentationDocument));
+      } catch (error) {
+        setPresentation(videoPresentation(video, document as PresentationDocument));
+        diagnostic(
+          "media.surface_presentation_failed",
+          { playbackId: props.playbackId() },
+          errorDetails(error),
+        );
+        props.onError(
+          mode === "picture-in-picture"
+            ? "Picture-in-picture não está disponível neste sistema."
+            : "Não foi possível alterar o modo de exibição do vídeo.",
+        );
+      }
+    })();
   }
+
   return (
     <div
+      ref={surface}
       class={`video-surface absolute inset-0 bg-black-a12 ${useCanvas ? " canvas-video-surface [&_.video-player]:opacity-[0.001] [&_.video-player]:pointer-events-none [&_.video-player:fullscreen]:opacity-[1] [&_.video-player:fullscreen]:pointer-events-auto [&_.video-player:-webkit-full-screen]:opacity-[1] [&_.video-player:-webkit-full-screen]:pointer-events-auto" : ""}`}
     >
       {props.children}
@@ -228,42 +280,42 @@ export function VideoSurface(props: {
           hidden={fullscreen()}
           aria-label="Imagem do vídeo"
         />
-        <Show when={pictureInPicture()}>
-          <div
-            class="video-pip-message absolute inset-0 flex flex-col items-center justify-center gap-[18px] bg-canvas-deep text-ink text-center p-6"
-            role="status"
-          >
-            <p>O vídeo está em picture-in-picture</p>
-            <button
-              class={buttonStyles({ variant: "secondary" })}
-              type="button"
-              onClick={() => present("inline")}
-            >
-              Trazer vídeo de volta
-            </button>
-          </div>
-        </Show>
         <Show when={!ready() && !pictureInPicture() && !fullscreen()}>
           <span class="video-loading absolute inset-[45%_0_auto] text-center" role="status">
             Carregando imagem…
           </span>
         </Show>
-        <Show when={!pictureInPicture() && !fullscreen()}>
-          <PlayerControls
-            video={props.video}
-            paused={paused}
-            position={position}
-            duration={duration}
-            downloadedRanges={downloaded()}
-            bufferedRanges={buffered()}
-            volume={volume}
-            play={() => void play()}
-            present={present}
-            audioTracks={props.audioTracks}
-            audioIndex={props.audioIndex}
-            onAudioChange={props.onAudioChange}
-          />
-        </Show>
+      </Show>
+      <Show when={pictureInPicture()}>
+        <div
+          class="video-pip-message absolute inset-0 flex flex-col items-center justify-center gap-[18px] bg-canvas-deep text-ink text-center p-6"
+          role="status"
+        >
+          <p>O vídeo está em picture-in-picture</p>
+          <button
+            class={buttonStyles({ variant: "secondary" })}
+            type="button"
+            onClick={() => present("inline")}
+          >
+            Trazer vídeo de volta
+          </button>
+        </div>
+      </Show>
+      <Show when={!pictureInPicture() && (!fullscreen() || !useCanvas)}>
+        <PlayerControls
+          video={props.video}
+          paused={paused}
+          position={position}
+          duration={duration}
+          downloadedRanges={downloaded()}
+          bufferedRanges={buffered()}
+          volume={volume}
+          play={() => void play()}
+          present={present}
+          audioTracks={props.audioTracks}
+          audioIndex={props.audioIndex}
+          onAudioChange={props.onAudioChange}
+        />
       </Show>
     </div>
   );

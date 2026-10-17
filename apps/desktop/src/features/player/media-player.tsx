@@ -468,7 +468,6 @@ export function MediaPlayer(props: {
         ref={video}
         class="video-player absolute inset-0 block w-full h-full bg-transparent object-contain"
         data-player-state={machine.state()}
-        controls
         autoplay
         playsinline
         tabindex="0"

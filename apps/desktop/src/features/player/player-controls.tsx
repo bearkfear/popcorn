@@ -1,4 +1,4 @@
-// Floating playback controls and shortcuts for the canvas video surface.
+// Floating playback controls shared by the native video and macOS canvas surfaces.
 import type { Playback } from "@popcorn/sdk";
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { Icon } from "../../shared/ui/icon";
@@ -112,7 +112,7 @@ export function PlayerControls(props: {
     video?.addEventListener("error", failed);
     const keydown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
-      // Fullscreen and PiP have their own native controls and key handling.
+      // Native WebKit fullscreen and PiP have their own controls and key handling.
       const mode = (props.video() as HTMLVideoElement & { webkitPresentationMode?: string })
         ?.webkitPresentationMode;
       if (mode && mode !== "inline") return;
