@@ -132,8 +132,10 @@ git push origin v2026.10.17
 ```
 
 Também é possível iniciar o workflow manualmente em **Actions → Release Desktop
-→ Run workflow**, informando `v2026.10.17`. Uma execução manual cria a tag no
-commit selecionado ao criar a GitHub Release, caso ela ainda não exista.
+→ Run workflow**, informando `v2026.10.17`. Uma execução manual reserva a tag no
+commit selecionado antes dos testes e builds e publica a GitHub Release nessa tag.
+Isso mantém os instaladores ligados ao commit exato que foi compilado, mesmo que a
+branch receba novos commits enquanto o workflow estiver em execução.
 
 Sem credenciais, o Windows é empacotado sem assinatura e o macOS usa assinatura
 ad-hoc; isso permite testar os instaladores, mas ainda pode produzir alertas do

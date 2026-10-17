@@ -24,7 +24,7 @@ jobs:
     name: Validate release version
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
+      contents: write
     outputs:
       app_version: ${{ steps.version.outputs.app_version }}
     steps:
@@ -52,6 +52,32 @@ jobs:
           test "$(jq -r .version packages/sdk/package.json)" = "$app_version"
           grep -Fq "version = \"$app_version\"" Cargo.toml
           echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
+
+      - name: Reserve tag for manual release
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          existing_sha="$(
+            gh api "repos/$GITHUB_REPOSITORY/commits/$RELEASE_TAG" \
+              --jq .sha 2>/dev/null || true
+          )"
+
+          if [[ -n "$existing_sha" ]]; then
+            if [[ "$existing_sha" != "$GITHUB_SHA" ]]; then
+              echo "Tag '$RELEASE_TAG' already points to $existing_sha, not $GITHUB_SHA." >&2
+              exit 1
+            fi
+            echo "Tag '$RELEASE_TAG' already reserves this commit."
+            exit 0
+          fi
+
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/$RELEASE_TAG" \
+            -f sha="$GITHUB_SHA" >/dev/null
+          echo "Reserved tag '$RELEASE_TAG' at $GITHUB_SHA."
 
   quality:
     name: Typecheck, lint and test
@@ -400,7 +426,6 @@ jobs:
           else
             gh release create "$RELEASE_TAG" release/* \
               --repo "$GITHUB_REPOSITORY" \
-              --target "$GITHUB_SHA" \
               --title "Popcorn $APP_VERSION" \
               --generate-notes
           fi
