@@ -5,9 +5,11 @@ import { isTauri } from "@tauri-apps/api/core";
 import { createSignal, type JSX, onCleanup, onMount, Show } from "solid-js";
 import { diagnostic, errorDetails } from "./media-diagnostics";
 import { PlayerControls } from "./player-controls";
+import { videoPresentation } from "./video-presentation";
 
 type NativeVideo = HTMLVideoElement & {
   webkitEnterFullscreen?: () => void;
+  webkitDisplayingFullscreen?: boolean;
   webkitPresentationMode?: string;
   webkitSetPresentationMode?: (mode: string) => void;
   webkitSupportsPresentationMode?: (mode: string) => boolean;
@@ -29,7 +31,20 @@ export function VideoSurface(props: {
   const [volume, setVolume] = createSignal(1);
   const [ready, setReady] = createSignal(false);
   const [pictureInPicture, setPictureInPicture] = createSignal(false);
+  const [fullscreen, setFullscreen] = createSignal(false);
   let canvas: HTMLCanvasElement | undefined;
+
+  function setPresentation(mode: string | undefined) {
+    const video = props.video();
+    if (!video) return;
+    const external = mode === "fullscreen" || mode === "picture-in-picture";
+    video.style.opacity = external ? "1" : "";
+    // Inline canvas mode disables video hit testing. Native controls need it back.
+    video.style.pointerEvents = external ? "auto" : "";
+    video.controls = external;
+    setFullscreen(mode === "fullscreen");
+    setPictureInPicture(mode === "picture-in-picture");
+  }
 
   onMount(() => {
     const video = props.video();
@@ -53,6 +68,7 @@ export function VideoSurface(props: {
       if (
         disposed ||
         failed ||
+        fullscreen() ||
         pictureInPicture() ||
         video.readyState < 2 ||
         !video.videoWidth ||
@@ -85,7 +101,9 @@ export function VideoSurface(props: {
     const sync = () => {
       setPaused(video.paused);
       setPosition(video.currentTime);
-      setDuration(Number.isFinite(video.duration) ? video.duration : 0);
+      // MSE briefly loses metadata when an unbuffered seek replaces the source.
+      // Preserve the timeline scale until the replacement publishes its duration.
+      if (Number.isFinite(video.duration) && video.duration > 0) setDuration(video.duration);
       setVolume(video.muted ? 0 : video.volume);
       draw();
     };
@@ -103,16 +121,20 @@ export function VideoSurface(props: {
       frame = video.requestVideoFrameCallback(nextFrame);
     } else animation = requestAnimationFrame(fallback);
     const presentation = () => {
-      const mode = (video as NativeVideo).webkitPresentationMode;
-      setPictureInPicture(mode === "picture-in-picture");
-      const external = mode === "fullscreen" || mode === "picture-in-picture";
-      video.style.opacity = external ? "1" : "";
-      video.controls = external;
+      const mode = videoPresentation(video as NativeVideo);
+      setPresentation(mode);
       if (mode === "picture-in-picture") {
         context.clearRect(0, 0, surface.width, surface.height);
       } else draw();
     };
+    const beginFullscreen = () => setPresentation("fullscreen");
+    const endFullscreen = () => {
+      setPresentation("inline");
+      draw();
+    };
     video.addEventListener("webkitpresentationmodechanged", presentation);
+    video.addEventListener("webkitbeginfullscreen", beginFullscreen);
+    video.addEventListener("webkitendfullscreen", endFullscreen);
     const events = [
       "play",
       "pause",
@@ -142,7 +164,10 @@ export function VideoSurface(props: {
       window.clearInterval(timer);
       for (const event of events) video.removeEventListener(event, sync);
       video.removeEventListener("webkitpresentationmodechanged", presentation);
+      video.removeEventListener("webkitbeginfullscreen", beginFullscreen);
+      video.removeEventListener("webkitendfullscreen", endFullscreen);
       video.style.opacity = "";
+      video.style.pointerEvents = "";
       video.controls = nativeControls;
       // Release the canvas backing store and its last decoded frame immediately.
       surface.width = 0;
@@ -170,13 +195,11 @@ export function VideoSurface(props: {
     const video = props.video() as NativeVideo | undefined;
     if (!video) return;
     try {
-      video.style.opacity = mode === "inline" ? "" : "1";
-      video.controls = mode !== "inline";
+      setPresentation(mode);
       if (mode === "fullscreen") video.webkitEnterFullscreen?.();
       else video.webkitSetPresentationMode?.(mode);
     } catch (error) {
-      video.style.opacity = "";
-      video.controls = false;
+      setPresentation("inline");
       diagnostic(
         "media.surface_presentation_failed",
         { playbackId: props.playbackId() },
@@ -188,7 +211,12 @@ export function VideoSurface(props: {
     <div class={`video-surface${useCanvas ? " canvas-video-surface" : ""}`}>
       {props.children}
       <Show when={useCanvas}>
-        <canvas ref={canvas} class="video-canvas" aria-label="Imagem do vídeo" />
+        <canvas
+          ref={canvas}
+          class="video-canvas"
+          hidden={fullscreen()}
+          aria-label="Imagem do vídeo"
+        />
         <Show when={pictureInPicture()}>
           <div class="video-pip-message" role="status">
             <p>O vídeo está em picture-in-picture</p>
@@ -197,12 +225,12 @@ export function VideoSurface(props: {
             </button>
           </div>
         </Show>
-        <Show when={!ready() && !pictureInPicture()}>
+        <Show when={!ready() && !pictureInPicture() && !fullscreen()}>
           <span class="video-loading" role="status">
             Carregando imagem…
           </span>
         </Show>
-        <Show when={!pictureInPicture()}>
+        <Show when={!pictureInPicture() && !fullscreen()}>
           <PlayerControls
             video={props.video}
             paused={paused}

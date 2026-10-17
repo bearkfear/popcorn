@@ -27,10 +27,12 @@ export function PlayerControls(props: {
 }) {
   const [visible, setVisible] = createSignal(true);
   const [dragging, setDragging] = createSignal<number>();
+  const [pendingSeek, setPendingSeek] = createSignal<number>();
   let panel: HTMLFieldSetElement | undefined;
   let timer: number | undefined;
-  const shown = () => visible() || props.paused() || dragging() !== undefined;
-  const position = () => dragging() ?? props.position();
+  const shown = () =>
+    visible() || props.paused() || dragging() !== undefined || pendingSeek() !== undefined;
+  const position = () => dragging() ?? pendingSeek() ?? props.position();
   const progress = () => Math.min(100, (100 * position()) / (props.duration() || 1));
   function reveal() {
     setVisible(true);
@@ -41,8 +43,11 @@ export function PlayerControls(props: {
   }
   function seek(position: number) {
     const video = props.video();
-    if (video && Number.isFinite(video.duration)) {
-      video.currentTime = Math.max(0, Math.min(position, Math.max(0, video.duration - 0.1)));
+    if (video && props.duration() > 0) {
+      const target = Math.max(0, Math.min(position, Math.max(0, props.duration() - 0.1)));
+      // Keep the chosen position through MSE teardown and stale timeupdate events.
+      setPendingSeek(target);
+      video.currentTime = target;
     }
   }
   function act(action: PlayerAction) {
@@ -54,10 +59,10 @@ export function PlayerControls(props: {
         props.play();
         break;
       case "back":
-        seek(video.currentTime - 10);
+        seek((pendingSeek() ?? props.position()) - 10);
         break;
       case "forward":
-        seek(video.currentTime + 10);
+        seek((pendingSeek() ?? props.position()) + 10);
         break;
       case "volume-up":
         video.muted = false;
@@ -79,6 +84,24 @@ export function PlayerControls(props: {
     }
   }
   onMount(() => {
+    const video = props.video();
+    const settled = () => {
+      const target = pendingSeek();
+      if (
+        video &&
+        target !== undefined &&
+        video.readyState >= 2 &&
+        !video.seeking &&
+        Math.abs(props.position() - target) <= 0.25 &&
+        Math.abs(video.currentTime - target) <= 0.25
+      ) {
+        setPendingSeek(undefined);
+      }
+    };
+    const failed = () => setPendingSeek(undefined);
+    const settledEvents = ["seeked", "timeupdate", "loadeddata", "playing"];
+    for (const event of settledEvents) video?.addEventListener(event, settled);
+    video?.addEventListener("error", failed);
     const keydown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
       // Fullscreen and PiP have their own native controls and key handling.
@@ -102,6 +125,8 @@ export function PlayerControls(props: {
     window.addEventListener("pointermove", reveal);
     reveal();
     onCleanup(() => {
+      for (const event of settledEvents) video?.removeEventListener(event, settled);
+      video?.removeEventListener("error", failed);
       window.clearTimeout(timer);
       window.removeEventListener("keydown", keydown);
       window.removeEventListener("pointermove", reveal);
@@ -227,22 +252,31 @@ export function PlayerControls(props: {
       </div>
       <div class="video-timeline">
         <span>{clock(position())}</span>
-        <input
-          type="range"
-          aria-label="Posição do vídeo"
-          min="0"
-          max={props.duration() || 1}
-          step="0.1"
-          value={position()}
-          style={{ "--range-progress": `${progress()}%` }}
-          onInput={(event) => setDragging(Number(event.currentTarget.value))}
-          onChange={(event) => {
-            seek(Number(event.currentTarget.value));
-            setDragging(undefined);
-            reveal();
-          }}
-          onPointerCancel={() => setDragging(undefined)}
-        />
+        <div class="video-timeline-track" style={{ "--range-progress": `${progress()}%` }}>
+          <input
+            type="range"
+            aria-label="Posição do vídeo"
+            aria-busy={pendingSeek() !== undefined}
+            min="0"
+            max={props.duration() || 1}
+            step="0.1"
+            value={position()}
+            onInput={(event) => setDragging(Number(event.currentTarget.value))}
+            onChange={(event) => {
+              seek(Number(event.currentTarget.value));
+              setDragging(undefined);
+              reveal();
+            }}
+            onPointerCancel={() => setDragging(undefined)}
+          />
+          <Show when={pendingSeek() !== undefined && dragging() === undefined}>
+            <div class="video-seek-indicators">
+              <span class="video-seek-loading" role="status" aria-label="Carregando trecho…">
+                <Icon name="loading" />
+              </span>
+            </div>
+          </Show>
+        </div>
         <span>{clock(props.duration())}</span>
       </div>
     </fieldset>

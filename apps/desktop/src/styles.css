@@ -1127,6 +1127,11 @@ a {
 }
 .canvas-video-surface .video-player:fullscreen {
   opacity: 1;
+  pointer-events: auto;
+}
+.canvas-video-surface .video-player:-webkit-full-screen {
+  opacity: 1;
+  pointer-events: auto;
 }
 .video-canvas {
   position: absolute;
@@ -1350,9 +1355,70 @@ a {
   border-radius: 50%;
   background: white;
 }
-.video-timeline input {
+.video-timeline-track {
+  --timeline-scale: 1;
+  --timeline-height: 5px;
+  --timeline-transition: 150ms;
+  position: relative;
+  display: flex;
+  align-items: center;
   flex: 1;
   min-width: 20px;
+  height: 32px;
+}
+.video-timeline-track:hover,
+.video-timeline-track:focus-within,
+.video-timeline-track:has([aria-busy="true"]) {
+  --timeline-scale: 1.5;
+  --timeline-height: 8px;
+}
+.video-timeline-track input {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  height: var(--timeline-height);
+  transition: height var(--timeline-transition) ease;
+}
+.video-timeline-track input::-webkit-slider-thumb {
+  transform: scale(var(--timeline-scale));
+  transition: transform var(--timeline-transition) ease;
+}
+.video-timeline-track input::-moz-range-thumb {
+  transform: scale(var(--timeline-scale));
+  transition: transform var(--timeline-transition) ease;
+}
+.video-seek-indicators {
+  position: absolute;
+  inset: 0 8px;
+  pointer-events: none;
+}
+.video-seek-loading {
+  position: absolute;
+  top: 50%;
+  left: var(--range-progress, 0%);
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  color: #252525;
+  transform: translate(-50%, -50%) scale(var(--timeline-scale));
+  transition: transform var(--timeline-transition) ease;
+}
+.video-controls .video-seek-loading .app-icon {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.5;
+  animation: video-seek-spin 800ms linear infinite;
+}
+@keyframes video-seek-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 .video-volume {
   width: 72px;
@@ -1380,6 +1446,12 @@ a {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .video-timeline-track {
+    --timeline-transition: 0ms;
+  }
+  .video-controls .video-seek-loading .app-icon {
+    animation: none;
+  }
   .video-controls {
     transition: none;
   }
