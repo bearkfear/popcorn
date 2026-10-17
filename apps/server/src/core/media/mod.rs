@@ -2,6 +2,7 @@
 
 pub mod audio;
 pub mod content;
+pub mod download;
 pub mod profile;
 pub mod range;
 pub mod selection;
@@ -81,6 +82,7 @@ pub(crate) struct Playback {
     pub(crate) timestamp_offset_seconds: f64,
     pub(crate) audio_tracks: Vec<PlaybackAudioTrack>,
     pub(crate) audio_stream_index: Option<u32>,
+    pub(crate) downloaded_ranges: Vec<std::ops::Range<u64>>,
 }
 
 #[derive(Debug)]

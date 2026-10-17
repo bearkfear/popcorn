@@ -1,6 +1,6 @@
 // Floating playback controls and shortcuts for the canvas video surface.
 import type { Playback } from "@popcorn/sdk";
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { Icon } from "../../shared/ui/icon";
 import { SelectField } from "../../shared/ui/select-field";
 import {
@@ -9,6 +9,7 @@ import {
   playerRangeStyles,
 } from "./player-controls.styles";
 import { type PlayerAction, playerShortcut } from "./player-shortcuts";
+import type { TimelineRange } from "./timeline-ranges";
 
 function clock(seconds: number): string {
   const value = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
@@ -23,6 +24,8 @@ export function PlayerControls(props: {
   paused: () => boolean;
   position: () => number;
   duration: () => number;
+  downloadedRanges: readonly TimelineRange[];
+  bufferedRanges: readonly TimelineRange[];
   volume: () => number;
   play: () => void;
   present: (mode: "fullscreen" | "picture-in-picture") => void;
@@ -265,7 +268,32 @@ export function PlayerControls(props: {
       </div>
       <div class={styles.timeline()}>
         <span>{clock(position())}</span>
-        <div class={styles.timelineTrack()} style={{ "--range-progress": `${progress()}%` }}>
+        <div
+          class={styles.timelineTrack()}
+          style={{
+            "--range-progress": `${progress()}%`,
+          }}
+          title="Cinza: partes baixadas (posição aproximada). Cinza claro: trechos carregados. Branco: reprodução."
+        >
+          <div class={styles.timelineLayers()} aria-hidden="true">
+            <For each={props.downloadedRanges}>
+              {(range) => (
+                <div
+                  class={styles.downloadSegment()}
+                  style={{ left: `${range.start}%`, width: `${range.end - range.start}%` }}
+                />
+              )}
+            </For>
+            <For each={props.bufferedRanges}>
+              {(range) => (
+                <div
+                  class={styles.bufferSegment()}
+                  style={{ left: `${range.start}%`, width: `${range.end - range.start}%` }}
+                />
+              )}
+            </For>
+            <div class={styles.playedSegment()} style={{ width: `${progress()}%` }} />
+          </div>
           <input
             class={playerRangeStyles()}
             type="range"

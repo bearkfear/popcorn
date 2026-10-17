@@ -47,6 +47,9 @@ impl<R: Sources, T: Transfers, C: Cache> MediaService<R, T, C> {
             .sources
             .playback_file(&request.source_id, request.file_index)
             .await?;
+        if file.size == 0 || !crate::core::media::is_media(&file.name) {
+            return Err(MediaError::Invalid);
+        }
         if file.size > self.cache.limit().await? {
             return Err(MediaError::Capacity);
         }

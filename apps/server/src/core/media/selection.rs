@@ -1,22 +1,17 @@
-//! Conservative selection of a main video using metadata available before downloading.
+//! Recommends a file only when the source contains exactly one nonempty video.
 
 use super::{SourceFile, is_media};
 
 pub(crate) fn recommend(files: &[SourceFile]) -> Option<u32> {
-    let mut candidates: Vec<_> = files
+    let candidates: Vec<_> = files
         .iter()
-        .filter(|file| file.size_bytes > 0 && is_media(&file.name) && !is_extra(&file.name))
+        .filter(|file| file.size_bytes > 0 && is_media(&file.name))
         .collect();
-    candidates.sort_by_key(|file| std::cmp::Reverse(file.size_bytes));
     let first = candidates.first()?;
-    if candidates.len() == 1 {
+    if candidates.len() == 1 && !is_extra(&first.name) {
         return Some(first.file_index);
     }
-    // Do not guess between two full versions, episodes, or split movie parts.
-    // A dominant feature must be substantial and at least four times its runner-up.
-    let second = candidates[1];
-    (first.size_bytes >= 100 * 1024 * 1024 && first.size_bytes / 4 >= second.size_bytes)
-        .then_some(first.file_index)
+    None
 }
 
 fn is_extra(name: &str) -> bool {
@@ -63,24 +58,24 @@ mod tests {
     }
 
     #[test]
-    fn excludes_samples_and_extras_including_directories() {
+    fn requires_choice_when_extra_videos_are_present() {
         assert_eq!(
             recommend(&[
                 file(1, "Sample/movie.mkv", 20),
                 file(2, "movie.mp4", 500),
                 file(3, "Extras/interview.mkv", 300)
             ]),
-            Some(2)
+            None
         );
         assert_eq!(recommend(&[file(1, "movie.trailer.mp4", 50)]), None);
         assert_eq!(recommend(&[file(1, "Sampled Life.mp4", 500)]), Some(1));
     }
 
     #[test]
-    fn selects_a_dominant_feature_but_preserves_ambiguous_versions_and_parts() {
+    fn requires_choice_even_when_one_video_is_much_larger() {
         assert_eq!(
             recommend(&[file(1, "movie.mp4", 2000), file(2, "interview.mp4", 100)]),
-            Some(1)
+            None
         );
         assert_eq!(
             recommend(&[file(1, "movie.cd1.avi", 700), file(2, "movie.cd2.avi", 650)]),

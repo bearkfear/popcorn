@@ -37,6 +37,7 @@ const playback = (id: string, state = PlaybackState.READY): Playback => ({
   error: "",
   timestampOffsetSeconds: 0,
   audioTracks: [],
+  downloadedRanges: [],
 });
 const flush = async () => {
   await new Promise<void>((resolve) => setTimeout(resolve, 0));

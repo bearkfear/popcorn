@@ -252,6 +252,14 @@ message Playback {
   double timestamp_offset_seconds = 15;
   repeated PlaybackAudioTrack audio_tracks = 16;
   optional uint32 audio_stream_index = 17;
+  // Verified pieces clipped to the selected file, not to the whole torrent.
+  repeated PlaybackDownloadRange downloaded_ranges = 18;
+}
+
+message PlaybackDownloadRange {
+  uint64 start_byte = 1;
+  // Exclusive end offset within the selected source file.
+  uint64 end_byte = 2;
 }
 
 message PlaybackAudioTrack {

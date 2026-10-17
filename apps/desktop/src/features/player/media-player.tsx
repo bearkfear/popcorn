@@ -455,6 +455,8 @@ export function MediaPlayer(props: {
     <VideoSurface
       video={() => video}
       playbackId={() => props.playback.playbackId}
+      downloadedRanges={props.playback.downloadedRanges}
+      fileSize={props.playback.sizeBytes}
       onError={props.onError}
       audioTracks={props.playback.audioTracks}
       audioIndex={props.playback.audioStreamIndex}

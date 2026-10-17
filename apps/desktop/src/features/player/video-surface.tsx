@@ -3,9 +3,10 @@ import { buttonStyles } from "../../shared/ui/styles";
 
 import type { Playback } from "@popcorn/sdk";
 import { isTauri } from "@tauri-apps/api/core";
-import { createSignal, type JSX, onCleanup, onMount, Show } from "solid-js";
+import { createMemo, createSignal, type JSX, onCleanup, onMount, Show } from "solid-js";
 import { diagnostic, errorDetails } from "./media-diagnostics";
 import { PlayerControls } from "./player-controls";
+import { bufferSegments, downloadSegments, type TimelineRange } from "./timeline-ranges";
 import { videoPresentation } from "./video-presentation";
 
 type NativeVideo = HTMLVideoElement & {
@@ -19,6 +20,8 @@ type NativeVideo = HTMLVideoElement & {
 export function VideoSurface(props: {
   readonly video: () => HTMLVideoElement | undefined;
   readonly playbackId: () => string;
+  readonly downloadedRanges: Playback["downloadedRanges"];
+  readonly fileSize: bigint;
   readonly onError: (message: string) => void;
   readonly children: JSX.Element;
   readonly audioTracks: Playback["audioTracks"];
@@ -29,6 +32,8 @@ export function VideoSurface(props: {
   const [paused, setPaused] = createSignal(true);
   const [position, setPosition] = createSignal(0);
   const [duration, setDuration] = createSignal(0);
+  const [buffered, setBuffered] = createSignal<TimelineRange[]>([]);
+  const downloaded = createMemo(() => downloadSegments(props.downloadedRanges, props.fileSize));
   const [volume, setVolume] = createSignal(1);
   const [ready, setReady] = createSignal(false);
   const [pictureInPicture, setPictureInPicture] = createSignal(false);
@@ -105,6 +110,7 @@ export function VideoSurface(props: {
       // MSE briefly loses metadata when an unbuffered seek replaces the source.
       // Preserve the timeline scale until the replacement publishes its duration.
       if (Number.isFinite(video.duration) && video.duration > 0) setDuration(video.duration);
+      setBuffered(bufferSegments(video.buffered, duration()));
       setVolume(video.muted ? 0 : video.volume);
       draw();
     };
@@ -145,6 +151,8 @@ export function VideoSurface(props: {
       "resize",
       "volumechange",
       "durationchange",
+      "progress",
+      "emptied",
     ];
     for (const event of events) video.addEventListener(event, sync);
     const timer = window.setInterval(() => {
@@ -246,6 +254,8 @@ export function VideoSurface(props: {
             paused={paused}
             position={position}
             duration={duration}
+            downloadedRanges={downloaded()}
+            bufferedRanges={buffered()}
             volume={volume}
             play={() => void play()}
             present={present}

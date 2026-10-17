@@ -19,7 +19,6 @@ export const playerButtonStyles = tv({
 export const playerRangeStyles = tv({
   base: [
     "appearance-none border-0 rounded-panel",
-    "bg-[linear-gradient(to_right,var(--slate-12)_var(--range-progress,0%),var(--white-a3)_var(--range-progress,0%))]",
     "cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:size-4",
     "[&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-ink",
     "[&::-webkit-slider-thumb]:shadow-[0_1px_3px_var(--black-a5)] [&::-moz-range-thumb]:size-4",
@@ -27,8 +26,11 @@ export const playerRangeStyles = tv({
   ],
   variants: {
     kind: {
-      timeline: "",
-      volume: "video-volume h-[5px] w-[72px] min-w-[30px] max-[540px]:w-10",
+      timeline: "relative bg-transparent",
+      volume: [
+        "video-volume h-[5px] w-[72px] min-w-[30px] max-[540px]:w-10",
+        "bg-[linear-gradient(to_right,var(--slate-12)_var(--range-progress,0%),var(--white-a3)_var(--range-progress,0%))]",
+      ],
     },
   },
   defaultVariants: {
@@ -62,6 +64,13 @@ export const playerControlsStyles = tv({
     timeline: [
       "video-timeline flex items-center gap-[10px] text-[13px] font-semibold tabular-nums [&_span]:shrink-0",
     ],
+    timelineLayers: [
+      "video-timeline-layers absolute inset-x-2 top-1/2 -translate-y-1/2 h-[var(--timeline-height)]",
+      "overflow-hidden rounded-full bg-white-a3 pointer-events-none [transition:height_var(--timeline-transition)_ease]",
+    ],
+    downloadSegment: ["video-download-segment absolute inset-y-0 bg-white-a5"],
+    bufferSegment: ["video-buffer-segment absolute inset-y-0 bg-white-a8"],
+    playedSegment: ["video-played-segment absolute inset-y-0 bg-ink"],
     timelineTrack: [
       "video-timeline-track [--timeline-scale:1] [--timeline-height:5px] [--timeline-transition:150ms] relative",
       "flex items-center [flex:1] min-w-[20px] h-[32px] [&:hover]:[--timeline-scale:1.5]",

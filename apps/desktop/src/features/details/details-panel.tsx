@@ -8,7 +8,7 @@ import { SelectField } from "../../shared/ui/select-field";
 import { buttonStyles } from "../../shared/ui/styles";
 import type { PlayerViewModel } from "../player/player.viewmodel";
 import type { SourcesViewModel } from "../sources/sources.viewmodel";
-import { SourcesPanel } from "../sources/sources-panel";
+import { SourcesDialog } from "../sources/sources-dialog";
 import type { DetailsViewModel } from "./details.viewmodel";
 
 export function DetailsPanel(props: {
@@ -22,9 +22,11 @@ export function DetailsPanel(props: {
 }) {
   let heading: HTMLHeadingElement | undefined;
   const [trailerOpen, setTrailerOpen] = createSignal(false);
+  const [sourcesOpen, setSourcesOpen] = createSignal(false);
 
   createEffect(() => {
     if (!props.vm.selected()) return;
+    setSourcesOpen(false);
     heading?.focus({ preventScroll: true });
     heading?.scrollIntoView({
       behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -90,6 +92,16 @@ export function DetailsPanel(props: {
                 <For each={title().genres}>{(genre) => <li>{genre.name}</li>}</For>
               </ul>
             </Show>
+            <SourcesDialog
+              open={sourcesOpen()}
+              onOpenChange={setSourcesOpen}
+              title={title().title}
+              sources={props.sources}
+              player={props.player}
+              onPrepare={props.onPrepare}
+              resumeSeconds={props.resumeSeconds}
+              onLaunch={props.onLaunch}
+            />
             <h3 class="synopsis-label m-[20px_0_8px] text-ink text-[13px] uppercase tracking-[0.08em]">
               Sinopse
             </h3>
@@ -153,13 +165,6 @@ export function DetailsPanel(props: {
                 </For>
               </ul>
             </Show>
-            <SourcesPanel
-              sources={props.sources}
-              player={props.player}
-              onPrepare={props.onPrepare}
-              resumeSeconds={props.resumeSeconds}
-              onLaunch={props.onLaunch}
-            />
             <Show when={props.online && title().content?.mediaType === MediaType.TV}>
               <section
                 class="episodes-section [&_>_label]:block [&_>_label]:mb-[6px] [&_>_label]:text-muted [&_>_label]:text-[12px] [&_>_label]:font-bold mt-6 pt-4 border-t border-line [&_.select-field]:mb-3"
@@ -280,7 +285,10 @@ export function DetailsPanel(props: {
                                     content().seasonNumber &&
                                   props.sources.content()?.episodeNumber === content().episodeNumber
                                 }
-                                onClick={() => void props.sources.selectContent(content())}
+                                onClick={() => {
+                                  props.sources.selectContent(content());
+                                  setSourcesOpen(true);
+                                }}
                               >
                                 Usar fontes deste episódio
                               </button>

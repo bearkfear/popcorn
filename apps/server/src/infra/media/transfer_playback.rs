@@ -1,20 +1,24 @@
 //! Projects transfer progress and asynchronous media preparation into playback state.
 
-use librqbit::TorrentStatsState;
+use librqbit::{Api, TorrentStatsState};
 use uuid::Uuid;
 
 use crate::{
     application::media::MediaError,
-    core::media::{Playback, PlaybackState, mime_type},
+    core::media::{Playback, PlaybackState, download::verified_file_ranges, mime_type},
 };
 
 use super::{TorrentEngine, preparation::Preparation, transfers::ActivePlayback};
 
 impl TorrentEngine {
     pub(super) async fn snapshot(&self, id: Uuid) -> Result<Playback, MediaError> {
+        let api = self
+            .active_session()
+            .await
+            .map(|session| Api::new(session, None));
         let playbacks = self.playbacks.lock().await;
         let active = playbacks.get(&id).ok_or(MediaError::NotFound)?;
-        let mut playback = transfer_snapshot(id, active);
+        let mut playback = transfer_snapshot(id, active, api.as_ref());
         match &*active.processing.state.borrow() {
             Preparation::Preparing => playback.state = PlaybackState::Preparing,
             Preparation::Failed(message) => {
@@ -44,7 +48,7 @@ impl TorrentEngine {
     }
 }
 
-fn transfer_snapshot(id: Uuid, active: &ActivePlayback) -> Playback {
+fn transfer_snapshot(id: Uuid, active: &ActivePlayback, api: Option<&Api>) -> Playback {
     let transfer_stats = active.handle.stats();
     let state = match transfer_stats.state {
         TorrentStatsState::Initializing { paused: true } | TorrentStatsState::Paused => {
@@ -78,5 +82,27 @@ fn transfer_snapshot(id: Uuid, active: &ActivePlayback) -> Playback {
         timestamp_offset_seconds: -3600.0,
         audio_tracks: Vec::new(),
         audio_stream_index: None,
+        downloaded_ranges: download_ranges(active, api).unwrap_or_default(),
     }
+}
+
+fn download_ranges(
+    active: &ActivePlayback,
+    api: Option<&Api>,
+) -> Option<Vec<std::ops::Range<u64>>> {
+    let (have, _) = api?.api_dump_haves(active.handle.id().into()).ok()?;
+    active
+        .handle
+        .with_metadata(|metadata| {
+            metadata.file_infos.get(active.file_index).map(|file| {
+                verified_file_ranges(
+                    file.offset_in_torrent,
+                    file.len,
+                    u64::from(metadata.lengths().default_piece_length()),
+                    have.iter().map(|bit| *bit),
+                )
+            })
+        })
+        .ok()
+        .flatten()
 }

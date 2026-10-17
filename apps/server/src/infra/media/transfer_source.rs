@@ -67,6 +67,7 @@ impl TorrentEngine {
             .add_torrent(
                 AddTorrent::from_bytes(file.torrent.clone()),
                 Some(AddTorrentOptions {
+                    paused: true,
                     only_files: Some(vec![
                         usize::try_from(index).map_err(|_| MediaError::Invalid)?,
                     ]),

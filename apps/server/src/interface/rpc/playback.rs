@@ -151,6 +151,15 @@ fn encode_playback(value: Playback) -> proto::Playback {
         error: value.error.into(),
         timestamp_offset_seconds: value.timestamp_offset_seconds,
         audio_stream_index: value.audio_stream_index,
+        downloaded_ranges: value
+            .downloaded_ranges
+            .into_iter()
+            .map(|range| proto::PlaybackDownloadRange {
+                start_byte: range.start,
+                end_byte: range.end,
+                ..Default::default()
+            })
+            .collect(),
         audio_tracks: value
             .audio_tracks
             .into_iter()

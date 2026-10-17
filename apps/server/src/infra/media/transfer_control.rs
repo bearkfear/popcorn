@@ -17,6 +17,10 @@ impl TorrentEngine {
         file: PlaybackFile,
         handle: Arc<ManagedTorrent>,
     ) -> Result<Uuid, MediaError> {
+        handle
+            .wait_until_initialized()
+            .await
+            .map_err(|_| MediaError::Unavailable)?;
         let previous: Vec<ActivePlayback> = self
             .playbacks
             .lock()
@@ -32,7 +36,7 @@ impl TorrentEngine {
             for active in previous {
                 pause_if_live(&session, &active.handle).await?;
             }
-            resume_if_paused(&session, &handle).await?;
+            select_file(&session, &handle, command.file_index).await?;
         }
         let id = Uuid::new_v4();
         let credential = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
@@ -120,6 +124,25 @@ impl TorrentEngine {
         }
         Ok(())
     }
+}
+
+async fn select_file(
+    session: &Arc<Session>,
+    handle: &Arc<ManagedTorrent>,
+    index: u32,
+) -> Result<(), MediaError> {
+    // add_torrent returns existing handles without applying new file options.
+    pause_if_live(session, handle).await?;
+    session
+        .update_only_files(
+            handle,
+            &std::collections::HashSet::from([
+                usize::try_from(index).map_err(|_| MediaError::Invalid)?
+            ]),
+        )
+        .await
+        .map_err(|_| MediaError::Unavailable)?;
+    resume_if_paused(session, handle).await
 }
 
 async fn pause_if_live(session: &Session, handle: &Arc<ManagedTorrent>) -> Result<(), MediaError> {
