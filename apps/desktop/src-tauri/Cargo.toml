@@ -8,7 +8,7 @@ default-run = "popcorn-desktop"
 
 [features]
 default = []
-desktop = ["dep:tauri", "dep:tauri-build", "dep:tauri-plugin-opener"]
+desktop = ["dep:tauri", "dep:tauri-build", "dep:tauri-plugin-opener", "dep:tauri-plugin-dialog"]
 
 [[bin]]
 name = "popcorn-desktop"
@@ -24,6 +24,8 @@ tokio.workspace = true
 uuid.workspace = true
 tauri = { version = "=2.12.4", optional = true , features = [] }
 tauri-plugin-opener = { version = "=2.7.2", optional = true }
+
+tauri-plugin-dialog = { version = "=2.8.3", optional = true }
 
 [build-dependencies]
 tauri-build = { version = "=2.7.3", optional = true , features = [] }

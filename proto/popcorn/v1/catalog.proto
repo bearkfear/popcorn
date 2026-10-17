@@ -366,3 +366,32 @@ service HistoryService {
   // Inserts missing legacy entries only; retries never overwrite server progress.
   rpc ImportHistory(ImportHistoryRequest) returns (ImportHistoryResponse);
 }
+
+// Portable, versioned user source catalogs. Payloads are UTF-8 JSON .popcatalog files.
+message ExportSourceCatalogRequest { string name = 1; string description = 2; }
+message ExportSourceCatalogResponse { string document = 1; }
+message PreviewSourceCatalogRequest { string document = 1; }
+message SourceCatalogPreview {
+  string name = 1;
+  uint32 sources = 2;
+  uint32 bindings = 3;
+  uint32 movies = 4;
+  uint32 series = 5;
+  uint32 existing_sources = 6;
+  uint32 reactivated_sources = 7;
+  uint32 local_sources = 8;
+  // Opaque local revision; import rejects changes since the preview.
+  string revision = 9;
+}
+message PreviewSourceCatalogResponse { SourceCatalogPreview preview = 1; }
+message ImportSourceCatalogRequest {
+  string document = 1;
+  bool replace = 2;
+  string expected_revision = 3;
+}
+message ImportSourceCatalogResponse { SourceCatalogPreview preview = 1; }
+service SourceCatalogService {
+  rpc ExportSourceCatalog(ExportSourceCatalogRequest) returns (ExportSourceCatalogResponse);
+  rpc PreviewSourceCatalog(PreviewSourceCatalogRequest) returns (PreviewSourceCatalogResponse);
+  rpc ImportSourceCatalog(ImportSourceCatalogRequest) returns (ImportSourceCatalogResponse);
+}

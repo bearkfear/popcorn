@@ -13,3 +13,5 @@ pub(crate) use router::router;
 
 mod history;
 mod history_mapping;
+
+mod source_catalog;

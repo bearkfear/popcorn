@@ -13,3 +13,5 @@ pub(crate) use ports::{AccessError, Cache, PlaybackFile, ResolvedSource, Sources
 
 pub(crate) use commands::start_converted_stream::ConvertedAccess;
 pub(crate) use queries::open_media::MediaAccess;
+
+pub mod source_catalog;

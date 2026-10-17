@@ -4,6 +4,7 @@
 
 mod diagnostics;
 mod player_window;
+mod source_catalog;
 
 use std::{
     path::PathBuf,
@@ -158,6 +159,7 @@ fn request_shutdown(app: &tauri::AppHandle) {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let directory = app.path().app_local_data_dir()?.join("logs");
             popcorn_diagnostics::init(&directory, "desktop")?;
@@ -177,6 +179,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             open_tmdb_settings,
             open_cache_folder,
             media_diagnostic,
+            source_catalog::save_source_catalog,
             player_window::open_player_window,
             player_window::take_player_session,
             player_window::player_window_active

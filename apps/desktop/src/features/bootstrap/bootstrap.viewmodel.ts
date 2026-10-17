@@ -2,6 +2,7 @@ import {
   createCatalogClient,
   createHistoryClient,
   createPlaybackClient,
+  createSourceCatalogClient,
   createSourceClient,
   createStorageClient,
 } from "@popcorn/sdk";
@@ -25,6 +26,7 @@ export function createBootstrapViewModel() {
             history: createHistoryClient(baseUrl, data.token),
             catalog: createCatalogClient(baseUrl, data.token),
             source: createSourceClient(baseUrl, data.token),
+            sourceCatalog: createSourceCatalogClient(baseUrl, data.token),
             playback: createPlaybackClient(baseUrl, data.token),
             storage: createStorageClient(baseUrl, data.token),
           },

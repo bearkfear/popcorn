@@ -3,7 +3,8 @@
 use std::sync::Arc;
 
 use popcorn_proto::catalog::popcorn::v1::{
-    PlaybackServiceRegisterMarker, SourceServiceRegisterMarker, StorageServiceRegisterMarker,
+    PlaybackServiceRegisterMarker, SourceCatalogServiceRegisterMarker, SourceServiceRegisterMarker,
+    StorageServiceRegisterMarker,
 };
 
 use crate::application::{
@@ -32,5 +33,24 @@ pub(crate) fn router<
         .add_service(Arc::new(CatalogRpc::new(metadata, snapshot)))
         .add_service::<MediaRpc<R, T, C>, SourceServiceRegisterMarker>(media.clone())
         .add_service::<MediaRpc<R, T, C>, PlaybackServiceRegisterMarker>(media.clone())
+        .add_service::<MediaRpc<R, T, C>, SourceCatalogServiceRegisterMarker>(media.clone())
         .add_service::<MediaRpc<R, T, C>, StorageServiceRegisterMarker>(media)
+        .with_route_limits(
+            "popcorn.v1.SourceCatalogService/ExportSourceCatalog",
+            archive_limits(),
+        )
+        .with_route_limits(
+            "popcorn.v1.SourceCatalogService/PreviewSourceCatalog",
+            archive_limits(),
+        )
+        .with_route_limits(
+            "popcorn.v1.SourceCatalogService/ImportSourceCatalog",
+            archive_limits(),
+        )
+}
+
+fn archive_limits() -> connectrpc::Limits {
+    connectrpc::Limits::default()
+        .with_max_request_body_size(65 * 1024 * 1024)
+        .with_max_message_size(65 * 1024 * 1024)
 }

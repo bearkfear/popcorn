@@ -14,5 +14,6 @@ pub(crate) async fn handle<R: Sources, T: Transfers, C: Cache>(
 ) -> Result<Source, MediaError> {
     command.input.validate()?;
     let resolved = context.transfers.resolve(command.input).await?;
+    let _guard = context.command.lock().await;
     context.sources.save(command.content, resolved).await
 }

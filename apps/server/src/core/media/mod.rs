@@ -13,3 +13,5 @@ pub(crate) use rules::range::{RangeError, parse_range};
 pub(crate) use value_objects::{
     Content, Coordinates, MediaKind, PlaybackAudioTrack, PlaybackState, SourceFile, SourceInput,
 };
+
+pub mod archive;

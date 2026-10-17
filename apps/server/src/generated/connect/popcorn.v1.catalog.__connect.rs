@@ -190,6 +190,30 @@ pub type OwnedImportHistoryRequestView = ::buffa::view::OwnedView<
 pub type OwnedImportHistoryResponseView = ::buffa::view::OwnedView<
     crate::proto::popcorn::v1::__buffa::view::ImportHistoryResponseView<'static>,
 >;
+///Shorthand for `OwnedView<ExportSourceCatalogRequestView<'static>>`.
+pub type OwnedExportSourceCatalogRequestView = ::buffa::view::OwnedView<
+    crate::proto::popcorn::v1::__buffa::view::ExportSourceCatalogRequestView<'static>,
+>;
+///Shorthand for `OwnedView<ExportSourceCatalogResponseView<'static>>`.
+pub type OwnedExportSourceCatalogResponseView = ::buffa::view::OwnedView<
+    crate::proto::popcorn::v1::__buffa::view::ExportSourceCatalogResponseView<'static>,
+>;
+///Shorthand for `OwnedView<PreviewSourceCatalogRequestView<'static>>`.
+pub type OwnedPreviewSourceCatalogRequestView = ::buffa::view::OwnedView<
+    crate::proto::popcorn::v1::__buffa::view::PreviewSourceCatalogRequestView<'static>,
+>;
+///Shorthand for `OwnedView<PreviewSourceCatalogResponseView<'static>>`.
+pub type OwnedPreviewSourceCatalogResponseView = ::buffa::view::OwnedView<
+    crate::proto::popcorn::v1::__buffa::view::PreviewSourceCatalogResponseView<'static>,
+>;
+///Shorthand for `OwnedView<ImportSourceCatalogRequestView<'static>>`.
+pub type OwnedImportSourceCatalogRequestView = ::buffa::view::OwnedView<
+    crate::proto::popcorn::v1::__buffa::view::ImportSourceCatalogRequestView<'static>,
+>;
+///Shorthand for `OwnedView<ImportSourceCatalogResponseView<'static>>`.
+pub type OwnedImportSourceCatalogResponseView = ::buffa::view::OwnedView<
+    crate::proto::popcorn::v1::__buffa::view::ImportSourceCatalogResponseView<'static>,
+>;
 impl ::connectrpc::Encodable<crate::proto::popcorn::v1::ListTitlesResponse>
 for crate::proto::popcorn::v1::__buffa::view::ListTitlesResponseView<'_> {
     fn encode(
@@ -984,6 +1008,108 @@ for crate::proto::popcorn::v1::__buffa::view::ImportHistoryResponseView<'_> {
 impl ::connectrpc::Encodable<crate::proto::popcorn::v1::ImportHistoryResponse>
 for ::buffa::view::OwnedView<
     crate::proto::popcorn::v1::__buffa::view::ImportHistoryResponseView<'static>,
+> {
+    fn encode(
+        &self,
+        codec: ::connectrpc::CodecFormat,
+    ) -> ::std::result::Result<::buffa::bytes::Bytes, ::connectrpc::ConnectError> {
+        ::connectrpc::__codegen::encode_view_body(self.reborrow(), codec)
+    }
+    /// An `OwnedView` still holds the buffer it was decoded from, so
+    /// its large fields can be handed to the response body by
+    /// reference count instead of copied. The bare view impl above
+    /// cannot do this: it has borrows but no buffer to name.
+    fn encode_segments(
+        &self,
+        codec: ::connectrpc::CodecFormat,
+    ) -> ::std::result::Result<::connectrpc::EncodedBody, ::connectrpc::ConnectError> {
+        ::connectrpc::__codegen::encode_view_body_segments(
+            self.reborrow(),
+            self.bytes(),
+            codec,
+        )
+    }
+}
+impl ::connectrpc::Encodable<crate::proto::popcorn::v1::ExportSourceCatalogResponse>
+for crate::proto::popcorn::v1::__buffa::view::ExportSourceCatalogResponseView<'_> {
+    fn encode(
+        &self,
+        codec: ::connectrpc::CodecFormat,
+    ) -> ::std::result::Result<::buffa::bytes::Bytes, ::connectrpc::ConnectError> {
+        ::connectrpc::__codegen::encode_view_body(self, codec)
+    }
+}
+impl ::connectrpc::Encodable<crate::proto::popcorn::v1::ExportSourceCatalogResponse>
+for ::buffa::view::OwnedView<
+    crate::proto::popcorn::v1::__buffa::view::ExportSourceCatalogResponseView<'static>,
+> {
+    fn encode(
+        &self,
+        codec: ::connectrpc::CodecFormat,
+    ) -> ::std::result::Result<::buffa::bytes::Bytes, ::connectrpc::ConnectError> {
+        ::connectrpc::__codegen::encode_view_body(self.reborrow(), codec)
+    }
+    /// An `OwnedView` still holds the buffer it was decoded from, so
+    /// its large fields can be handed to the response body by
+    /// reference count instead of copied. The bare view impl above
+    /// cannot do this: it has borrows but no buffer to name.
+    fn encode_segments(
+        &self,
+        codec: ::connectrpc::CodecFormat,
+    ) -> ::std::result::Result<::connectrpc::EncodedBody, ::connectrpc::ConnectError> {
+        ::connectrpc::__codegen::encode_view_body_segments(
+            self.reborrow(),
+            self.bytes(),
+            codec,
+        )
+    }
+}
+impl ::connectrpc::Encodable<crate::proto::popcorn::v1::PreviewSourceCatalogResponse>
+for crate::proto::popcorn::v1::__buffa::view::PreviewSourceCatalogResponseView<'_> {
+    fn encode(
+        &self,
+        codec: ::connectrpc::CodecFormat,
+    ) -> ::std::result::Result<::buffa::bytes::Bytes, ::connectrpc::ConnectError> {
+        ::connectrpc::__codegen::encode_view_body(self, codec)
+    }
+}
+impl ::connectrpc::Encodable<crate::proto::popcorn::v1::PreviewSourceCatalogResponse>
+for ::buffa::view::OwnedView<
+    crate::proto::popcorn::v1::__buffa::view::PreviewSourceCatalogResponseView<'static>,
+> {
+    fn encode(
+        &self,
+        codec: ::connectrpc::CodecFormat,
+    ) -> ::std::result::Result<::buffa::bytes::Bytes, ::connectrpc::ConnectError> {
+        ::connectrpc::__codegen::encode_view_body(self.reborrow(), codec)
+    }
+    /// An `OwnedView` still holds the buffer it was decoded from, so
+    /// its large fields can be handed to the response body by
+    /// reference count instead of copied. The bare view impl above
+    /// cannot do this: it has borrows but no buffer to name.
+    fn encode_segments(
+        &self,
+        codec: ::connectrpc::CodecFormat,
+    ) -> ::std::result::Result<::connectrpc::EncodedBody, ::connectrpc::ConnectError> {
+        ::connectrpc::__codegen::encode_view_body_segments(
+            self.reborrow(),
+            self.bytes(),
+            codec,
+        )
+    }
+}
+impl ::connectrpc::Encodable<crate::proto::popcorn::v1::ImportSourceCatalogResponse>
+for crate::proto::popcorn::v1::__buffa::view::ImportSourceCatalogResponseView<'_> {
+    fn encode(
+        &self,
+        codec: ::connectrpc::CodecFormat,
+    ) -> ::std::result::Result<::buffa::bytes::Bytes, ::connectrpc::ConnectError> {
+        ::connectrpc::__codegen::encode_view_body(self, codec)
+    }
+}
+impl ::connectrpc::Encodable<crate::proto::popcorn::v1::ImportSourceCatalogResponse>
+for ::buffa::view::OwnedView<
+    crate::proto::popcorn::v1::__buffa::view::ImportSourceCatalogResponseView<'static>,
 > {
     fn encode(
         &self,
@@ -5520,6 +5646,685 @@ where
                 &self.transport,
                 &self.config,
                 HISTORY_SERVICE_IMPORT_HISTORY_SPEC
+                    .with_origin(::connectrpc::SpecOrigin::Client),
+                request,
+                options,
+            )
+            .await
+    }
+}
+/// Full service name for this service.
+pub const SOURCE_CATALOG_SERVICE_SERVICE_NAME: &str = "popcorn.v1.SourceCatalogService";
+/// Static [`Spec`](::connectrpc::Spec) for the `ExportSourceCatalog` RPC, as seen by the server; the generated client passes it with [`origin`](::connectrpc::Spec::origin) `Client` (compare across sides with [`Spec::same_method`](::connectrpc::Spec::same_method)).
+pub const SOURCE_CATALOG_SERVICE_EXPORT_SOURCE_CATALOG_SPEC: ::connectrpc::Spec = ::connectrpc::Spec::server(
+        "/popcorn.v1.SourceCatalogService/ExportSourceCatalog",
+        ::connectrpc::StreamType::Unary,
+    )
+    .with_idempotency_level(::connectrpc::IdempotencyLevel::Unknown);
+/// Static [`Spec`](::connectrpc::Spec) for the `PreviewSourceCatalog` RPC, as seen by the server; the generated client passes it with [`origin`](::connectrpc::Spec::origin) `Client` (compare across sides with [`Spec::same_method`](::connectrpc::Spec::same_method)).
+pub const SOURCE_CATALOG_SERVICE_PREVIEW_SOURCE_CATALOG_SPEC: ::connectrpc::Spec = ::connectrpc::Spec::server(
+        "/popcorn.v1.SourceCatalogService/PreviewSourceCatalog",
+        ::connectrpc::StreamType::Unary,
+    )
+    .with_idempotency_level(::connectrpc::IdempotencyLevel::Unknown);
+/// Static [`Spec`](::connectrpc::Spec) for the `ImportSourceCatalog` RPC, as seen by the server; the generated client passes it with [`origin`](::connectrpc::Spec::origin) `Client` (compare across sides with [`Spec::same_method`](::connectrpc::Spec::same_method)).
+pub const SOURCE_CATALOG_SERVICE_IMPORT_SOURCE_CATALOG_SPEC: ::connectrpc::Spec = ::connectrpc::Spec::server(
+        "/popcorn.v1.SourceCatalogService/ImportSourceCatalog",
+        ::connectrpc::StreamType::Unary,
+    )
+    .with_idempotency_level(::connectrpc::IdempotencyLevel::Unknown);
+/// Server trait for SourceCatalogService.
+///
+/// # Implementing handlers
+///
+/// Implement methods with plain `async fn`; the returned future satisfies
+/// the `Send` bound automatically.
+///
+/// **Unary and server-streaming requests** arrive as
+/// [`ServiceRequest<'_, Req>`](::connectrpc::ServiceRequest): a zero-copy
+/// view of the request plus its body, valid for the duration of the call.
+/// Fields are read directly (`request.name` is a `&str` into the decoded
+/// buffer) and the borrow may be held across `.await` points. Anything
+/// that must outlive the call — `tokio::spawn`, channels, server state,
+/// or data captured by a returned response stream — takes owned data:
+/// call `request.to_owned_message()` (or copy the specific fields)
+/// first.
+///
+/// **Client-streaming and bidi requests** arrive as
+/// [`InboundStream<Req>`](::connectrpc::InboundStream) — a
+/// `ServiceStream` of [`StreamMessage`](::connectrpc::StreamMessage)s.
+/// Each item owns its decoded buffer and is `Send + 'static`, so items
+/// can be buffered or moved into spawned tasks; read fields zero-copy
+/// through the generated accessor methods (`item.name()`) or `.view()`,
+/// convert with `.to_owned_message()`, or yield an item back unchanged —
+/// `StreamMessage<M>` implements `Encodable<M>`.
+///
+/// Request types resolved through `extern_path` (e.g. well-known types
+/// from another crate) use the same wrappers; the crate that owns the
+/// type must be generated with buffa ≥ 0.9.0 and views enabled so the
+/// backing `HasMessageView` impl exists.
+///
+/// The `impl Encodable<Out>` return bound accepts the owned `Out`, the
+/// generated `OutView<'_>` / `OwnedOutView`,
+/// [`MaybeBorrowed`](::connectrpc::MaybeBorrowed), or
+/// [`PreEncoded`](::connectrpc::PreEncoded) for handlers that encode a
+/// non-`'static` view internally and pass the bytes across the handler
+/// boundary. View bodies are not emitted for output types mapped via
+/// `extern_path` (the impl would be an orphan); return owned for
+/// WKT/extern outputs.
+///
+/// Server-streaming and bidi-streaming methods return
+/// `ServiceStream<impl Encodable<Out> + Send + use<Self>>`. The
+/// `use<Self>` precise-capturing clause excludes `&self`'s lifetime and
+/// the request's lifetime (unary methods use `use<'a, Self>` and may
+/// borrow from `&self`), so stream items must be `'static` and cannot
+/// borrow from the request. To stream view-encoded data, encode each
+/// item inside the stream body and yield
+/// [`PreEncoded`](::connectrpc::PreEncoded) — see its `# Streaming
+/// example` doc.
+#[allow(clippy::type_complexity)]
+pub trait SourceCatalogService: Send + Sync + 'static {
+    /// Handle the ExportSourceCatalog RPC.
+    ///
+    /// `'a` lets the response body borrow from `&self` (e.g. server-resident state).
+    ///
+    /// `request` is borrowed from the request body and is valid for the
+    /// duration of the call; message fields are read directly on it
+    /// (zero-copy). The response cannot borrow from `request` — use
+    /// `.to_owned_message()` (or copy the specific fields) for anything
+    /// returned, stored, or moved into `tokio::spawn`.
+    fn export_source_catalog<'a>(
+        &'a self,
+        ctx: ::connectrpc::RequestContext,
+        request: ::connectrpc::ServiceRequest<
+            '_,
+            crate::proto::popcorn::v1::ExportSourceCatalogRequest,
+        >,
+    ) -> impl ::std::future::Future<
+        Output = ::connectrpc::ServiceResult<
+            impl ::connectrpc::Encodable<
+                crate::proto::popcorn::v1::ExportSourceCatalogResponse,
+            > + Send + use<'a, Self>,
+        >,
+    > + Send;
+    /// Handle the PreviewSourceCatalog RPC.
+    ///
+    /// `'a` lets the response body borrow from `&self` (e.g. server-resident state).
+    ///
+    /// `request` is borrowed from the request body and is valid for the
+    /// duration of the call; message fields are read directly on it
+    /// (zero-copy). The response cannot borrow from `request` — use
+    /// `.to_owned_message()` (or copy the specific fields) for anything
+    /// returned, stored, or moved into `tokio::spawn`.
+    fn preview_source_catalog<'a>(
+        &'a self,
+        ctx: ::connectrpc::RequestContext,
+        request: ::connectrpc::ServiceRequest<
+            '_,
+            crate::proto::popcorn::v1::PreviewSourceCatalogRequest,
+        >,
+    ) -> impl ::std::future::Future<
+        Output = ::connectrpc::ServiceResult<
+            impl ::connectrpc::Encodable<
+                crate::proto::popcorn::v1::PreviewSourceCatalogResponse,
+            > + Send + use<'a, Self>,
+        >,
+    > + Send;
+    /// Handle the ImportSourceCatalog RPC.
+    ///
+    /// `'a` lets the response body borrow from `&self` (e.g. server-resident state).
+    ///
+    /// `request` is borrowed from the request body and is valid for the
+    /// duration of the call; message fields are read directly on it
+    /// (zero-copy). The response cannot borrow from `request` — use
+    /// `.to_owned_message()` (or copy the specific fields) for anything
+    /// returned, stored, or moved into `tokio::spawn`.
+    fn import_source_catalog<'a>(
+        &'a self,
+        ctx: ::connectrpc::RequestContext,
+        request: ::connectrpc::ServiceRequest<
+            '_,
+            crate::proto::popcorn::v1::ImportSourceCatalogRequest,
+        >,
+    ) -> impl ::std::future::Future<
+        Output = ::connectrpc::ServiceResult<
+            impl ::connectrpc::Encodable<
+                crate::proto::popcorn::v1::ImportSourceCatalogResponse,
+            > + Send + use<'a, Self>,
+        >,
+    > + Send;
+}
+/// Extension trait for registering a service implementation with a Router.
+///
+/// This trait is automatically implemented for all types that implement the service trait.
+/// Prefer [`Router::add_service`](::connectrpc::Router::add_service) for
+/// top-down registration; `register` remains available for compatibility
+/// and cases where the service-first call shape is more convenient.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use std::sync::Arc;
+///
+/// let service = Arc::new(MyServiceImpl);
+/// let router = service.register(Router::new());
+/// ```
+pub trait SourceCatalogServiceExt: SourceCatalogService {
+    /// Register this service implementation with a Router.
+    ///
+    /// Takes ownership of the `Arc<Self>` and returns a new Router with
+    /// this service's methods registered.
+    fn register(
+        self: ::std::sync::Arc<Self>,
+        router: ::connectrpc::Router,
+    ) -> ::connectrpc::Router;
+}
+impl<S: SourceCatalogService> SourceCatalogServiceExt for S {
+    fn register(
+        self: ::std::sync::Arc<Self>,
+        router: ::connectrpc::Router,
+    ) -> ::connectrpc::Router {
+        router
+            .route_view(
+                SOURCE_CATALOG_SERVICE_SERVICE_NAME,
+                "ExportSourceCatalog",
+                {
+                    let svc = ::std::sync::Arc::clone(&self);
+                    ::connectrpc::view_handler_fn(move |
+                        ctx,
+                        req: ::buffa::view::OwnedView<
+                            crate::proto::popcorn::v1::__buffa::view::ExportSourceCatalogRequestView<
+                                'static,
+                            >,
+                        >,
+                        format|
+                    {
+                        let svc = ::std::sync::Arc::clone(&svc);
+                        async move {
+                            let sreq = ::connectrpc::ServiceRequest::<
+                                crate::proto::popcorn::v1::ExportSourceCatalogRequest,
+                            >::from_parts(req.reborrow(), req.bytes());
+                            svc.export_source_catalog(ctx, sreq)
+                                .await?
+                                .encode::<
+                                    crate::proto::popcorn::v1::ExportSourceCatalogResponse,
+                                >(format)
+                        }
+                    })
+                },
+            )
+            .with_spec(SOURCE_CATALOG_SERVICE_EXPORT_SOURCE_CATALOG_SPEC)
+            .route_view(
+                SOURCE_CATALOG_SERVICE_SERVICE_NAME,
+                "PreviewSourceCatalog",
+                {
+                    let svc = ::std::sync::Arc::clone(&self);
+                    ::connectrpc::view_handler_fn(move |
+                        ctx,
+                        req: ::buffa::view::OwnedView<
+                            crate::proto::popcorn::v1::__buffa::view::PreviewSourceCatalogRequestView<
+                                'static,
+                            >,
+                        >,
+                        format|
+                    {
+                        let svc = ::std::sync::Arc::clone(&svc);
+                        async move {
+                            let sreq = ::connectrpc::ServiceRequest::<
+                                crate::proto::popcorn::v1::PreviewSourceCatalogRequest,
+                            >::from_parts(req.reborrow(), req.bytes());
+                            svc.preview_source_catalog(ctx, sreq)
+                                .await?
+                                .encode::<
+                                    crate::proto::popcorn::v1::PreviewSourceCatalogResponse,
+                                >(format)
+                        }
+                    })
+                },
+            )
+            .with_spec(SOURCE_CATALOG_SERVICE_PREVIEW_SOURCE_CATALOG_SPEC)
+            .route_view(
+                SOURCE_CATALOG_SERVICE_SERVICE_NAME,
+                "ImportSourceCatalog",
+                {
+                    let svc = ::std::sync::Arc::clone(&self);
+                    ::connectrpc::view_handler_fn(move |
+                        ctx,
+                        req: ::buffa::view::OwnedView<
+                            crate::proto::popcorn::v1::__buffa::view::ImportSourceCatalogRequestView<
+                                'static,
+                            >,
+                        >,
+                        format|
+                    {
+                        let svc = ::std::sync::Arc::clone(&svc);
+                        async move {
+                            let sreq = ::connectrpc::ServiceRequest::<
+                                crate::proto::popcorn::v1::ImportSourceCatalogRequest,
+                            >::from_parts(req.reborrow(), req.bytes());
+                            svc.import_source_catalog(ctx, sreq)
+                                .await?
+                                .encode::<
+                                    crate::proto::popcorn::v1::ImportSourceCatalogResponse,
+                                >(format)
+                        }
+                    })
+                },
+            )
+            .with_spec(SOURCE_CATALOG_SERVICE_IMPORT_SOURCE_CATALOG_SPEC)
+    }
+}
+/// Type-inference marker used by [`Router::add_service`](::connectrpc::Router::add_service).
+#[doc(hidden)]
+pub struct SourceCatalogServiceRegisterMarker;
+impl<
+    S: SourceCatalogService,
+> ::connectrpc::ServiceRegister<SourceCatalogServiceRegisterMarker>
+for ::std::sync::Arc<S> {
+    fn register_service(self, router: ::connectrpc::Router) -> ::connectrpc::Router {
+        <S as SourceCatalogServiceExt>::register(self, router)
+    }
+}
+/// Monomorphic dispatcher for `SourceCatalogService`.
+///
+/// Unlike `.register(Router)` which type-erases each method into an `Arc<dyn ErasedHandler>` stored in a `HashMap`, this struct dispatches via a compile-time `match` on method name: no vtable, no hash lookup.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use connectrpc::ConnectRpcService;
+///
+/// let server = SourceCatalogServiceServer::new(MyImpl);
+/// let service = ConnectRpcService::new(server);
+/// // hand `service` to axum/hyper as a fallback_service
+/// ```
+pub struct SourceCatalogServiceServer<T> {
+    inner: ::std::sync::Arc<T>,
+}
+impl<T: SourceCatalogService> SourceCatalogServiceServer<T> {
+    /// Wrap a service implementation in a monomorphic dispatcher.
+    pub fn new(service: T) -> Self {
+        Self {
+            inner: ::std::sync::Arc::new(service),
+        }
+    }
+    /// Wrap an already-`Arc`'d service implementation.
+    pub fn from_arc(inner: ::std::sync::Arc<T>) -> Self {
+        Self { inner }
+    }
+}
+impl<T> Clone for SourceCatalogServiceServer<T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: ::std::sync::Arc::clone(&self.inner),
+        }
+    }
+}
+impl<T: SourceCatalogService> ::connectrpc::Dispatcher
+for SourceCatalogServiceServer<T> {
+    #[inline]
+    fn lookup(
+        &self,
+        path: &str,
+    ) -> Option<::connectrpc::dispatcher::codegen::MethodDescriptor> {
+        let method = path.strip_prefix("popcorn.v1.SourceCatalogService/")?;
+        match method {
+            "ExportSourceCatalog" => {
+                Some(
+                    ::connectrpc::dispatcher::codegen::MethodDescriptor::unary(false)
+                        .with_spec(SOURCE_CATALOG_SERVICE_EXPORT_SOURCE_CATALOG_SPEC),
+                )
+            }
+            "PreviewSourceCatalog" => {
+                Some(
+                    ::connectrpc::dispatcher::codegen::MethodDescriptor::unary(false)
+                        .with_spec(SOURCE_CATALOG_SERVICE_PREVIEW_SOURCE_CATALOG_SPEC),
+                )
+            }
+            "ImportSourceCatalog" => {
+                Some(
+                    ::connectrpc::dispatcher::codegen::MethodDescriptor::unary(false)
+                        .with_spec(SOURCE_CATALOG_SERVICE_IMPORT_SOURCE_CATALOG_SPEC),
+                )
+            }
+            _ => None,
+        }
+    }
+    fn call_unary(
+        &self,
+        path: &str,
+        ctx: ::connectrpc::RequestContext,
+        request: ::connectrpc::Payload,
+        format: ::connectrpc::CodecFormat,
+    ) -> ::connectrpc::dispatcher::codegen::UnaryResult {
+        let Some(method) = path.strip_prefix("popcorn.v1.SourceCatalogService/") else {
+            return ::connectrpc::dispatcher::codegen::unimplemented_unary(path);
+        };
+        let _ = (&ctx, &request, &format);
+        match method {
+            "ExportSourceCatalog" => {
+                let svc = ::std::sync::Arc::clone(&self.inner);
+                Box::pin(async move {
+                    let body = ::connectrpc::dispatcher::codegen::request_proto_bytes::<
+                        crate::proto::popcorn::v1::ExportSourceCatalogRequest,
+                    >(request.encoded()?, format)?;
+                    let req: crate::proto::popcorn::v1::__buffa::view::ExportSourceCatalogRequestView<
+                        '_,
+                    > = ::connectrpc::dispatcher::codegen::decode_borrowed_request_view(
+                        &body,
+                        ctx.decode_options(),
+                    )?;
+                    let req = ::connectrpc::ServiceRequest::<
+                        crate::proto::popcorn::v1::ExportSourceCatalogRequest,
+                    >::from_parts(&req, &body);
+                    svc.export_source_catalog(ctx, req)
+                        .await?
+                        .encode::<
+                            crate::proto::popcorn::v1::ExportSourceCatalogResponse,
+                        >(format)
+                })
+            }
+            "PreviewSourceCatalog" => {
+                let svc = ::std::sync::Arc::clone(&self.inner);
+                Box::pin(async move {
+                    let body = ::connectrpc::dispatcher::codegen::request_proto_bytes::<
+                        crate::proto::popcorn::v1::PreviewSourceCatalogRequest,
+                    >(request.encoded()?, format)?;
+                    let req: crate::proto::popcorn::v1::__buffa::view::PreviewSourceCatalogRequestView<
+                        '_,
+                    > = ::connectrpc::dispatcher::codegen::decode_borrowed_request_view(
+                        &body,
+                        ctx.decode_options(),
+                    )?;
+                    let req = ::connectrpc::ServiceRequest::<
+                        crate::proto::popcorn::v1::PreviewSourceCatalogRequest,
+                    >::from_parts(&req, &body);
+                    svc.preview_source_catalog(ctx, req)
+                        .await?
+                        .encode::<
+                            crate::proto::popcorn::v1::PreviewSourceCatalogResponse,
+                        >(format)
+                })
+            }
+            "ImportSourceCatalog" => {
+                let svc = ::std::sync::Arc::clone(&self.inner);
+                Box::pin(async move {
+                    let body = ::connectrpc::dispatcher::codegen::request_proto_bytes::<
+                        crate::proto::popcorn::v1::ImportSourceCatalogRequest,
+                    >(request.encoded()?, format)?;
+                    let req: crate::proto::popcorn::v1::__buffa::view::ImportSourceCatalogRequestView<
+                        '_,
+                    > = ::connectrpc::dispatcher::codegen::decode_borrowed_request_view(
+                        &body,
+                        ctx.decode_options(),
+                    )?;
+                    let req = ::connectrpc::ServiceRequest::<
+                        crate::proto::popcorn::v1::ImportSourceCatalogRequest,
+                    >::from_parts(&req, &body);
+                    svc.import_source_catalog(ctx, req)
+                        .await?
+                        .encode::<
+                            crate::proto::popcorn::v1::ImportSourceCatalogResponse,
+                        >(format)
+                })
+            }
+            _ => ::connectrpc::dispatcher::codegen::unimplemented_unary(path),
+        }
+    }
+    fn call_server_streaming(
+        &self,
+        path: &str,
+        ctx: ::connectrpc::RequestContext,
+        request: ::buffa::bytes::Bytes,
+        format: ::connectrpc::CodecFormat,
+    ) -> ::connectrpc::dispatcher::codegen::StreamingResult {
+        let Some(method) = path.strip_prefix("popcorn.v1.SourceCatalogService/") else {
+            return ::connectrpc::dispatcher::codegen::unimplemented_streaming(path);
+        };
+        let _ = (&ctx, &request, &format);
+        match method {
+            _ => ::connectrpc::dispatcher::codegen::unimplemented_streaming(path),
+        }
+    }
+    fn call_client_streaming(
+        &self,
+        path: &str,
+        ctx: ::connectrpc::RequestContext,
+        requests: ::connectrpc::dispatcher::codegen::RequestStream,
+        format: ::connectrpc::CodecFormat,
+    ) -> ::connectrpc::dispatcher::codegen::UnaryResult {
+        let Some(method) = path.strip_prefix("popcorn.v1.SourceCatalogService/") else {
+            return ::connectrpc::dispatcher::codegen::unimplemented_unary(path);
+        };
+        let _ = (&ctx, &requests, &format);
+        match method {
+            _ => ::connectrpc::dispatcher::codegen::unimplemented_unary(path),
+        }
+    }
+    fn call_bidi_streaming(
+        &self,
+        path: &str,
+        ctx: ::connectrpc::RequestContext,
+        requests: ::connectrpc::dispatcher::codegen::RequestStream,
+        format: ::connectrpc::CodecFormat,
+    ) -> ::connectrpc::dispatcher::codegen::StreamingResult {
+        let Some(method) = path.strip_prefix("popcorn.v1.SourceCatalogService/") else {
+            return ::connectrpc::dispatcher::codegen::unimplemented_streaming(path);
+        };
+        let _ = (&ctx, &requests, &format);
+        match method {
+            _ => ::connectrpc::dispatcher::codegen::unimplemented_streaming(path),
+        }
+    }
+}
+/// Client for this service.
+///
+/// Generic over `T: ClientTransport`. For **gRPC** (HTTP/2), use
+/// `Http2Connection` — it has honest `poll_ready` and composes with
+/// `tower::balance` for multi-connection load balancing. For **Connect
+/// over HTTP/1.1** (or unknown protocol), use `HttpClient`.
+///
+/// # Example (gRPC / HTTP/2)
+///
+/// ```rust,ignore
+/// use connectrpc::client::{Http2Connection, ClientConfig};
+/// use connectrpc::Protocol;
+///
+/// let uri: http::Uri = "http://localhost:8080".parse()?;
+/// let conn = Http2Connection::connect_plaintext(uri.clone()).await?.shared(1024);
+/// let config = ClientConfig::new(uri).with_protocol(Protocol::Grpc);
+///
+/// let client = SourceCatalogServiceClient::new(conn, config);
+/// let response = client.export_source_catalog(request).await?;
+/// ```
+///
+/// # Example (Connect / HTTP/1.1 or ALPN)
+///
+/// ```rust,ignore
+/// use connectrpc::client::{HttpClient, ClientConfig};
+///
+/// let http = HttpClient::plaintext();  // cleartext http:// only
+/// let config = ClientConfig::new("http://localhost:8080".parse()?);
+///
+/// let client = SourceCatalogServiceClient::new(http, config);
+/// let response = client.export_source_catalog(request).await?;
+/// ```
+///
+/// # Working with the response
+///
+/// Unary calls return [`UnaryResponse<OwnedView<FooView>>`](::connectrpc::client::UnaryResponse).
+/// [`view()`](::connectrpc::client::UnaryResponse::view) borrows the response
+/// message, so field access is zero-copy:
+///
+/// ```rust,ignore
+/// let resp = client.export_source_catalog(request).await?;
+/// let name: &str = resp.view().name;  // borrow into the response buffer
+/// ```
+///
+/// If you need the owned struct (e.g. to store or pass by value), use
+/// [`into_owned()`](::connectrpc::client::UnaryResponse::into_owned):
+///
+/// ```rust,ignore
+/// let owned = client.export_source_catalog(request).await?.into_owned();
+/// ```
+///
+/// [`into_view()`](::connectrpc::client::UnaryResponse::into_view) keeps the
+/// zero-copy decoded body (an `OwnedView`) without copying; field access on it
+/// goes through `.reborrow()`. Streaming responses yield one
+/// [`StreamMessage`](::connectrpc::StreamMessage) per received message from
+/// `.message().await` — read fields zero-copy through the generated accessor
+/// methods (`msg.name()`) or `.view()`, or convert with `.to_owned_message()`.
+#[derive(Clone)]
+pub struct SourceCatalogServiceClient<T> {
+    transport: T,
+    config: ::connectrpc::client::ClientConfig,
+}
+impl<T> SourceCatalogServiceClient<T>
+where
+    T: ::connectrpc::client::ClientTransport,
+    <T::ResponseBody as ::connectrpc::http_body::Body>::Error: ::std::fmt::Display,
+{
+    /// Create a new client with the given transport and configuration.
+    pub fn new(transport: T, config: ::connectrpc::client::ClientConfig) -> Self {
+        Self { transport, config }
+    }
+    /// Get the client configuration.
+    pub fn config(&self) -> &::connectrpc::client::ClientConfig {
+        &self.config
+    }
+    /// Get a mutable reference to the client configuration.
+    pub fn config_mut(&mut self) -> &mut ::connectrpc::client::ClientConfig {
+        &mut self.config
+    }
+    /// Call the ExportSourceCatalog RPC. Sends a request to /popcorn.v1.SourceCatalogService/ExportSourceCatalog.
+    pub async fn export_source_catalog(
+        &self,
+        request: crate::proto::popcorn::v1::ExportSourceCatalogRequest,
+    ) -> Result<
+        ::connectrpc::client::UnaryResponse<
+            ::buffa::view::OwnedView<
+                crate::proto::popcorn::v1::__buffa::view::ExportSourceCatalogResponseView<
+                    'static,
+                >,
+            >,
+        >,
+        ::connectrpc::ConnectError,
+    > {
+        self.export_source_catalog_with_options(
+                request,
+                ::connectrpc::client::CallOptions::default(),
+            )
+            .await
+    }
+    /// Call the ExportSourceCatalog RPC with explicit per-call options. Options override [`ClientConfig`](::connectrpc::client::ClientConfig) defaults.
+    pub async fn export_source_catalog_with_options(
+        &self,
+        request: crate::proto::popcorn::v1::ExportSourceCatalogRequest,
+        options: ::connectrpc::client::CallOptions,
+    ) -> Result<
+        ::connectrpc::client::UnaryResponse<
+            ::buffa::view::OwnedView<
+                crate::proto::popcorn::v1::__buffa::view::ExportSourceCatalogResponseView<
+                    'static,
+                >,
+            >,
+        >,
+        ::connectrpc::ConnectError,
+    > {
+        ::connectrpc::client::call_unary(
+                &self.transport,
+                &self.config,
+                SOURCE_CATALOG_SERVICE_EXPORT_SOURCE_CATALOG_SPEC
+                    .with_origin(::connectrpc::SpecOrigin::Client),
+                request,
+                options,
+            )
+            .await
+    }
+    /// Call the PreviewSourceCatalog RPC. Sends a request to /popcorn.v1.SourceCatalogService/PreviewSourceCatalog.
+    pub async fn preview_source_catalog(
+        &self,
+        request: crate::proto::popcorn::v1::PreviewSourceCatalogRequest,
+    ) -> Result<
+        ::connectrpc::client::UnaryResponse<
+            ::buffa::view::OwnedView<
+                crate::proto::popcorn::v1::__buffa::view::PreviewSourceCatalogResponseView<
+                    'static,
+                >,
+            >,
+        >,
+        ::connectrpc::ConnectError,
+    > {
+        self.preview_source_catalog_with_options(
+                request,
+                ::connectrpc::client::CallOptions::default(),
+            )
+            .await
+    }
+    /// Call the PreviewSourceCatalog RPC with explicit per-call options. Options override [`ClientConfig`](::connectrpc::client::ClientConfig) defaults.
+    pub async fn preview_source_catalog_with_options(
+        &self,
+        request: crate::proto::popcorn::v1::PreviewSourceCatalogRequest,
+        options: ::connectrpc::client::CallOptions,
+    ) -> Result<
+        ::connectrpc::client::UnaryResponse<
+            ::buffa::view::OwnedView<
+                crate::proto::popcorn::v1::__buffa::view::PreviewSourceCatalogResponseView<
+                    'static,
+                >,
+            >,
+        >,
+        ::connectrpc::ConnectError,
+    > {
+        ::connectrpc::client::call_unary(
+                &self.transport,
+                &self.config,
+                SOURCE_CATALOG_SERVICE_PREVIEW_SOURCE_CATALOG_SPEC
+                    .with_origin(::connectrpc::SpecOrigin::Client),
+                request,
+                options,
+            )
+            .await
+    }
+    /// Call the ImportSourceCatalog RPC. Sends a request to /popcorn.v1.SourceCatalogService/ImportSourceCatalog.
+    pub async fn import_source_catalog(
+        &self,
+        request: crate::proto::popcorn::v1::ImportSourceCatalogRequest,
+    ) -> Result<
+        ::connectrpc::client::UnaryResponse<
+            ::buffa::view::OwnedView<
+                crate::proto::popcorn::v1::__buffa::view::ImportSourceCatalogResponseView<
+                    'static,
+                >,
+            >,
+        >,
+        ::connectrpc::ConnectError,
+    > {
+        self.import_source_catalog_with_options(
+                request,
+                ::connectrpc::client::CallOptions::default(),
+            )
+            .await
+    }
+    /// Call the ImportSourceCatalog RPC with explicit per-call options. Options override [`ClientConfig`](::connectrpc::client::ClientConfig) defaults.
+    pub async fn import_source_catalog_with_options(
+        &self,
+        request: crate::proto::popcorn::v1::ImportSourceCatalogRequest,
+        options: ::connectrpc::client::CallOptions,
+    ) -> Result<
+        ::connectrpc::client::UnaryResponse<
+            ::buffa::view::OwnedView<
+                crate::proto::popcorn::v1::__buffa::view::ImportSourceCatalogResponseView<
+                    'static,
+                >,
+            >,
+        >,
+        ::connectrpc::ConnectError,
+    > {
+        ::connectrpc::client::call_unary(
+                &self.transport,
+                &self.config,
+                SOURCE_CATALOG_SERVICE_IMPORT_SOURCE_CATALOG_SPEC
                     .with_origin(::connectrpc::SpecOrigin::Client),
                 request,
                 options,

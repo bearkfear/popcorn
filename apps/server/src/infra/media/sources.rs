@@ -37,6 +37,28 @@ pub(super) const fn binding(content: &Content) -> (i32, Option<u32>, Option<u32>
 }
 
 impl Sources for SqliteSources {
+    async fn export_catalog(
+        &self,
+        name: String,
+        description: String,
+    ) -> Result<String, MediaError> {
+        self.export_archive(name, description).await
+    }
+    async fn preview_catalog(
+        &self,
+        catalog: crate::core::media::archive::SourceCatalog,
+    ) -> Result<crate::application::media::source_catalog::CatalogPreview, MediaError> {
+        self.preview_archive(catalog).await
+    }
+    async fn import_catalog(
+        &self,
+        catalog: crate::core::media::archive::SourceCatalog,
+        replace: bool,
+        revision: &str,
+    ) -> Result<crate::application::media::source_catalog::CatalogPreview, MediaError> {
+        self.import_archive(catalog, replace, revision).await
+    }
+
     async fn save(&self, content: Content, source: ResolvedSource) -> Result<Source, MediaError> {
         super::source_write::save(&self.pool, content, source).await
     }

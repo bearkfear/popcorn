@@ -33,6 +33,7 @@ fn database_error(error: &dyn std::error::Error) -> ConnectError {
 
 pub(super) fn source_error(error: MediaError) -> ConnectError {
     let (code, reason) = match error {
+        MediaError::CatalogChanged => (ErrorCode::FailedPrecondition, "CATALOG_CHANGED"),
         MediaError::Invalid => (ErrorCode::InvalidArgument, "SOURCE_INVALID"),
         MediaError::NotFound => (ErrorCode::NotFound, "SOURCE_NOT_FOUND"),
         MediaError::InUse => (ErrorCode::FailedPrecondition, "SOURCE_IN_USE"),

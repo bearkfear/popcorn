@@ -94,6 +94,13 @@ pub mod __buffa {
         reg.register_json_any(super::__UPDATE_HISTORY_RESPONSE_JSON_ANY);
         reg.register_json_any(super::__IMPORT_HISTORY_REQUEST_JSON_ANY);
         reg.register_json_any(super::__IMPORT_HISTORY_RESPONSE_JSON_ANY);
+        reg.register_json_any(super::__EXPORT_SOURCE_CATALOG_REQUEST_JSON_ANY);
+        reg.register_json_any(super::__EXPORT_SOURCE_CATALOG_RESPONSE_JSON_ANY);
+        reg.register_json_any(super::__PREVIEW_SOURCE_CATALOG_REQUEST_JSON_ANY);
+        reg.register_json_any(super::__SOURCE_CATALOG_PREVIEW_JSON_ANY);
+        reg.register_json_any(super::__PREVIEW_SOURCE_CATALOG_RESPONSE_JSON_ANY);
+        reg.register_json_any(super::__IMPORT_SOURCE_CATALOG_REQUEST_JSON_ANY);
+        reg.register_json_any(super::__IMPORT_SOURCE_CATALOG_RESPONSE_JSON_ANY);
     }
 }
 #[doc(inline)]
@@ -344,5 +351,33 @@ pub use self::__buffa::view::ImportHistoryRequestOwnedView;
 pub use self::__buffa::view::ImportHistoryResponseView;
 #[doc(inline)]
 pub use self::__buffa::view::ImportHistoryResponseOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::ExportSourceCatalogRequestView;
+#[doc(inline)]
+pub use self::__buffa::view::ExportSourceCatalogRequestOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::ExportSourceCatalogResponseView;
+#[doc(inline)]
+pub use self::__buffa::view::ExportSourceCatalogResponseOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::PreviewSourceCatalogRequestView;
+#[doc(inline)]
+pub use self::__buffa::view::PreviewSourceCatalogRequestOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::SourceCatalogPreviewView;
+#[doc(inline)]
+pub use self::__buffa::view::SourceCatalogPreviewOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::PreviewSourceCatalogResponseView;
+#[doc(inline)]
+pub use self::__buffa::view::PreviewSourceCatalogResponseOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::ImportSourceCatalogRequestView;
+#[doc(inline)]
+pub use self::__buffa::view::ImportSourceCatalogRequestOwnedView;
+#[doc(inline)]
+pub use self::__buffa::view::ImportSourceCatalogResponseView;
+#[doc(inline)]
+pub use self::__buffa::view::ImportSourceCatalogResponseOwnedView;
 #[doc(inline)]
 pub use self::__buffa::register_types;

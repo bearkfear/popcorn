@@ -5,6 +5,7 @@ import type { BootstrapViewModel } from "../bootstrap/bootstrap.viewmodel";
 import { CachePanel } from "./cache-panel";
 import type { SettingsViewModel } from "./settings.viewmodel";
 import { SetupPanel } from "./setup-panel";
+import { SourceCatalogPanel } from "./source-catalog-panel";
 
 const sections = [
   { id: "catalog", label: "Catálogo", description: "Conexão com o TMDB", icon: "database" },
@@ -13,6 +14,12 @@ const sections = [
     label: "Armazenamento",
     description: "Espaço e arquivos temporários",
     icon: "storage",
+  },
+  {
+    id: "sources",
+    label: "Meu catálogo",
+    description: "Importar e exportar fontes",
+    icon: "database",
   },
   { id: "app", label: "Aplicativo", description: "Conexão e informações", icon: "monitor" },
 ] as const satisfies ReadonlyArray<{
@@ -30,6 +37,7 @@ export function SettingsPage(props: {
   readonly onReconnect: () => void;
   readonly onConfigured: () => void;
   readonly onRemoved: () => void;
+  readonly onImported: () => void;
 }) {
   const [section, setSection] = createSignal<string>("catalog");
   const ready = () => props.bootstrap.connection() === "ready";
@@ -80,7 +88,7 @@ export function SettingsPage(props: {
         <aside class="sticky top-24 max-[760px]:static">
           <nav
             aria-label="Seções das configurações"
-            class="flex flex-col gap-2 max-[760px]:flex-row max-[760px]:gap-1"
+            class="flex flex-col gap-2 max-[760px]:grid max-[760px]:grid-cols-2 max-[760px]:gap-2"
           >
             <For each={sections}>
               {(item) => (
@@ -144,6 +152,13 @@ export function SettingsPage(props: {
               onRemoved={props.onRemoved}
             />
           </Show>
+          <Show when={section() === "sources" && ready()}>
+            <SourceCatalogPanel
+              vm={props.vm.sourceCatalog}
+              playbackActive={props.playbackActive}
+              onImported={props.onImported}
+            />
+          </Show>
           <Show when={section() === "storage" && ready()}>
             <CachePanel vm={props.vm} playbackActive={props.playbackActive} />
           </Show>
@@ -175,7 +190,8 @@ export function SettingsPage(props: {
                     disabled={
                       props.bootstrap.connection() === "connecting" ||
                       props.vm.configurationBusy() ||
-                      props.vm.cacheBusy()
+                      props.vm.cacheBusy() ||
+                      props.vm.sourceCatalog.busy()
                     }
                     onClick={props.onReconnect}
                   >

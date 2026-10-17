@@ -6,6 +6,8 @@ use crate::core::media::InvalidMedia;
 pub(crate) enum MediaError {
     #[error("invalid source request")]
     Invalid,
+    #[error("source catalog changed since preview")]
+    CatalogChanged,
     #[error("source not found")]
     NotFound,
     #[error("source is in use")]

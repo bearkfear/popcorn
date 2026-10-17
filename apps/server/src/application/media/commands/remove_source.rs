@@ -10,6 +10,7 @@ pub(crate) async fn handle<R: Sources, T: Transfers, C: Cache>(
     context: &MediaContext<R, T, C>,
     request: RemoveSource<'_>,
 ) -> Result<(), MediaError> {
+    let _guard = context.command.lock().await;
     if context.transfers.in_use(Some(request.source_id)).await {
         return Err(MediaError::InUse);
     }

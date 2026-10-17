@@ -22,6 +22,7 @@ pub(crate) async fn handle<R: Sources, T: Transfers, C: Cache>(
     if let Some(id) = context.transfers.previous(&request.idempotency_key).await {
         return context.transfers.playback(id).await;
     }
+    let command = context.command.lock().await;
     let file = context
         .sources
         .playback_file(&request.source_id, request.file_index)
@@ -29,7 +30,6 @@ pub(crate) async fn handle<R: Sources, T: Transfers, C: Cache>(
     if file.size == 0 || !crate::core::media::is_media(&file.name) {
         return Err(MediaError::Invalid);
     }
-    let command = context.command.lock().await;
     if file.size > context.cache.limit().await? {
         return Err(MediaError::Capacity);
     }

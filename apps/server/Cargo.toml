@@ -7,6 +7,7 @@ publish.workspace = true
 default-run = "popcorn-server"
 
 [dependencies]
+base64.workspace = true
 axum.workspace = true
 connectrpc.workspace = true
 popcorn-proto = { path = "src/generated" }

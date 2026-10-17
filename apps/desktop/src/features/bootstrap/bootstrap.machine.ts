@@ -3,6 +3,7 @@ import type {
   CatalogClient,
   HistoryClient,
   PlaybackClient,
+  SourceCatalogClient,
   SourceClient,
   StorageClient,
 } from "../../shared/types";
@@ -11,6 +12,7 @@ export type Clients = {
   readonly history?: HistoryClient;
   readonly catalog?: CatalogClient;
   readonly source?: SourceClient;
+  readonly sourceCatalog?: SourceCatalogClient;
   readonly playback?: PlaybackClient;
   readonly storage?: StorageClient;
 };

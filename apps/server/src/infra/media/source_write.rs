@@ -53,7 +53,7 @@ pub(super) async fn save(
     })
 }
 
-async fn write_files(
+pub(super) async fn write_files(
     transaction: &mut Transaction<'_, Sqlite>,
     source_id: &str,
     files: &[SourceFile],

@@ -3,6 +3,7 @@ import {
   type createCatalogClient,
   type createHistoryClient,
   type createPlaybackClient,
+  type createSourceCatalogClient,
   type createSourceClient,
   type createStorageClient,
   PlaybackQuality,
@@ -19,6 +20,7 @@ export type Bootstrap = {
 export type HistoryClient = ReturnType<typeof createHistoryClient>;
 export type CatalogClient = ReturnType<typeof createCatalogClient>;
 export type PlaybackClient = ReturnType<typeof createPlaybackClient>;
+export type SourceCatalogClient = ReturnType<typeof createSourceCatalogClient>;
 export type SourceClient = ReturnType<typeof createSourceClient>;
 export type StorageClient = ReturnType<typeof createStorageClient>;
 

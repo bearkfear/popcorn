@@ -27,7 +27,11 @@ type Page = "search" | "details" | "settings";
 export function App() {
   const bootstrap = createBootstrapViewModel();
   const catalogClient = () => bootstrap.getClients().catalog;
-  const settings = createSettingsViewModel(catalogClient, () => bootstrap.getClients().storage);
+  const settings = createSettingsViewModel(
+    catalogClient,
+    () => bootstrap.getClients().storage,
+    () => bootstrap.getClients().sourceCatalog,
+  );
   const details = createDetailsViewModel(catalogClient);
   const sources = createSourcesViewModel(() => bootstrap.getClients().source);
   const player = createPlayerViewModel(() => bootstrap.getClients().playback);
@@ -79,7 +83,7 @@ export function App() {
     }
   }
   async function connect() {
-    if (settings.configurationBusy()) return;
+    if (settings.configurationBusy() || settings.sourceCatalog.busy()) return;
     resetSelection();
     await bootstrap.connect(() => {
       void settings.refreshStatus().then(loadCatalog);
@@ -310,6 +314,10 @@ export function App() {
               playbackActive={Boolean(player.playback()) || videoWindowOpen()}
               onBack={closeSettings}
               onReconnect={() => void connect()}
+              onImported={() => {
+                const target = sources.content();
+                if (target) sources.selectContent(target);
+              }}
               onConfigured={configured}
               onRemoved={() => {
                 player.close();

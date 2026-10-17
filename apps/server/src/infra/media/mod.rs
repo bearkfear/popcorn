@@ -26,3 +26,8 @@ pub(crate) use cache::DiskCache;
 pub(crate) use composition::{MediaApplication, media_application};
 pub(crate) use sources::SqliteSources;
 pub(crate) use transfers::TorrentEngine;
+
+mod catalog_archive;
+mod catalog_decode;
+mod catalog_read;
+mod catalog_write;

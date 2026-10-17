@@ -3,7 +3,8 @@
 import { ConnectError, type TmdbStatus } from "@popcorn/sdk";
 import { createResource, createSignal } from "solid-js";
 import { catalogErrorText, needsConfiguration } from "../../catalog-ui";
-import type { CatalogClient, StorageClient } from "../../shared/types";
+import type { CatalogClient, SourceCatalogClient, StorageClient } from "../../shared/types";
+import { createSourceCatalogViewModel } from "./source-catalog.viewmodel";
 
 type StatusRequest = {
   readonly client: CatalogClient;
@@ -216,10 +217,12 @@ function createCacheSubViewModel(getStorageClient: () => StorageClient | undefin
 export function createSettingsViewModel(
   getCatalogClient: () => CatalogClient | undefined,
   getStorageClient: () => StorageClient | undefined,
+  getSourceCatalogClient: () => SourceCatalogClient | undefined,
 ) {
   const tmdb = createTmdbSubViewModel(getCatalogClient);
   const cache = createCacheSubViewModel(getStorageClient);
-  return { ...tmdb, ...cache };
+  const sourceCatalog = createSourceCatalogViewModel(getSourceCatalogClient);
+  return { ...tmdb, ...cache, sourceCatalog };
 }
 
 export type SettingsViewModel = ReturnType<typeof createSettingsViewModel>;

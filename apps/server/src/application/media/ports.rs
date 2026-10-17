@@ -25,6 +25,21 @@ pub(crate) struct PlaybackFile {
 }
 
 pub(crate) trait Sources: Send + Sync {
+    fn export_catalog(
+        &self,
+        name: String,
+        description: String,
+    ) -> impl Future<Output = Result<String, MediaError>> + Send;
+    fn preview_catalog(
+        &self,
+        catalog: crate::core::media::archive::SourceCatalog,
+    ) -> impl Future<Output = Result<super::source_catalog::CatalogPreview, MediaError>> + Send;
+    fn import_catalog(
+        &self,
+        catalog: crate::core::media::archive::SourceCatalog,
+        replace: bool,
+        revision: &str,
+    ) -> impl Future<Output = Result<super::source_catalog::CatalogPreview, MediaError>> + Send;
     fn save(
         &self,
         content: Content,

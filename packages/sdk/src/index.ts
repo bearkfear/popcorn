@@ -5,6 +5,7 @@ import {
   HistoryService,
   PlaybackService,
   SourceService,
+  SourceCatalogService,
   StorageService,
 } from "./gen/popcorn/v1/catalog_pb";
 
@@ -60,4 +61,9 @@ function authenticatedTransport(baseUrl: string, token: string) {
 /** Creates the authenticated user library client. */
 export function createHistoryClient(baseUrl: string, token: string): Client<typeof HistoryService> {
   return createClient(HistoryService, authenticatedTransport(baseUrl, token));
+}
+
+/** Creates the authenticated client for portable source catalogs. */
+export function createSourceCatalogClient(baseUrl: string, token: string): Client<typeof SourceCatalogService> {
+  return createClient(SourceCatalogService, authenticatedTransport(baseUrl, token));
 }
