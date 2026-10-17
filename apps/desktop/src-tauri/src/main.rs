@@ -1,4 +1,4 @@
-//! Native shell: owns process lifecycle and exposes only bootstrap IPC.
+//! Native shell: owns process lifecycle, local folder access and player windows.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -102,6 +102,21 @@ fn open_tmdb_settings(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn open_cache_folder(app: tauri::AppHandle) -> Result<(), String> {
+    let directory = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|_| "Não foi possível localizar a pasta de arquivos temporários.".to_owned())?
+        .join("downloads");
+    tokio::fs::create_dir_all(&directory)
+        .await
+        .map_err(|_| "Não foi possível preparar a pasta de arquivos temporários.".to_owned())?;
+    app.opener()
+        .open_path(directory.to_string_lossy().into_owned(), None::<&str>)
+        .map_err(|_| "Não foi possível abrir a pasta. Tente novamente.".to_owned())
+}
+
+#[tauri::command]
 fn media_diagnostic(sample: diagnostics::MediaSample) -> Result<(), String> {
     diagnostics::record(sample)
 }
@@ -160,6 +175,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             bootstrap,
             stop_backend,
             open_tmdb_settings,
+            open_cache_folder,
             media_diagnostic,
             player_window::open_player_window,
             player_window::take_player_session,

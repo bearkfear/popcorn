@@ -1,6 +1,6 @@
 // ViewModel handling TMDB credentials and storage cache settings.
 
-import type { TmdbStatus } from "@popcorn/sdk";
+import { ConnectError, type TmdbStatus } from "@popcorn/sdk";
 import { createResource, createSignal } from "solid-js";
 import { catalogErrorText, needsConfiguration } from "../../catalog-ui";
 import type { CatalogClient, StorageClient } from "../../shared/types";
@@ -120,11 +120,11 @@ function createTmdbSubViewModel(getCatalogClient: () => CatalogClient | undefine
 type CacheRequest = { readonly client: StorageClient };
 
 function createCacheSubViewModel(getStorageClient: () => StorageClient | undefined) {
-  const [cacheOpen, setCacheOpen] = createSignal(false);
   const [cacheRequest, setCacheRequest] = createSignal<CacheRequest>();
   const [cacheLimitGb, setCacheLimitGb] = createSignal("20");
   const [cacheMutationBusy, setCacheMutationBusy] = createSignal(false);
   const [cacheMutationError, setCacheMutationError] = createSignal("");
+  const [cacheMessage, setCacheMessage] = createSignal("");
 
   const [cacheResource, cacheActions] = createResource(cacheRequest, async (request) => {
     try {
@@ -140,13 +140,19 @@ function createCacheSubViewModel(getStorageClient: () => StorageClient | undefin
 
   function loadCacheSettings() {
     const client = getStorageClient();
-    if (client) setCacheRequest({ client });
+    if (client) {
+      setCacheMutationError("");
+      setCacheMessage("");
+      setCacheRequest({ client });
+    }
   }
 
   async function saveCacheLimit() {
     const client = getStorageClient();
-    const gb = Number.parseInt(cacheLimitGb(), 10);
-    if (!client || Number.isNaN(gb) || gb < 1 || gb > 1000) {
+    if (!client || cacheResource.loading || cacheMutationBusy()) return;
+    const gb = Number(cacheLimitGb());
+    setCacheMessage("");
+    if (!Number.isInteger(gb) || gb < 1 || gb > 1000) {
       setCacheMutationError("Defina um limite de cache entre 1 e 1000 GB.");
       return;
     }
@@ -154,10 +160,16 @@ function createCacheSubViewModel(getStorageClient: () => StorageClient | undefin
     setCacheMutationError("");
     try {
       const bytes = BigInt(gb) * 1024n * 1024n * 1024n;
-      const response = await client.setCacheLimit({ limitBytes: bytes }, { timeoutMs: 10_000 });
-      if (response.settings) cacheActions.mutate(response.settings);
-    } catch {
-      setCacheMutationError("Não foi possível salvar o limite de cache.");
+      const response = await client.setCacheLimit({ limitBytes: bytes }, { timeoutMs: 30_000 });
+      if (!response.settings) throw new Error("cache settings missing");
+      cacheActions.mutate(response.settings);
+      setCacheMessage("Limite de armazenamento salvo.");
+    } catch (error) {
+      setCacheMutationError(
+        error instanceof ConnectError && error.rawMessage === "SOURCE_IN_USE"
+          ? "Feche a reprodução antes de reduzir o limite. O valor anterior foi mantido para proteger os arquivos em uso."
+          : "Não foi possível aplicar o limite de armazenamento. Tente novamente.",
+      );
     } finally {
       setCacheMutationBusy(false);
     }
@@ -165,12 +177,15 @@ function createCacheSubViewModel(getStorageClient: () => StorageClient | undefin
 
   async function clearCache() {
     const client = getStorageClient();
-    if (!client || cacheMutationBusy()) return;
+    if (!client || cacheResource.loading || cacheMutationBusy()) return;
     setCacheMutationBusy(true);
     setCacheMutationError("");
+    setCacheMessage("");
     try {
       const response = await client.clearCache({}, { timeoutMs: 30_000 });
-      if (response.settings) cacheActions.mutate(response.settings);
+      if (!response.settings) throw new Error("cache settings missing");
+      cacheActions.mutate(response.settings);
+      setCacheMessage("Cache limpo. Espaço liberado.");
     } catch {
       setCacheMutationError(
         "Não foi possível limpar o cache agora. Pare a reprodução e tente novamente.",
@@ -181,11 +196,13 @@ function createCacheSubViewModel(getStorageClient: () => StorageClient | undefin
   }
 
   return {
-    cacheOpen,
-    setCacheOpen,
-    cacheSettings: () => cacheResource.latest,
+    cacheSettings: () => (cacheResource.error ? undefined : cacheResource.latest),
     cacheLimitGb,
-    setCacheLimitGb,
+    setCacheLimitGb: (value: string) => {
+      setCacheMessage("");
+      setCacheLimitGb(value);
+    },
+    cacheMessage,
     cacheBusy: () => cacheResource.loading || cacheMutationBusy(),
     cacheError: () => cacheMutationError() || errorMessage(cacheResource.error),
     loadCacheSettings,

@@ -82,6 +82,7 @@ pub(crate) trait Cache: Send + Sync {
     fn settings(&self) -> impl Future<Output = Result<CacheSettings, MediaError>> + Send;
     fn limit(&self) -> impl Future<Output = Result<u64, MediaError>> + Send;
     fn set_limit(&self, bytes: u64) -> impl Future<Output = Result<(), MediaError>> + Send;
+    fn trim(&self, bytes: u64) -> impl Future<Output = Result<(), MediaError>> + Send;
     fn clear(&self) -> impl Future<Output = Result<(), MediaError>> + Send;
 }
 

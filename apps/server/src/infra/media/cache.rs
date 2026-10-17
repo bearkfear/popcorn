@@ -46,6 +46,14 @@ impl Cache for DiskCache {
         Ok(())
     }
 
+    async fn trim(&self, bytes: u64) -> Result<(), MediaError> {
+        let directory = self.directory.clone();
+        tokio::task::spawn_blocking(move || trim_directory(&directory, bytes))
+            .await
+            .map_err(|_| MediaError::Unavailable)?
+            .map_err(|_| MediaError::Unavailable)
+    }
+
     async fn clear(&self) -> Result<(), MediaError> {
         match tokio::fs::symlink_metadata(&self.directory).await {
             Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_dir() => {
@@ -100,4 +108,35 @@ fn directory_size(path: &Path) -> std::io::Result<u64> {
         });
     }
     Ok(total)
+}
+
+// Evict entire top-level entries so multi-file torrents are not left half-cached.
+fn trim_directory(path: &Path, limit: u64) -> std::io::Result<()> {
+    let mut used = directory_size(path)?;
+    if used <= limit {
+        return Ok(());
+    }
+    let mut entries = Vec::new();
+    for entry in std::fs::read_dir(path)? {
+        let entry = entry?;
+        let metadata = std::fs::symlink_metadata(entry.path())?;
+        if metadata.file_type().is_symlink() {
+            continue;
+        }
+        let size = directory_size(&entry.path())?;
+        entries.push((metadata.modified()?, entry.path(), size, metadata.is_dir()));
+    }
+    entries.sort_by(|left, right| left.0.cmp(&right.0).then_with(|| left.1.cmp(&right.1)));
+    for (_, path, size, is_directory) in entries {
+        if used <= limit {
+            break;
+        }
+        if is_directory {
+            std::fs::remove_dir_all(path)?;
+        } else {
+            std::fs::remove_file(path)?;
+        }
+        used = used.saturating_sub(size);
+    }
+    Ok(())
 }

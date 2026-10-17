@@ -2,7 +2,7 @@ import { Toggle } from "@ark-ui/solid/toggle";
 import type { ContentRef, Title, TmdbStatus } from "@popcorn/sdk";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { createEffect, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createSignal, on, onCleanup, onMount, Show } from "solid-js";
 import tmdbLogo from "./assets/tmdb.svg";
 import { createBootstrapViewModel } from "./features/bootstrap/bootstrap.viewmodel";
 import { createCatalogViewModel } from "./features/catalog/catalog.viewmodel";
@@ -15,15 +15,14 @@ import { createHistoryViewModel } from "./features/history/history.viewmodel";
 import { HistoryShelf } from "./features/history/history-shelf";
 import { createPlayerViewModel } from "./features/player/player.viewmodel";
 import { PlayerPage } from "./features/player/player-page";
-import { CachePanel } from "./features/settings/cache-panel";
 import { createSettingsViewModel } from "./features/settings/settings.viewmodel";
-import { SetupPanel } from "./features/settings/setup-panel";
+import { SettingsPage } from "./features/settings/settings-page";
 import { createSourcesViewModel } from "./features/sources/sources.viewmodel";
 import { Icon } from "./shared/ui/icon";
 import { buttonStyles } from "./shared/ui/styles";
 
 type WatchContext = Omit<WatchEntry, "key" | "status" | "position" | "duration" | "updatedAt">;
-type Page = "search" | "details";
+type Page = "search" | "details" | "settings";
 
 export function App() {
   const bootstrap = createBootstrapViewModel();
@@ -35,7 +34,7 @@ export function App() {
   const history = createHistoryViewModel();
   const [page, setPage] = createSignal<Page>("search");
   const [session, setSession] = createSignal<WatchContext>();
-  const [serviceOpen, setServiceOpen] = createSignal(false);
+  let settingsReturnPage: Page = "search";
   let openingWindow = false;
   const [videoWindowOpen, setVideoWindowOpen] = createSignal(false);
 
@@ -57,14 +56,21 @@ export function App() {
     player.close();
     details.resetDetail();
     sources.reset();
-    setPage("search");
+    if (page() !== "settings") setPage("search");
   }
   const catalog = createCatalogViewModel(
     catalogClient,
     resetSelection,
     settings.handleCatalogError,
   );
-  const setupVisible = () => settings.settingsOpen() || settings.status()?.configured === false;
+  createEffect(
+    on(
+      () => settings.settingsOpen() || settings.status()?.configured === false,
+      (needsSetup) => {
+        if (needsSetup && page() !== "settings") openSettings();
+      },
+    ),
+  );
 
   function loadCatalog(current: TmdbStatus | undefined = settings.status()) {
     if (current?.configured) {
@@ -82,6 +88,15 @@ export function App() {
   function configured() {
     settings.setSettingsOpen(false);
     loadCatalog();
+  }
+  function openSettings() {
+    if (page() === "settings") return;
+    settingsReturnPage = page();
+    navigate("settings");
+  }
+  function closeSettings() {
+    settings.setSettingsOpen(false);
+    navigate(settingsReturnPage === "details" && details.selected() ? "details" : "search");
   }
   function navigate(next: Page | "player") {
     window.history.pushState({ page: next }, "", `#${next}`);
@@ -178,9 +193,11 @@ export function App() {
   createEffect(() => {
     document.title = player.viewing()
       ? `${session()?.title.title || "Reprodução"} · Popcorn`
-      : page() === "details"
-        ? `${details.selected()?.title || "Detalhes"} · Popcorn`
-        : "Explorar · Popcorn";
+      : page() === "settings"
+        ? "Configurações · Popcorn"
+        : page() === "details"
+          ? `${details.selected()?.title || "Detalhes"} · Popcorn`
+          : "Explorar · Popcorn";
   });
   onMount(() => {
     if (isTauri()) {
@@ -215,7 +232,14 @@ export function App() {
     window.history.replaceState({ page: "search" }, "", "#search");
     const pop = (event: PopStateEvent) => {
       player.close();
-      setPage(event.state?.page === "details" && details.selected() ? "details" : "search");
+      settings.setSettingsOpen(false);
+      setPage(
+        event.state?.page === "settings"
+          ? "settings"
+          : event.state?.page === "details" && details.selected()
+            ? "details"
+            : "search",
+      );
     };
     window.addEventListener("popstate", pop);
     onCleanup(() => window.removeEventListener("popstate", pop));
@@ -245,17 +269,11 @@ export function App() {
       <div class="app-shell min-h-screen">
         <header class="app-header sticky z-[20] top-0 min-h-[64px] p-[0_clamp(18px,_4vw,_54px)] border-b border-slate-6 bg-slate-2 shadow-[0_2px_12px_var(--black-a4)] backdrop-blur-[14px] max-[560px]:min-h-[56px] cluster flex flex-wrap items-center justify-between gap-3">
           <button
-            class="brand-lockup flex items-center gap-[10px] brand-button border-0 p-0 text-inherit bg-transparent"
+            class="brand-lockup flex min-h-10 items-center brand-button border-0 p-0 text-inherit bg-transparent"
             type="button"
             onClick={backToSearch}
             aria-label="Ir para pesquisa"
           >
-            <span
-              class="brand-mark grid w-[32px] h-[32px] place-items-center rounded-full bg-accent text-accent-contrast text-[18px] font-bold shadow-[inset_0_-2px_0_var(--black-a4)] max-[560px]:w-[29px] max-[560px]:h-[29px] max-[560px]:text-[16px]"
-              aria-hidden="true"
-            >
-              P
-            </span>
             <span class="wordmark text-[22px] font-bold tracking-[-0.04em] lowercase max-[560px]:text-[20px]">
               popcorn<span class="wordmark-dot text-accent">.</span>
             </span>
@@ -265,193 +283,170 @@ export function App() {
             aria-label="Navegação principal"
           >
             <button
-              class="text-button p-[3px_0] border-0 bg-transparent text-negative text-[11px]"
+              class="text-button flex min-h-10 items-center gap-2 rounded-control border-0 bg-transparent px-3 text-[13px] text-muted hover:bg-slate-4 hover:text-ink aria-[current=page]:bg-slate-4 aria-[current=page]:text-ink"
               type="button"
               onClick={backToSearch}
+              aria-current={page() !== "settings" ? "page" : undefined}
             >
               Explorar
             </button>
             <button
-              class="text-button p-[3px_0] border-0 bg-transparent text-negative text-[11px]"
+              class="text-button flex min-h-10 items-center gap-2 rounded-control border-0 bg-transparent px-3 text-[13px] text-muted hover:bg-slate-4 hover:text-ink aria-[current=page]:bg-slate-4 aria-[current=page]:text-ink"
               type="button"
-              aria-expanded={serviceOpen()}
-              onClick={() => setServiceOpen(!serviceOpen())}
+              aria-current={page() === "settings" ? "page" : undefined}
+              onClick={openSettings}
             >
-              Configurações
+              <Icon name="settings" /> Configurações
             </button>
           </nav>
         </header>
         <main
           class={`page w-[min(1480px,_100%)] m-[0_auto] p-[32px_clamp(18px,_4vw,_54px)_24px] max-[820px]:pt-6 max-[560px]:px-[14px] ${page() === "details" ? "details-page max-w-[1120px]" : "search-page max-w-[1500px]"}`}
         >
-          <Show when={serviceOpen()}>
-            <section
-              class="connection-panel p-[12px_16px] border border-line rounded-panel bg-surface [&_strong]:text-[13px] max-[560px]:items-start max-[560px]:[&_>_.cluster]:w-full cluster flex flex-wrap items-center justify-between gap-3"
-              aria-label="Configurações"
-            >
-              <div>
-                <strong>Popcorn</strong>
-                <p class="connection-caption mt-[2px] text-[12px] wrap-anywhere muted text-muted">
-                  {bootstrap.connection() === "ready" ? "Conectado" : "Conectando ao aplicativo…"}
-                </p>
-              </div>
-              <div class="cluster flex flex-wrap items-center justify-between gap-3">
-                <button
-                  class={buttonStyles({ variant: "secondary" })}
-                  type="button"
-                  onClick={() => settings.setSettingsOpen(!settings.settingsOpen())}
-                >
-                  Configurar TMDB
-                </button>
-                <button
-                  class={buttonStyles({ variant: "secondary" })}
-                  type="button"
-                  disabled={settings.cacheBusy()}
-                  onClick={() => {
-                    settings.setCacheOpen(!settings.cacheOpen());
-                    if (settings.cacheOpen()) void settings.loadCacheSettings();
-                  }}
-                >
-                  Armazenamento
-                </button>
-                <button
-                  class={buttonStyles({ variant: "secondary" })}
-                  type="button"
-                  disabled={bootstrap.connection() === "connecting"}
-                  onClick={() => void connect()}
-                >
-                  Reconectar
-                </button>
-              </div>
-            </section>
-          </Show>
-          <Show when={settings.cacheOpen()}>
-            <CachePanel
+          <Show when={page() === "settings"}>
+            <SettingsPage
               vm={settings}
+              bootstrap={bootstrap}
               playbackActive={Boolean(player.playback()) || videoWindowOpen()}
-            />
-          </Show>
-          <Show when={bootstrap.connectionError()}>
-            <p
-              class="service-error mt-3 p-[12px_16px] border border-tomato-7 rounded-control bg-negative-bg text-negative"
-              role="alert"
-            >
-              {bootstrap.connectionError()}
-            </p>
-          </Show>
-          <Show when={bootstrap.connection() === "browser"}>
-            <section class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5">
-              <h2>Abra o Popcorn no desktop</h2>
-              <p>O aplicativo conecta o catálogo e prepara a reprodução.</p>
-            </section>
-          </Show>
-          <Show when={bootstrap.connection() === "connecting"}>
-            <p
-              class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5"
-              role="status"
-            >
-              Iniciando o Popcorn…
-            </p>
-          </Show>
-          <Show when={setupVisible() && bootstrap.connection() !== "browser"}>
-            <SetupPanel
-              vm={settings}
+              onBack={closeSettings}
+              onReconnect={() => void connect()}
               onConfigured={configured}
               onRemoved={() => {
-                resetSelection();
+                player.close();
+                details.resetDetail();
+                sources.reset();
                 catalog.resetCatalog();
               }}
             />
           </Show>
-          <Show when={!setupVisible() && bootstrap.connection() === "ready"}>
-            <Show
-              when={page() === "search"}
-              fallback={
-                <>
-                  <nav
-                    class="detail-navigation mb-6 max-[600px]:items-start max-[600px]:gap-4 cluster flex flex-wrap items-center justify-between gap-3"
-                    aria-label="Navegação do título"
-                  >
-                    <button
-                      class={buttonStyles({ variant: "secondary" })}
-                      type="button"
-                      onClick={backToSearch}
-                    >
-                      <Icon name="arrow-left" /> Voltar à pesquisa
-                    </button>
-                    <Show when={details.detail()?.content}>
-                      {(content) => (
-                        <div class="cluster flex flex-wrap items-center justify-between gap-3">
-                          <Toggle.Root
-                            class={buttonStyles({ variant: "secondary" })}
-                            type="button"
-                            pressed={selectedEntry()?.status === "want"}
-                            onPressedChange={(pressed) => {
-                              if (!pressed) return;
-                              const title = details.detail();
-                              if (title) history.mark(title, content(), "want");
-                            }}
-                          >
-                            <Icon name="plus" /> Quero assistir
-                          </Toggle.Root>
-                          <Toggle.Root
-                            class={buttonStyles({ variant: "secondary" })}
-                            type="button"
-                            pressed={selectedEntry()?.status === "watched"}
-                            onPressedChange={(pressed) => {
-                              if (!pressed) return;
-                              const title = details.detail();
-                              if (title)
-                                history.mark(title, sources.content() ?? content(), "watched");
-                            }}
-                          >
-                            <Icon name="check" /> Já assisti
-                          </Toggle.Root>
-                        </div>
-                      )}
-                    </Show>
-                  </nav>
-                  <DetailsPanel
-                    vm={details}
-                    online
-                    sources={{ ...sources, selectContent }}
-                    player={player}
-                    onPrepare={(id, index) => void prepareFile(id, index)}
-                    resumeSeconds={resumeSeconds()}
-                    onLaunch={(position) => void launch(position)}
-                  />
-                  <Show when={history.error()}>
-                    <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
-                      {history.error()}
-                    </p>
-                  </Show>
-                </>
-              }
-            >
-              <section
-                class="introduction mb-6 [&_h1]:m-[4px_0_8px] [&_h1]:text-[clamp(30px,_4vw,_46px)] [&_h1]:font-normal [&_h1]:leading-[1.12] [&_h1]:tracking-[-0.035em] [&_>_.muted]:max-w-[620px] max-[560px]:[&_h1]:text-[31px]"
-                aria-labelledby="library-title"
+          <Show when={page() !== "settings"}>
+            <Show when={bootstrap.connectionError()}>
+              <p
+                class="service-error mt-3 p-[12px_16px] border border-tomato-7 rounded-control bg-negative-bg text-negative"
+                role="alert"
               >
-                <p class="eyebrow text-accent-strong text-[11px] font-bold tracking-[0.13em]">
-                  SEU CINEMA, SEU TEMPO
-                </p>
-                <h1 id="library-title">O que vamos assistir?</h1>
-                <p class="muted text-muted">
-                  Encontre uma nova história ou continue de onde parou.
-                </p>
+                {bootstrap.connectionError()}
+              </p>
+            </Show>
+            <Show when={bootstrap.connection() === "browser"}>
+              <section class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5">
+                <h2>Abra o Popcorn no desktop</h2>
+                <p>O aplicativo conecta o catálogo e prepara a reprodução.</p>
               </section>
-              <CatalogControls vm={catalog} />
-              <HistoryShelf
-                vm={history}
-                disabled={player.busy()}
-                onOpen={(entry) => openTitle(entry.title, entry.content)}
-                onResume={(entry) => void resume(entry)}
-              />
-              <PosterGrid
-                vm={catalog}
-                selectedTitle={details.selected}
-                onSelectTitle={(title) => openTitle(title)}
-              />
+            </Show>
+            <Show when={bootstrap.connection() === "connecting"}>
+              <p
+                class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5"
+                role="status"
+              >
+                Iniciando o Popcorn…
+              </p>
+            </Show>
+            <Show when={bootstrap.connection() === "ready" && !settings.status()?.configured}>
+              <section class="mx-auto max-w-[620px] rounded-panel border border-line bg-slate-2 p-8">
+                <h1 class="text-2xl">Seu catálogo começa aqui</h1>
+                <p class="mt-3 text-[14px] text-muted">
+                  Conecte sua conta TMDB nas configurações para explorar filmes e séries.
+                </p>
+                <button
+                  class={buttonStyles({ class: "mt-5" })}
+                  type="button"
+                  onClick={openSettings}
+                >
+                  <Icon name="settings" /> Configurar catálogo
+                </button>
+              </section>
+            </Show>
+            <Show when={bootstrap.connection() === "ready" && settings.status()?.configured}>
+              <Show
+                when={page() === "search"}
+                fallback={
+                  <>
+                    <nav
+                      class="detail-navigation mb-6 max-[600px]:items-start max-[600px]:gap-4 cluster flex flex-wrap items-center justify-between gap-3"
+                      aria-label="Navegação do título"
+                    >
+                      <button
+                        class={buttonStyles({ variant: "secondary" })}
+                        type="button"
+                        onClick={backToSearch}
+                      >
+                        <Icon name="arrow-left" /> Voltar à pesquisa
+                      </button>
+                      <Show when={details.detail()?.content}>
+                        {(content) => (
+                          <div class="cluster flex flex-wrap items-center justify-between gap-3">
+                            <Toggle.Root
+                              class={buttonStyles({ variant: "secondary" })}
+                              type="button"
+                              pressed={selectedEntry()?.status === "want"}
+                              onPressedChange={(pressed) => {
+                                if (!pressed) return;
+                                const title = details.detail();
+                                if (title) history.mark(title, content(), "want");
+                              }}
+                            >
+                              <Icon name="plus" /> Quero assistir
+                            </Toggle.Root>
+                            <Toggle.Root
+                              class={buttonStyles({ variant: "secondary" })}
+                              type="button"
+                              pressed={selectedEntry()?.status === "watched"}
+                              onPressedChange={(pressed) => {
+                                if (!pressed) return;
+                                const title = details.detail();
+                                if (title)
+                                  history.mark(title, sources.content() ?? content(), "watched");
+                              }}
+                            >
+                              <Icon name="check" /> Já assisti
+                            </Toggle.Root>
+                          </div>
+                        )}
+                      </Show>
+                    </nav>
+                    <DetailsPanel
+                      vm={details}
+                      online
+                      sources={{ ...sources, selectContent }}
+                      player={player}
+                      onPrepare={(id, index) => void prepareFile(id, index)}
+                      resumeSeconds={resumeSeconds()}
+                      onLaunch={(position) => void launch(position)}
+                    />
+                    <Show when={history.error()}>
+                      <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
+                        {history.error()}
+                      </p>
+                    </Show>
+                  </>
+                }
+              >
+                <section
+                  class="introduction mb-6 [&_h1]:m-[4px_0_8px] [&_h1]:text-[clamp(30px,_4vw,_46px)] [&_h1]:font-normal [&_h1]:leading-[1.12] [&_h1]:tracking-[-0.035em] [&_>_.muted]:max-w-[620px] max-[560px]:[&_h1]:text-[31px]"
+                  aria-labelledby="library-title"
+                >
+                  <p class="eyebrow text-accent-strong text-[11px] font-bold tracking-[0.13em]">
+                    SEU CINEMA, SEU TEMPO
+                  </p>
+                  <h1 id="library-title">O que vamos assistir?</h1>
+                  <p class="muted text-muted">
+                    Encontre uma nova história ou continue de onde parou.
+                  </p>
+                </section>
+                <CatalogControls vm={catalog} />
+                <HistoryShelf
+                  vm={history}
+                  disabled={player.busy()}
+                  onOpen={(entry) => openTitle(entry.title, entry.content)}
+                  onResume={(entry) => void resume(entry)}
+                />
+                <PosterGrid
+                  vm={catalog}
+                  selectedTitle={details.selected}
+                  onSelectTitle={(title) => openTitle(title)}
+                />
+              </Show>
             </Show>
           </Show>
           <footer

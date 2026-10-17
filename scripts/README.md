@@ -30,3 +30,12 @@ Clippy owns function-length analysis with `too-many-lines-threshold = 60`.
 The server crate must enable `deny(clippy::too_many_lines)`. Clippy targets only
 the server library and binaries, not tests; the structural check still includes
 handwritten tests. Formatting is restricted to the server package.
+
+# Cache quota regression
+
+Run `cargo build -p popcorn-server` and then `python3 scripts/test-cache-limit.py`.
+The test starts the real server with isolated temporary data and sparse files. It
+checks immediate eviction when reducing 20 to 4 GB, oldest-entry removal, retained
+files when increasing the limit, invalid limits, symlink safety, active playback
+protection, and successful reduction after playback stops. It does not use the
+application's data directory.

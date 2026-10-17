@@ -50,11 +50,11 @@ impl<R: Sources, T: Transfers, C: Cache> MediaService<R, T, C> {
         if file.size == 0 || !crate::core::media::is_media(&file.name) {
             return Err(MediaError::Invalid);
         }
+        let command = self.command.lock().await;
         if file.size > self.cache.limit().await? {
             return Err(MediaError::Capacity);
         }
         let prepared = self.transfers.prepare(&file, request.file_index).await?;
-        let command = self.command.lock().await;
         if let Some(id) = self.transfers.previous(&request.idempotency_key).await {
             drop(command);
             return self.playback(id).await;
@@ -87,8 +87,19 @@ impl<R: Sources, T: Transfers, C: Cache> MediaService<R, T, C> {
 
     pub(crate) async fn set_cache_limit(&self, bytes: u64) -> Result<CacheSettings, MediaError> {
         validate_cache_limit(bytes)?;
+        let command = self.command.lock().await;
+        if self.cache.settings().await?.used_bytes > bytes {
+            if self.transfers.in_use(None).await {
+                return Err(MediaError::InUse);
+            }
+            // Release paused torrent handles before deleting their cached files.
+            self.transfers.shutdown().await;
+            self.cache.trim(bytes).await?;
+        }
         self.cache.set_limit(bytes).await?;
-        self.cache.settings().await
+        let settings = self.cache.settings().await?;
+        drop(command);
+        Ok(settings)
     }
 
     pub(crate) async fn clear_cache(&self) -> Result<CacheSettings, MediaError> {
