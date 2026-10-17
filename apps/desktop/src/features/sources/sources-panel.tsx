@@ -82,7 +82,7 @@ export function SourcesPanel(props: {
             disabled={props.sources.busy()}
           />
           <button
-            class={buttonStyles}
+            class={buttonStyles()}
             type="submit"
             disabled={props.sources.busy() || !props.sources.magnet().trim()}
           >
@@ -92,7 +92,12 @@ export function SourcesPanel(props: {
       </form>
       <div class="torrent-import flex items-center gap-3 mt-3 text-muted text-[11px] [&_label]:inline-flex [&_label]:min-h-[36px] [&_label]:items-center [&_label]:p-[6px_10px] [&_label.disabled]:cursor-default [&_label.disabled]:opacity-[0.48] [&_input]:absolute [&_input]:w-[1px] [&_input]:h-[1px] [&_input]:overflow-hidden [&_input]:[clip:rect(0_0_0_0)] [&_input]:[clip-path:inset(50%)] [&_input]:whitespace-nowrap">
         <span>ou</span>
-        <label class={`${buttonStyles} secondary ${props.sources.busy() ? "disabled" : ""}`}>
+        <label
+          class={buttonStyles({
+            variant: "secondary",
+            class: props.sources.busy() ? "disabled" : "",
+          })}
+        >
           Importar .torrent
           <input
             type="file"
@@ -147,7 +152,7 @@ export function SourcesPanel(props: {
                               <span>{bytesLabel(file.sizeBytes)}</span>
                             </div>
                             <button
-                              class={buttonStyles}
+                              class={buttonStyles()}
                               type="button"
                               disabled={props.player.busy()}
                               onClick={() => props.onPrepare(source.sourceId, file.fileIndex)}
@@ -163,7 +168,7 @@ export function SourcesPanel(props: {
               >
                 <Show when={props.sources.sources().length > 1 || props.player.error()}>
                   <button
-                    class={buttonStyles}
+                    class={buttonStyles()}
                     type="button"
                     disabled={props.player.busy()}
                     onClick={() => {

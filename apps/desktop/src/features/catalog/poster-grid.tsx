@@ -67,7 +67,7 @@ export function PosterGrid(props: PosterGridProps) {
             <p>{vm.catalogError()}</p>
             <button
               type="button"
-              class={`${buttonStyles} secondary`}
+              class={buttonStyles({ variant: "secondary" })}
               disabled={vm.catalogBusy()}
               onClick={() => void vm.loadCatalog(vm.catalogLoaded() && vm.hasMore())}
             >
@@ -90,7 +90,7 @@ export function PosterGrid(props: PosterGridProps) {
             <p>A consulta terminou sem títulos. Experimente outra busca, gênero ou coleção.</p>
             <button
               type="button"
-              class={`${buttonStyles} secondary`}
+              class={buttonStyles({ variant: "secondary" })}
               onClick={() => vm.changeCategory(CatalogCategory.POPULAR)}
             >
               Voltar aos populares
@@ -141,7 +141,7 @@ export function PosterGrid(props: PosterGridProps) {
           <div class="pagination p-4 border-t border-line text-center">
             <button
               type="button"
-              class={`${buttonStyles} secondary`}
+              class={buttonStyles({ variant: "secondary" })}
               disabled={vm.catalogBusy()}
               onClick={() => void vm.loadCatalog(true)}
             >

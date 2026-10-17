@@ -40,7 +40,7 @@ export function HistoryShelf(props: {
             ]}
           >
             {(tab) => (
-              <ToggleGroup.Item class={`${buttonStyles} secondary`} value={tab.value}>
+              <ToggleGroup.Item class={buttonStyles({ variant: "secondary" })} value={tab.value}>
                 {tab.label}
               </ToggleGroup.Item>
             )}
@@ -95,7 +95,7 @@ export function HistoryShelf(props: {
                   </Show>
                   <button
                     type="button"
-                    class={`${buttonStyles} secondary`}
+                    class={buttonStyles({ variant: "secondary" })}
                     disabled={props.disabled}
                     onClick={() =>
                       entry.status === "watching" &&

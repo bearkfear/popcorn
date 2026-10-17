@@ -41,7 +41,11 @@ export function PlayerPage(props: {
     >
       <Show when={!props.dedicated}>
         <header class="player-toolbar flex flex-none flex-wrap min-h-[64px] items-center justify-between gap-4 p-[10px_clamp(16px,_4vw,_48px)] border-b border-slate-6 bg-canvas-deep [&_strong]:block [&_strong]:text-[15px] [&_span]:block [&_span]:text-muted [&_span]:text-[11px] [&_progress]:block [&_progress]:w-[min(320px,_55vw)] [&_progress]:h-[4px] [&_progress]:mt-[6px] [&_progress]:border-0 [&_progress]:accent-accent max-[560px]:items-start max-[600px]:gap-2 max-[600px]:p-[10px] max-[600px]:[&_strong]:overflow-hidden max-[600px]:[&_strong]:text-ellipsis max-[600px]:[&_strong]:whitespace-nowrap">
-          <button class={`${buttonStyles} secondary`} type="button" onClick={props.onBack}>
+          <button
+            class={buttonStyles({ variant: "secondary" })}
+            type="button"
+            onClick={props.onBack}
+          >
             <Icon name="arrow-left" /> Voltar aos detalhes
           </button>
           <div class="player-download min-w-0 max-[600px]:[order:-1] max-[600px]:w-full">
@@ -63,7 +67,7 @@ export function PlayerPage(props: {
             </Show>
           </div>
           <button
-            class={`${buttonStyles} secondary`}
+            class={buttonStyles({ variant: "secondary" })}
             type="button"
             disabled={props.vm.busy() || !props.vm.mediaReady()}
             onClick={() => void props.vm.toggleDownload()}
@@ -93,7 +97,7 @@ export function PlayerPage(props: {
           <Show when={props.vm.displayError()}>
             <button
               type="button"
-              class={`${buttonStyles} secondary`}
+              class={buttonStyles({ variant: "secondary" })}
               disabled={props.vm.busy()}
               onClick={() => void props.vm.retry()}
             >

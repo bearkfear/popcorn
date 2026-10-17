@@ -36,7 +36,7 @@ export function DetailsPanel(props: {
 
   return (
     <section
-      class="detail-panel min-w-0 border border-line rounded-panel bg-slate-2 wrap-anywhere p-[clamp(18px,3vw,40px)] shadow-[0_18px_50px_var(--black-a4)] [&_.artwork-wide]:aspect-video [&_.artwork-wide]:mb-4 [&_>_.artwork-wide]:aspect-[21/9] [&_>_.artwork-wide]:max-h-[390px] [&_>_.artwork-wide]:rounded-xl"
+      class="detail-panel min-w-0 border border-line rounded-panel bg-slate-2 wrap-anywhere p-[clamp(18px,3vw,40px)] shadow-[0_18px_50px_var(--black-a4)] [&_.artwork-wide]:mb-4 [&_>_.artwork-wide]:aspect-[21/9] [&_>_.artwork-wide]:max-h-[390px] [&_>_.artwork-wide]:rounded-xl"
       aria-label="Detalhes do título"
       aria-busy={props.vm.detailBusy()}
     >
@@ -55,7 +55,7 @@ export function DetailsPanel(props: {
           {props.vm.detailError()}
         </p>
         <button
-          class={`${buttonStyles} secondary`}
+          class={buttonStyles({ variant: "secondary" })}
           type="button"
           onClick={() => {
             const selected = props.vm.selected();
@@ -111,7 +111,7 @@ export function DetailsPanel(props: {
                 unmountOnExit
               >
                 <section class="trailer-section m-[24px_0]" aria-label="Trailer">
-                  <Collapsible.Trigger class={`${buttonStyles} secondary`}>
+                  <Collapsible.Trigger class={buttonStyles({ variant: "secondary" })}>
                     {trailerOpen() ? (
                       <>Fechar trailer</>
                     ) : (
@@ -222,7 +222,7 @@ export function DetailsPanel(props: {
                       {props.vm.episodesError()}
                     </p>
                     <button
-                      class={`${buttonStyles} secondary`}
+                      class={buttonStyles({ variant: "secondary" })}
                       type="button"
                       onClick={() => {
                         const number = props.vm.seasonNumber();
@@ -268,7 +268,12 @@ export function DetailsPanel(props: {
                           <Show when={episode.content}>
                             {(content) => (
                               <button
-                                class={`${buttonStyles} secondary episode-source-button min-h-[36px] mt-3 p-[6px_10px] [&[aria-pressed=true]]:border-accent [&[aria-pressed=true]]:text-ink`}
+                                class={buttonStyles({
+                                  variant: "secondary",
+                                  size: "compact",
+                                  class:
+                                    "episode-source-button mt-3 [&[aria-pressed=true]]:border-accent [&[aria-pressed=true]]:text-ink",
+                                })}
                                 type="button"
                                 aria-pressed={
                                   props.sources.content()?.seasonNumber ===

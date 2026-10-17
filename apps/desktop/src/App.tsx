@@ -297,14 +297,14 @@ export function App() {
               </div>
               <div class="cluster flex flex-wrap items-center justify-between gap-3">
                 <button
-                  class={`${buttonStyles} secondary`}
+                  class={buttonStyles({ variant: "secondary" })}
                   type="button"
                   onClick={() => settings.setSettingsOpen(!settings.settingsOpen())}
                 >
                   Configurar TMDB
                 </button>
                 <button
-                  class={`${buttonStyles} secondary`}
+                  class={buttonStyles({ variant: "secondary" })}
                   type="button"
                   disabled={settings.cacheBusy()}
                   onClick={() => {
@@ -315,7 +315,7 @@ export function App() {
                   Armazenamento
                 </button>
                 <button
-                  class={`${buttonStyles} secondary`}
+                  class={buttonStyles({ variant: "secondary" })}
                   type="button"
                   disabled={bootstrap.connection() === "connecting"}
                   onClick={() => void connect()}
@@ -373,7 +373,7 @@ export function App() {
                     aria-label="Navegação do título"
                   >
                     <button
-                      class={`${buttonStyles} secondary`}
+                      class={buttonStyles({ variant: "secondary" })}
                       type="button"
                       onClick={backToSearch}
                     >
@@ -383,7 +383,7 @@ export function App() {
                       {(content) => (
                         <div class="cluster flex flex-wrap items-center justify-between gap-3">
                           <Toggle.Root
-                            class={`${buttonStyles} secondary`}
+                            class={buttonStyles({ variant: "secondary" })}
                             type="button"
                             pressed={selectedEntry()?.status === "want"}
                             onPressedChange={(pressed) => {
@@ -395,7 +395,7 @@ export function App() {
                             <Icon name="plus" /> Quero assistir
                           </Toggle.Root>
                           <Toggle.Root
-                            class={`${buttonStyles} secondary`}
+                            class={buttonStyles({ variant: "secondary" })}
                             type="button"
                             pressed={selectedEntry()?.status === "watched"}
                             onPressedChange={(pressed) => {

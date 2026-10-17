@@ -15,6 +15,7 @@ import {
   VolumeX,
 } from "lucide-solid";
 import { Dynamic } from "solid-js/web";
+import { tv } from "tailwind-variants";
 
 const icons = {
   "arrow-left": ArrowLeft,
@@ -33,13 +34,15 @@ const icons = {
   star: Star,
 };
 
+const iconStyles = tv({ base: "app-icon inline-block flex-none align-[-0.125em] size-[1em]" });
+
 export type IconName = keyof typeof icons;
 
 export function Icon(props: { readonly name: IconName; readonly class?: string }) {
   return (
     <Dynamic
       component={icons[props.name]}
-      class={`app-icon inline-block flex-none align-[-0.125em] ${props.class ?? "size-[1em]"}`}
+      class={iconStyles({ class: props.class })}
       aria-hidden="true"
       stroke-width={2}
     />

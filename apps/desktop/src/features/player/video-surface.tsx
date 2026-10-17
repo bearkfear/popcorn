@@ -227,7 +227,7 @@ export function VideoSurface(props: {
           >
             <p>O vídeo está em picture-in-picture</p>
             <button
-              class={`${buttonStyles} secondary`}
+              class={buttonStyles({ variant: "secondary" })}
               type="button"
               onClick={() => present("inline")}
             >

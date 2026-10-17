@@ -100,7 +100,7 @@ export function PlaybackSetup(props: {
           {props.vm.displayError()}
         </p>
         <button
-          class={`${buttonStyles} secondary`}
+          class={buttonStyles({ variant: "secondary" })}
           type="button"
           disabled={props.vm.busy()}
           onClick={() => void props.vm.retry()}
@@ -111,7 +111,7 @@ export function PlaybackSetup(props: {
       <Show when={props.vm.mediaReady()}>
         <div class="cluster flex flex-wrap items-center justify-between gap-3 playback-launch justify-start">
           <button
-            class={buttonStyles}
+            class={buttonStyles()}
             type="button"
             disabled={props.vm.busy()}
             onClick={() => props.onLaunch(props.resumeSeconds)}
@@ -128,7 +128,7 @@ export function PlaybackSetup(props: {
           </button>
           <Show when={props.resumeSeconds > 0}>
             <button
-              class={`${buttonStyles} secondary`}
+              class={buttonStyles({ variant: "secondary" })}
               type="button"
               onClick={() => props.onLaunch(0)}
             >

@@ -59,14 +59,14 @@ export function CachePanel(props: {
             onInput={(e) => props.vm.setCacheLimitGb(e.currentTarget.value)}
             disabled={props.vm.cacheBusy()}
           />
-          <button class={buttonStyles} type="submit" disabled={props.vm.cacheBusy()}>
+          <button class={buttonStyles()} type="submit" disabled={props.vm.cacheBusy()}>
             Salvar limite
           </button>
         </div>
       </form>
       <div class="cache-actions col-span-full flex flex-wrap gap-3 max-[560px]:[grid-column:1]">
         <button
-          class={`${buttonStyles} secondary danger`}
+          class={buttonStyles({ variant: "secondary", tone: "danger" })}
           type="button"
           disabled={props.vm.cacheBusy() || props.playbackActive}
           title={
@@ -80,7 +80,7 @@ export function CachePanel(props: {
         </button>
       </div>
       <button
-        class={`${buttonStyles} secondary`}
+        class={buttonStyles({ variant: "secondary" })}
         type="button"
         onClick={() => props.vm.setCacheOpen(false)}
       >

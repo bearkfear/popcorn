@@ -1,3 +1,4 @@
+import { selectFieldStyles } from "../../shared/ui/select-field.styles";
 import { buttonStyles } from "../../shared/ui/styles";
 // UI component for catalog filtering, search input, and genre selection.
 
@@ -40,21 +41,29 @@ export function CatalogControls(props: CatalogControlsProps) {
     vm.performSearch(vm.searchInput().trim());
   };
 
+  const genreStyles = selectFieldStyles({ variant: "genre" });
+
   return (
     <section
       class="catalog-controls grid grid-cols-[auto_minmax(240px,_1fr)_auto] gap-4 items-end mt-6 p-4 border border-line rounded-panel bg-slate-2 max-[1120px]:grid-cols-[1fr_1fr] max-[560px]:grid-cols-[1fr]"
       aria-label="Explorar o TMDB"
     >
       <ToggleGroup.Root
-        class="cluster flex flex-wrap items-center justify-between gap-3 media-tabs justify-start [&_.button]:min-h-[40px] [&_.button]:p-[7px_13px] max-[560px]:flex-nowrap max-[560px]:overflow-x-auto max-[560px]:[&_.button]:flex-none"
+        class="cluster flex flex-wrap items-center justify-between gap-3 media-tabs justify-start max-[560px]:flex-nowrap max-[560px]:overflow-x-auto"
         aria-label="Tipo de mídia"
         value={[String(vm.mediaType())]}
         onValueChange={({ value }) => value[0] && vm.changeMediaType(Number(value[0]) as MediaType)}
       >
-        <ToggleGroup.Item class={`${buttonStyles} secondary`} value={String(MediaType.MOVIE)}>
+        <ToggleGroup.Item
+          class={buttonStyles({ variant: "secondary", size: "tab" })}
+          value={String(MediaType.MOVIE)}
+        >
           Filmes
         </ToggleGroup.Item>
-        <ToggleGroup.Item class={`${buttonStyles} secondary`} value={String(MediaType.TV)}>
+        <ToggleGroup.Item
+          class={buttonStyles({ variant: "secondary", size: "tab" })}
+          value={String(MediaType.TV)}
+        >
           Séries
         </ToggleGroup.Item>
       </ToggleGroup.Root>
@@ -74,14 +83,14 @@ export function CatalogControls(props: CatalogControlsProps) {
             onInput={(e) => vm.setSearchInput(e.currentTarget.value)}
             placeholder={vm.mediaType() === MediaType.MOVIE ? "Nome do filme" : "Nome da série"}
           />
-          <button class={buttonStyles} type="submit">
+          <button class={buttonStyles()} type="submit">
             Buscar
           </button>
         </div>
       </form>
 
       <ToggleGroup.Root
-        class="cluster flex flex-wrap items-center justify-between gap-3 category-tabs justify-start [&_.button]:min-h-[40px] [&_.button]:p-[7px_13px] max-[560px]:flex-nowrap max-[560px]:overflow-x-auto max-[560px]:[&_.button]:flex-none"
+        class="cluster flex flex-wrap items-center justify-between gap-3 category-tabs justify-start max-[560px]:flex-nowrap max-[560px]:overflow-x-auto"
         aria-label="Categoria do catálogo"
         value={vm.query() ? [] : [String(vm.category())]}
         onValueChange={({ value }) =>
@@ -89,19 +98,19 @@ export function CatalogControls(props: CatalogControlsProps) {
         }
       >
         <ToggleGroup.Item
-          class={`${buttonStyles} secondary`}
+          class={buttonStyles({ variant: "secondary", size: "tab" })}
           value={String(CatalogCategory.POPULAR)}
         >
           Populares
         </ToggleGroup.Item>
         <ToggleGroup.Item
-          class={`${buttonStyles} secondary`}
+          class={buttonStyles({ variant: "secondary", size: "tab" })}
           value={String(CatalogCategory.UPCOMING)}
         >
           {vm.mediaType() === MediaType.MOVIE ? "Próximos lançamentos" : "Em exibição"}
         </ToggleGroup.Item>
         <ToggleGroup.Item
-          class={`${buttonStyles} secondary`}
+          class={buttonStyles({ variant: "secondary", size: "tab" })}
           value={String(CatalogCategory.TOP_RATED)}
         >
           Mais bem avaliados
@@ -110,7 +119,7 @@ export function CatalogControls(props: CatalogControlsProps) {
 
       <div class="genre-filter [&_>_label]:block [&_>_label]:mb-[6px] [&_>_label]:text-muted [&_>_label]:text-[12px] [&_>_label]:font-bold col-span-full grid grid-cols-[auto_minmax(180px,_280px)_1fr] items-center gap-3 pt-3 border-t border-line max-[1120px]:grid-cols-[auto_minmax(180px,_1fr)] max-[1120px]:[&_.cache-label]:col-span-full max-[1120px]:[&_.error-text]:col-span-full max-[1120px]:[&_.button]:col-span-full max-[560px]:[grid-column:1] max-[560px]:grid-cols-[1fr]">
         <Select.Root
-          class="genre-select grid col-span-full grid-cols-subgrid items-center gap-3 min-w-0 max-[560px]:grid-cols-[1fr]"
+          class={genreStyles.root()}
           collection={collection()}
           value={[String(vm.genreId())]}
           disabled={vm.genresBusy()}
@@ -119,27 +128,24 @@ export function CatalogControls(props: CatalogControlsProps) {
             vm.changeCategory(CatalogCategory.POPULAR, Number(value[0] ?? 0))
           }
         >
-          <Select.Label class="genre-select-label text-muted text-[12px] font-bold">
+          <Select.Label class={genreStyles.label()}>
             Gênero <span class="muted text-muted">· em Populares</span>
           </Select.Label>
-          <Select.Trigger class="genre-select-trigger flex min-w-0 min-h-[40px] items-center justify-between gap-3 p-[8px_12px] border border-line rounded-control bg-slate-2 text-ink text-left [&:disabled]:cursor-default [&:disabled]:opacity-[0.65] [&_[data-part=indicator]]:text-muted">
-            <Select.ValueText placeholder="Todos os gêneros" />
-            <Select.Indicator aria-hidden="true">
-              <Icon name="caret-down" />
+          <Select.Trigger class={genreStyles.trigger()}>
+            <Select.ValueText class={genreStyles.valueText()} placeholder="Todos os gêneros" />
+            <Select.Indicator class={genreStyles.indicator()} aria-hidden="true">
+              <Icon name="caret-down" class={genreStyles.caretIcon()} />
             </Select.Indicator>
           </Select.Trigger>
           <Portal>
             <Select.Positioner>
-              <Select.Content class="genre-select-content z-[50] w-[min(280px,_calc(100vw_-_32px))] max-h-[min(320px,_var(--available-height,_320px))] overflow-auto p-1 border border-line rounded-control bg-surface shadow-[0_12px_32px_var(--black-a6)] genre-select-listbox m-0 outline-none list-none">
+              <Select.Content class={genreStyles.content()}>
                 <For each={collection().items}>
                   {(item) => (
-                    <Select.Item
-                      class="genre-select-item flex min-h-[36px] items-center justify-between gap-3 p-[7px_9px] rounded-[3px] text-ink cursor-pointer text-[13px] [&[data-highlighted]]:outline-none [&[data-highlighted]]:bg-soft [&[data-state=checked]]:text-accent-strong"
-                      item={item}
-                    >
-                      <Select.ItemText>{item.name}</Select.ItemText>
-                      <Select.ItemIndicator aria-hidden="true">
-                        <Icon name="check" />
+                    <Select.Item class={genreStyles.item()} item={item}>
+                      <Select.ItemText class={genreStyles.itemText()}>{item.name}</Select.ItemText>
+                      <Select.ItemIndicator class={genreStyles.itemIndicator()} aria-hidden="true">
+                        <Icon name="check" class={genreStyles.checkIcon()} />
                       </Select.ItemIndicator>
                     </Select.Item>
                   )}
@@ -160,7 +166,7 @@ export function CatalogControls(props: CatalogControlsProps) {
           </p>
           <button
             type="button"
-            class={`${buttonStyles} secondary`}
+            class={buttonStyles({ variant: "secondary" })}
             onClick={() => void vm.loadGenres()}
           >
             Tentar gêneros novamente

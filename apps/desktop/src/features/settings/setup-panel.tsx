@@ -55,7 +55,10 @@ export function SetupPanel(props: {
           when={isTauri()}
           fallback={
             <a
-              class={`${buttonStyles} secondary external-link inline-flex items-center no-underline`}
+              class={buttonStyles({
+                variant: "secondary",
+                class: "external-link inline-flex items-center no-underline",
+              })}
               href="https://www.themoviedb.org/settings/api"
               target="_blank"
               rel="noopener noreferrer"
@@ -65,7 +68,7 @@ export function SetupPanel(props: {
           }
         >
           <button
-            class={`${buttonStyles} secondary`}
+            class={buttonStyles({ variant: "secondary" })}
             type="button"
             onClick={() => {
               void openTmdbSettings();
@@ -115,13 +118,13 @@ export function SetupPanel(props: {
             {props.vm.configurationError()}
           </p>
         </Show>
-        <button class={buttonStyles} type="submit" disabled={props.vm.configurationBusy()}>
+        <button class={buttonStyles()} type="submit" disabled={props.vm.configurationBusy()}>
           {props.vm.configurationBusy() ? "Validando acesso..." : "Salvar e continuar"}
         </button>
         <Show when={props.vm.status()?.configured}>
           <div class="cluster flex flex-wrap items-center justify-between gap-3">
             <button
-              class={`${buttonStyles} secondary`}
+              class={buttonStyles({ variant: "secondary" })}
               type="button"
               disabled={props.vm.configurationBusy()}
               onClick={props.onConfigured}
@@ -129,7 +132,7 @@ export function SetupPanel(props: {
               Voltar ao catálogo
             </button>
             <button
-              class={`${buttonStyles} secondary danger`}
+              class={buttonStyles({ variant: "secondary", tone: "danger" })}
               type="button"
               disabled={props.vm.configurationBusy()}
               onClick={() => {
