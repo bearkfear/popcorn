@@ -22,14 +22,14 @@ env:
 jobs:
   validate:
     name: Validate release version
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:
       app_version: ${{ steps.version.outputs.app_version }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Validate CalVer and project versions
         id: version
@@ -56,13 +56,13 @@ jobs:
   quality:
     name: Typecheck, lint and test
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust 1.94 toolchain
         shell: bash
@@ -103,7 +103,7 @@ jobs:
       WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust 1.94 MSVC toolchain
         shell: pwsh
@@ -190,7 +190,7 @@ jobs:
           "$hash  $name" | Set-Content release/SHA256SUMS-windows.txt -Encoding ascii
 
       - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: popcorn-windows-${{ needs.validate.outputs.app_version }}
           path: release/*
@@ -206,7 +206,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust 1.94 Apple Silicon toolchain
         shell: bash
@@ -311,7 +311,7 @@ jobs:
           shasum -a 256 "release/$name" | sed 's#  release/#  #' > release/SHA256SUMS-macos.txt
 
       - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: popcorn-macos-${{ needs.validate.outputs.app_version }}
           path: release/*
@@ -321,12 +321,12 @@ jobs:
   release:
     name: Publish GitHub Release
     needs: [validate, windows, macos]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       - name: Download installers
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: popcorn-*-${{ needs.validate.outputs.app_version }}
           path: release
