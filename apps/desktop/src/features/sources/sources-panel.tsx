@@ -42,9 +42,9 @@ export function SourcesPanel(props: SourcesPanelProps) {
           <label for="magnet-link" class="mb-2 block text-xs text-muted">
             Link magnet
           </label>
-          <div class="magnet-fields flex gap-2 max-[560px]:flex-col">
+          <div class="magnet-fields flex items-start gap-2 max-[560px]:flex-col max-[560px]:items-stretch">
             <input
-              class="min-w-0 flex-1 rounded-control border border-line bg-canvas-deep px-3 py-2 text-sm text-ink"
+              class="h-11 min-h-11 min-w-0 flex-1 rounded-control border border-line bg-canvas-deep px-3 py-0 text-sm text-ink max-[560px]:flex-none"
               id="magnet-link"
               type="text"
               inputmode="url"
@@ -55,7 +55,7 @@ export function SourcesPanel(props: SourcesPanelProps) {
               disabled={props.sources.busy()}
             />
             <button
-              class={buttonStyles()}
+              class={buttonStyles({ class: "h-11 shrink-0 py-0" })}
               type="submit"
               disabled={props.sources.busy() || !props.sources.magnet().trim()}
             >
@@ -63,22 +63,25 @@ export function SourcesPanel(props: SourcesPanelProps) {
             </button>
           </div>
         </form>
-        <label
-          class={buttonStyles({
-            variant: "secondary",
-            class:
-              "relative mt-3 cursor-pointer focus-within:outline-2 focus-within:outline-accent",
-          })}
-        >
-          <Icon name="plus" /> Importar .torrent
-          <input
-            class="sr-only"
-            type="file"
-            accept=".torrent,application/x-bittorrent"
-            disabled={props.sources.busy()}
-            onChange={importTorrent}
-          />
-        </label>
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+          <span class="text-xs text-muted">ou</span>
+          <label
+            class={buttonStyles({
+              variant: "secondary",
+              class:
+                "relative inline-flex items-center justify-center gap-2 cursor-pointer focus-within:outline-2 focus-within:outline-accent",
+            })}
+          >
+            <Icon name="plus" /> Importar .torrent
+            <input
+              class="sr-only"
+              type="file"
+              accept=".torrent,application/x-bittorrent"
+              disabled={props.sources.busy()}
+              onChange={importTorrent}
+            />
+          </label>
+        </div>
       </div>
       <Show when={props.sources.error()}>
         <p class="error-text my-3 text-sm text-negative" role="alert">
@@ -144,7 +147,7 @@ export function SourcesPanel(props: SourcesPanelProps) {
                           <button
                             class={buttonStyles({
                               variant: selected() ? "secondary" : "primary",
-                              class: "shrink-0",
+                              class: "inline-flex shrink-0 items-center justify-center gap-2",
                             })}
                             type="button"
                             aria-pressed={selected()}
@@ -152,7 +155,7 @@ export function SourcesPanel(props: SourcesPanelProps) {
                             onClick={() => props.onPrepare(source.sourceId, file.fileIndex)}
                           >
                             <Show when={selected()}>
-                              <Icon name="check" />
+                              <Icon name="check" class="size-4" />
                             </Show>
                             {selected() ? "Selecionado" : "Baixar este vídeo"}
                           </button>

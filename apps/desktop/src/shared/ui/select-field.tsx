@@ -1,5 +1,5 @@
 import { createListCollection, Select } from "@ark-ui/solid/select";
-import { createMemo, For } from "solid-js";
+import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { Icon } from "./icon";
 import { type SelectFieldVariants, selectFieldStyles } from "./select-field.styles";
@@ -7,6 +7,7 @@ import { type SelectFieldVariants, selectFieldStyles } from "./select-field.styl
 export interface SelectOption {
   readonly value: string;
   readonly label: string;
+  readonly description?: string;
 }
 
 interface SelectFieldProps extends SelectFieldVariants {
@@ -23,6 +24,11 @@ interface SelectFieldProps extends SelectFieldVariants {
 export function SelectField(props: SelectFieldProps) {
   const styles = createMemo(() => selectFieldStyles({ variant: props.variant ?? "default" }));
   const collection = createMemo(() => createListCollection({ items: [...props.options] }));
+  const [portalMount, setPortalMount] = createSignal<HTMLDialogElement>();
+  let trigger: HTMLButtonElement | undefined;
+
+  // Native modal dialogs make portals mounted on document.body inert.
+  onMount(() => setPortalMount(trigger?.closest("dialog") ?? undefined));
 
   return (
     <Select.Root
@@ -30,11 +36,19 @@ export function SelectField(props: SelectFieldProps) {
       collection={collection()}
       value={[props.value]}
       disabled={props.disabled ?? false}
-      positioning={{ placement: props.placement ?? "bottom-start", gutter: 8 }}
+      positioning={{
+        placement: props.placement ?? "bottom-start",
+        gutter: 8,
+        strategy: "fixed",
+        boundary: portalMount() ?? "clipping-ancestors",
+        sameWidth: Boolean(portalMount()),
+        fitViewport: true,
+      }}
       onValueChange={({ value }) => value[0] !== undefined && props.onChange(value[0])}
     >
       {props.label && <Select.Label class={styles().label()}>{props.label}</Select.Label>}
       <Select.Trigger
+        ref={trigger}
         class={styles().trigger()}
         title={props.options.find((option) => option.value === props.value)?.label}
         {...(props.ariaLabel ? { "aria-label": props.ariaLabel } : {})}
@@ -44,13 +58,26 @@ export function SelectField(props: SelectFieldProps) {
           <Icon name="caret-down" class={styles().caretIcon()} />
         </Select.Indicator>
       </Select.Trigger>
-      <Portal>
+      <Portal mount={portalMount() ?? document.body}>
         <Select.Positioner>
-          <Select.Content class={styles().content()}>
+          <Select.Content
+            class={styles().content({
+              class: portalMount()
+                ? "w-[var(--reference-width)] max-w-[var(--available-width)]"
+                : "",
+            })}
+          >
             <For each={collection().items}>
               {(item) => (
                 <Select.Item class={styles().item()} item={item}>
-                  <Select.ItemText class={styles().itemText()}>{item.label}</Select.ItemText>
+                  <Select.ItemText class={styles().itemText()}>
+                    <span class="block">{item.label}</span>
+                    <Show when={item.description}>
+                      <span class="mt-0.5 block text-xs font-normal text-muted">
+                        {item.description}
+                      </span>
+                    </Show>
+                  </Select.ItemText>
                   <Select.ItemIndicator class={styles().itemIndicator()} aria-hidden="true">
                     <Icon name="check" class={styles().checkIcon()} />
                   </Select.ItemIndicator>

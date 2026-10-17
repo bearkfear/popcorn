@@ -26,9 +26,15 @@ export const selectFieldStyles = tv({
   variants: {
     variant: {
       default: {
-        trigger: "min-h-11 gap-3 px-3 py-[9px] border-line rounded-control bg-slate-2",
+        root: "flex flex-col gap-1.5",
+        label: "mb-0",
+        trigger: "h-11 min-h-11 gap-3 px-3 py-0 border-line rounded-control bg-slate-2 text-sm",
+        valueText: "min-w-0 truncate",
+        indicator: "flex shrink-0 text-muted",
         content: "w-[min(360px,calc(100vw-32px))] p-1 border-line rounded-control",
         item: "min-h-9 px-[9px] py-[7px] rounded-[3px] data-[highlighted]:bg-soft",
+        itemText: "min-w-0 wrap-anywhere",
+        itemIndicator: "flex shrink-0",
       },
       genre: {
         root: "genre-select grid col-span-full grid-cols-subgrid items-center gap-3 max-[560px]:grid-cols-1",

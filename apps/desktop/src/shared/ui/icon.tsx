@@ -21,6 +21,7 @@ import {
   Star,
   Volume2,
   VolumeX,
+  X,
 } from "lucide-solid";
 import { Dynamic } from "solid-js/web";
 import { tv } from "tailwind-variants";
@@ -29,6 +30,7 @@ const icons = {
   "arrow-left": ArrowLeft,
   "caret-down": ChevronDown,
   check: Check,
+  close: X,
   settings: Settings,
   database: Database,
   storage: HardDrive,

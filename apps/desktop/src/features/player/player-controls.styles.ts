@@ -94,7 +94,8 @@ export const playerControlsStyles = tv({
     transportIcon: ["size-6 text-2xl text-center fill-current stroke-[1.5]"],
     playIcon: ["size-7 text-2xl text-center fill-current stroke-[1.5]"],
     loadingIcon: [
-      "size-3 text-2xl text-center stroke-[2.5] animate-[spin_800ms_linear_infinite] motion-reduce:animate-none",
+      "size-3 text-2xl text-center stroke-[2.5] animate-spin [animation-duration:800ms]",
+      "motion-reduce:[animation-duration:1600ms]",
     ],
   },
   variants: {

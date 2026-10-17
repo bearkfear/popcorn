@@ -75,12 +75,13 @@ export function SourcesDialog(
             </p>
           </div>
           <button
-            class={buttonStyles({ variant: "secondary", size: "compact" })}
+            class="grid size-9 shrink-0 place-items-center rounded-lg border-0 bg-transparent text-muted transition-colors hover:bg-soft hover:text-ink"
             type="button"
             aria-label="Fechar fontes"
+            title="Fechar"
             onClick={() => dialog?.close()}
           >
-            Fechar
+            <Icon name="close" class="size-5" />
           </button>
         </header>
         <div class="p-6 max-[560px]:p-4">

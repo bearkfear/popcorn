@@ -28,6 +28,14 @@ export type Connection = "connecting" | "ready" | "error" | "browser";
 
 export const playbackQualities = [
   { value: PlaybackQuality.AUTO, label: "Auto (até 1080p)" },
-  { value: PlaybackQuality.FULL_HD, label: "1080p" },
-  { value: PlaybackQuality.HD, label: "720p" },
+  {
+    value: PlaybackQuality.FULL_HD,
+    label: "1080p",
+    description: "Transcodificação se necessária",
+  },
+  {
+    value: PlaybackQuality.HD,
+    label: "720p",
+    description: "Transcodificação se necessária",
+  },
 ] as const;

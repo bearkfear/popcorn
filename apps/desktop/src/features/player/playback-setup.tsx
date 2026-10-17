@@ -45,23 +45,25 @@ export function PlaybackSetup(props: {
   });
   return (
     <section
-      class="playback-setup mt-6 p-[clamp(18px,_3vw,_36px)] border border-line rounded-[12px] bg-surface"
+      class="playback-setup mt-6 rounded-xl border border-line bg-surface p-5 min-[600px]:p-6"
       aria-label="Opções de reprodução"
     >
       <div>
-        <p class="eyebrow text-accent-strong text-[11px] font-bold tracking-[0.13em]">
+        <p class="eyebrow m-0 mb-1 text-accent-strong text-[11px] font-bold tracking-[0.13em]">
           DO SEU JEITO
         </p>
-        <h3 ref={heading}>Prepare a sessão</h3>
+        <h3 ref={heading} class="m-0 text-base font-semibold">
+          Prepare a sessão
+        </h3>
       </div>
-      <div class="playback-options grid grid-cols-[1fr_1fr] gap-5 m-[20px_0] [&_label]:grid [&_label]:gap-2 [&_.select-field]:grid [&_.select-field]:gap-2 [&_.select-field-trigger]:w-full [&_.select-field-trigger]:min-w-0 max-[600px]:grid-cols-[1fr]">
+      <div class="playback-options my-5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-4 max-[600px]:grid-cols-1">
         <SelectField
           label="Qualidade"
           value={String(props.vm.quality())}
           disabled={props.vm.busy()}
           options={playbackQualities.map((item) => ({
+            ...item,
             value: String(item.value),
-            label: item.label,
           }))}
           onChange={(value) => {
             const option = playbackQualities.find((item) => String(item.value) === value);
