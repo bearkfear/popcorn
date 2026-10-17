@@ -127,16 +127,40 @@ nativos e publica uma única GitHub Release com:
 - checksums SHA-256 separados para cada plataforma.
 
 Ambos os pacotes incluem o backend, FFmpeg, ffprobe, catálogo e licenças. A tag
-precisa coincidir com a versão CalVer `AAAA.MM.DD` de
-`apps/desktop/src-tauri/tauri.conf.json`. Para publicar a versão `2026.10.17`:
+precisa coincidir com a versão de `apps/desktop/src-tauri/tauri.conf.json`.
+Para preparar uma nova versão, execute:
 
 ```sh
-git tag v2026.10.17
-git push origin v2026.10.17
+bun run release --dry-run # mostra a próxima versão sem alterar arquivos
+bun run release           # atualiza os quatro manifests e os dois lockfiles
+# Ou escolha explicitamente:
+bun run release 2026.10.1702
+```
+
+Use apenas uma das formas de preparação. O comando usa a data local e o formato
+`AAAA.MM.DDNN`: `NN` começa em `01` e aumenta até `99` no mesmo dia.
+Depois da versão antiga `2026.10.17`, a próxima no mesmo dia será
+`2026.10.1702`; no dia seguinte, `2026.10.1801`. O terceiro componente numérico
+mantém a ordenação das versões para os instaladores. O formato antigo
+`AAAA.MM.DD` continua aceito para compatibilidade.
+Os componentes numéricos não têm zeros à esquerda, conforme o SemVer exigido
+pelo Cargo/Tauri: no primeiro dia de janeiro, por exemplo, `2027.1.101`.
+
+O script recusa versões menores ou iguais à atual, datas inválidas, tags locais
+existentes e arquivos dessincronizados. Não instala dependências nem altera Git;
+ao terminar, mostra os comandos para registrar e publicar a versão preparada:
+
+```sh
+git add Cargo.toml Cargo.lock bun.lock apps/desktop/package.json packages/sdk/package.json apps/desktop/src-tauri/tauri.conf.json
+git commit -m "chore: release 2026.10.1702"
+git push
+git tag v2026.10.1702
+git push origin v2026.10.1702
 ```
 
 Também é possível iniciar o workflow manualmente em **Actions → Release Desktop
-→ Run workflow**, informando `v2026.10.17`. Uma execução manual reserva a tag no
+→ Run workflow**, informando a tag da versão já preparada e enviada, como
+`v2026.10.1702`. Uma execução manual reserva a tag no
 commit selecionado antes dos testes e builds e publica a GitHub Release nessa tag.
 Isso mantém os instaladores ligados ao commit exato que foi compilado, mesmo que a
 branch receba novos commits enquanto o workflow estiver em execução.

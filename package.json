@@ -4,6 +4,7 @@
   "packageManager": "bun@1.3.14",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
+    "release": "bun scripts/release.ts",
     "generate": "bash scripts/generate.sh",
     "generate:check": "bash scripts/generate.sh --check",
     "catalog:generate": "bash scripts/generate-catalog.sh",

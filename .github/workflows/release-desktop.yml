@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Tag CalVer da release (por exemplo v2026.10.17)"
+        description: "Tag CalVer da release (por exemplo v2026.10.1702)"
         required: true
         type: string
 
@@ -31,26 +31,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
       - name: Validate CalVer and project versions
         id: version
         shell: bash
         run: |
           set -euo pipefail
           app_version="$(jq -r .version apps/desktop/src-tauri/tauri.conf.json)"
-          expected_tag="v${app_version}"
-
-          if [[ ! "$app_version" =~ ^[0-9]{4}\.(0[1-9]|1[0-2])\.(0[1-9]|[12][0-9]|3[01])$ ]]; then
-            echo "Tauri version '$app_version' is not YYYY.MM.DD CalVer." >&2
-            exit 1
-          fi
-          if [[ "$RELEASE_TAG" != "$expected_tag" ]]; then
-            echo "Release tag '$RELEASE_TAG' does not match '$expected_tag'." >&2
-            exit 1
-          fi
-
-          test "$(jq -r .version apps/desktop/package.json)" = "$app_version"
-          test "$(jq -r .version packages/sdk/package.json)" = "$app_version"
-          grep -Fq "version = \"$app_version\"" Cargo.toml
+          bun run release --check --tag "$RELEASE_TAG"
           echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
 
       - name: Reserve tag for manual release
@@ -122,7 +114,7 @@ jobs:
           bun run check:desktop
 
       - name: Run frontend domain tests
-        run: bun test apps/desktop/tests
+        run: bun test scripts/release-version.test.ts apps/desktop/tests
 
       - name: Lint and test backend domain
         run: |
