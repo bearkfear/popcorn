@@ -1,7 +1,7 @@
 //! Pauses a playback under command serialization and returns its updated status.
 
+use crate::application::media::queries::get_playback::Playback;
 use crate::application::media::{Cache, MediaError, Sources, Transfers, context::MediaContext};
-use crate::core::media::Playback;
 use uuid::Uuid;
 
 pub(crate) struct PausePlayback {

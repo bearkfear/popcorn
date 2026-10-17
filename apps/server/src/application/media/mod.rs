@@ -9,7 +9,7 @@ pub mod queries;
 pub(crate) use commands::{AddSource, StartPlayback};
 pub(crate) use context::MediaContext;
 pub(crate) use error::MediaError;
-pub(crate) use ports::{
-    AccessError, Cache, ConvertedAccess, MediaAccess, PlaybackFile, ResolvedSource, Sources,
-    Transfers,
-};
+pub(crate) use ports::{AccessError, Cache, PlaybackFile, ResolvedSource, Sources, Transfers};
+
+pub(crate) use commands::start_converted_stream::ConvertedAccess;
+pub(crate) use queries::open_media::MediaAccess;

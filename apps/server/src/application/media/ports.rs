@@ -1,13 +1,15 @@
 //! Media persistence, transfer execution and cache boundary contracts.
 
+use crate::application::media::queries::get_cache_settings::CacheSettings;
+use crate::application::media::queries::get_playback::Playback;
 use std::future::Future;
 
 use tokio::io::{AsyncRead, AsyncSeek};
 use uuid::Uuid;
 
-use crate::core::media::{CacheSettings, Content, Playback, Source, SourceFile, SourceInput};
+use crate::core::media::{Content, Source, SourceFile, SourceInput};
 
-use super::{MediaError, StartPlayback};
+use super::{ConvertedAccess, MediaAccess, MediaError, StartPlayback};
 
 pub(crate) struct ResolvedSource {
     pub(crate) info_hash: String,
@@ -88,16 +90,6 @@ pub(crate) trait Cache: Send + Sync {
 
 pub(crate) trait MediaReader: AsyncRead + AsyncSeek + Unpin + Send {}
 impl<T: AsyncRead + AsyncSeek + Unpin + Send> MediaReader for T {}
-
-pub(crate) struct MediaAccess {
-    pub(crate) reader: Box<dyn MediaReader>,
-    pub(crate) size: u64,
-    pub(crate) mime_type: &'static str,
-}
-
-pub(crate) struct ConvertedAccess {
-    pub(crate) reader: Box<dyn AsyncRead + Unpin + Send>,
-}
 
 pub(crate) enum AccessError {
     Gone,

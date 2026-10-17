@@ -1,8 +1,7 @@
 //! Opens an authorized conversion generation, starting or replacing its process.
 
-use crate::application::media::{
-    AccessError, Cache, ConvertedAccess, Sources, Transfers, context::MediaContext,
-};
+use crate::application::media::{AccessError, Cache, Sources, Transfers, context::MediaContext};
+use tokio::io::AsyncRead;
 use uuid::Uuid;
 
 pub(crate) struct StartConvertedStream<'a> {
@@ -10,6 +9,10 @@ pub(crate) struct StartConvertedStream<'a> {
     pub(crate) credential: &'a str,
     pub(crate) start: f64,
     pub(crate) generation: u64,
+}
+
+pub(crate) struct ConvertedAccess {
+    pub(crate) reader: Box<dyn AsyncRead + Unpin + Send>,
 }
 
 pub(crate) async fn handle<R: Sources, T: Transfers, C: Cache>(

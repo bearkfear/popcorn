@@ -1,7 +1,7 @@
 //! Clears unused cached files under command serialization and returns cache settings.
 
+use crate::application::media::queries::get_cache_settings::CacheSettings;
 use crate::application::media::{Cache, MediaError, Sources, Transfers, context::MediaContext};
-use crate::core::media::CacheSettings;
 
 pub(crate) struct ClearCache;
 

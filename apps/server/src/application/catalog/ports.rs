@@ -1,11 +1,16 @@
 //! External metadata and immutable snapshot boundaries.
+
 use super::{
     commands::ConfigureTmdb,
-    queries::{BrowseTitles, ListTitles, SearchTitles, SnapshotPage},
+    queries::{BrowseTitles, ListTitles, SearchTitles},
 };
+use crate::application::catalog::cached::Cached;
+use crate::application::catalog::connection_status::ConnectionStatus;
+use crate::application::catalog::queries::list_titles::SnapshotPage;
+use crate::application::catalog::title_page::TitlePage;
 use crate::core::catalog::{
-    Cached, CatalogError, ConnectionStatus, EpisodeData, EpisodeSelection, GenreData, MediaType,
-    SeasonData, SeriesId, TitleData, TitleId, TitlePage,
+    CatalogError, EpisodeData, EpisodeSelection, GenreData, MediaType, SeasonData, SeriesId,
+    TitleData, TitleId,
 };
 use std::future::Future;
 

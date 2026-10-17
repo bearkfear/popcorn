@@ -120,6 +120,9 @@ async function checkDirectory(directory: string): Promise<void> {
     const isCore = localPath === "core.rs" || localPath.startsWith("core/");
     const isApplication = localPath === "application.rs" || localPath.startsWith("application/");
     const isInterface = localPath === "interface.rs" || localPath.startsWith("interface/");
+    if (isCore && localPath.split("/").some((part) => part === "read_models" || part === "read_models.rs")) {
+      report(path, 1, "read models belong in application, not core");
+    }
     const tokens = codeTokens(source);
     if (entry.name === "mod.rs") checkModuleIndex(path, tokens);
     if (!isCore && tokens.some((token) => token.value === "test")) {

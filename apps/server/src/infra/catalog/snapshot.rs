@@ -1,8 +1,7 @@
 //! `SQLite` implementation of immutable catalog snapshot queries.
-use crate::application::catalog::{
-    ports::SnapshotQueries,
-    queries::{ListTitles, SnapshotPage},
-};
+
+use crate::application::catalog::queries::list_titles::SnapshotPage;
+use crate::application::catalog::{ports::SnapshotQueries, queries::ListTitles};
 use crate::core::catalog::{CatalogError, Cursor, TitleData, TitleId};
 use sqlx::SqlitePool;
 #[derive(Debug)]

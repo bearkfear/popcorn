@@ -1,6 +1,6 @@
 //! Recommends a file only when the source contains exactly one nonempty video.
 
-use super::{SourceFile, is_media};
+use crate::core::media::{SourceFile, is_media};
 
 pub(crate) fn recommend(files: &[SourceFile]) -> Option<u32> {
     let candidates: Vec<_> = files

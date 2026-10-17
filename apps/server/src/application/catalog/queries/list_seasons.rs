@@ -1,7 +1,8 @@
 //! Retrieves cached seasons for a requested television series.
 
+use crate::application::catalog::cached::Cached;
 use crate::application::catalog::ports::MetadataProvider;
-use crate::core::catalog::{Cached, CatalogError, SeasonData, SeriesId};
+use crate::core::catalog::{CatalogError, SeasonData, SeriesId};
 
 #[derive(Debug)]
 pub(crate) struct ListSeasons {

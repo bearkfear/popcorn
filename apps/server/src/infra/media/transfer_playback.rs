@@ -1,11 +1,12 @@
 //! Projects transfer progress and asynchronous media preparation into playback state.
 
+use crate::application::media::queries::get_playback::Playback;
 use librqbit::{Api, TorrentStatsState};
 use uuid::Uuid;
 
 use crate::{
     application::media::MediaError,
-    core::media::{Playback, PlaybackState, download::verified_file_ranges, mime_type},
+    core::media::{PlaybackState, mime_type, rules::download::verified_file_ranges},
 };
 
 use super::{TorrentEngine, preparation::Preparation, transfers::ActivePlayback};

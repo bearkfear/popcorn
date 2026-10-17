@@ -1,12 +1,13 @@
 //! Download cache quota persistence and symlink-aware disk operations.
 
+use crate::application::media::queries::get_cache_settings::CacheSettings;
 use std::path::{Path, PathBuf};
 
 use sqlx::SqlitePool;
 
 use crate::{
     application::media::{Cache, MediaError},
-    core::media::{CacheSettings, DEFAULT_CACHE_LIMIT},
+    core::media::DEFAULT_CACHE_LIMIT,
 };
 
 #[derive(Debug)]

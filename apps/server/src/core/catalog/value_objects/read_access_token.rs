@@ -1,7 +1,7 @@
 //! Validated metadata credential with redacted debug output.
 use std::fmt;
 
-use super::CatalogError;
+use crate::core::catalog::CatalogError;
 
 #[derive(Clone)]
 pub(crate) struct ReadAccessToken(String);

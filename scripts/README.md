@@ -22,6 +22,8 @@ syntax structure; reviewers assess whether each header accurately describes its 
 In `src/core.rs` and `src/core/**`, imports (including grouped imports and
 reexports) and qualified paths may not reference `application`, `infra`,
 `interface`, `sqlx`, `axum`, `reqwest`, `librqbit`, or `popcorn_proto`.
+`read_models/` directories and `read_models.rs` files are also forbidden in core;
+read projections belong alongside their application use cases.
 This is a lexical dependency check, not Rust name resolution; comments and
 literals are ignored.
 

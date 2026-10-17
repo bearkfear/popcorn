@@ -2,7 +2,7 @@
 
 use tokio::process::Command;
 
-use crate::core::media::profile::{AudioConversion, VideoConversion};
+use crate::core::media::value_objects::playback_profile::{AudioConversion, VideoConversion};
 
 use super::{preparation::PreparedMedia, tools::MediaTools};
 

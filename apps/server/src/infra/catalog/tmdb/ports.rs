@@ -1,13 +1,17 @@
 //! Adapt TMDB operations to the application metadata boundary.
+
 use super::Tmdb;
+use crate::application::catalog::cached::Cached;
+use crate::application::catalog::connection_status::ConnectionStatus;
+use crate::application::catalog::title_page::TitlePage;
 use crate::application::catalog::{
     commands::ConfigureTmdb,
     ports::MetadataProvider,
     queries::{BrowseTitles, SearchTitles},
 };
 use crate::core::catalog::{
-    Cached, CatalogError, ConnectionStatus, EpisodeData, EpisodeSelection, GenreData, MediaType,
-    SeasonData, SeriesId, TitleData, TitleId, TitlePage,
+    CatalogError, EpisodeData, EpisodeSelection, GenreData, MediaType, SeasonData, SeriesId,
+    TitleData, TitleId,
 };
 impl MetadataProvider for Tmdb {
     async fn browse(&self, q: BrowseTitles) -> Result<Cached<TitlePage>, CatalogError> {

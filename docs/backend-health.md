@@ -1,17 +1,18 @@
 # Revisão da organização do backend — 2026-10-16
 
-Atualizada em 2026-10-17 para a organização por caso de uso.
+Atualizada em 2026-10-17 para a organização por caso de uso e por categoria de domínio.
 
 Escopo: leitura estática de comandos, consultas, contratos e agregadores Rust, com validação por lint, compilação, testes de domínio e regressão local via RPC. Não é uma verificação de uma instância em produção nem um teste de integração com o TMDB ou peers remotos.
 
 ## Organização após a revisão
 
 - As fronteiras entre core, application e adapters são verificadas pelo lint estrutural. SQL, HTTP e handles torrent ficam fora do domínio e dos contratos RPC.
-- Catálogo: dois comandos em `commands/` e oito consultas em `queries/`, com pedido e execução juntos em cada arquivo. `queries/list_titles.rs` também contém o resultado paginado `SnapshotPage`. As funções `handle` recebem diretamente metadata, snapshot ou ambos, conforme a operação; bootstrap seleciona os adapters concretos.
+- Catálogo: dois comandos em `commands/` e oito consultas em `queries/`, com pedido, execução e resultado específico juntos em cada arquivo. `queries/list_titles.rs` contém `ListTitles`, `SnapshotPage` e `handle`. Os envelopes compartilhados `Cached`, `ConnectionStatus` e `TitlePage` têm arquivos específicos na aplicação. As funções `handle` recebem diretamente metadata, snapshot ou ambos, conforme a operação; bootstrap seleciona os adapters concretos.
 - Mídia: dez comandos (incluindo `ShutdownMedia`) em `commands/` e quatro consultas em `queries/`, com pedido e execução juntos por caso de uso. As funções `handle` recebem `MediaContext`, que mantém os ports e a única trava de playback/cache. Esse contexto é compartilhado entre consumidores e não implementa casos de uso. `OpenMedia` é consulta; `StartConvertedStream` é comando. Não há arquivo genérico `access.rs` nem uma camada intermediária de service.
 - Os adaptadores chamam diretamente funções como `set_cache_limit::handle` e `get_playback::handle`. Não há `handlers.rs`, `CommandHandlers` nem `QueryHandlers`. Comandos podem retornar projeções atualizadas sem chamar outro caso de uso.
+- Domínio: `core/catalog` e `core/media` distinguem `entities` e `value_objects`; regras puras de mídia ficam em `rules`. Projeções e resultados de leitura ficam junto de seus casos de uso na aplicação; o lint impede uma pasta de `read_models` em `core`. Valores de catálogo têm arquivos próprios com suas validações, e os testes existentes acompanham as regras. A classificação segue o [ADR 0002](adr/0002-domain-type-roles.md).
 - Todos os arquivos Rust manuais de `src` já tinham um comentário inicial. Os cabeçalhos afetados foram ajustados e a regra foi formalizada no [ADR 0001](adr/0001-backend-file-responsibilities.md).
-- Todos os 19 `mod.rs` manuais agora apenas agregam módulos e imports/reexports. Implementações foram movidas para arquivos descritivos. Os agregadores gerados ficam sob controle do gerador.
+- Todos os 24 `mod.rs` manuais agora apenas agregam módulos e imports/reexports. Implementações foram movidas para arquivos descritivos. Os agregadores gerados ficam sob controle do gerador.
 
 ## Pontos ainda abertos
 
@@ -31,7 +32,7 @@ Esses pontos continuam abertos; a reorganização de arquivos não altera o prot
 
 ## Validação
 
-- `bun run lint:server`: verificação estrutural de 124 arquivos Rust manuais, rustfmt e Clippy sem avisos.
+- `bun run lint:server`: verificação estrutural de 147 arquivos Rust manuais, rustfmt e Clippy sem avisos.
 - `cargo test -p popcorn-server --lib`: 27 testes de domínio aprovados.
 - `bun run check:scripts`: verificação TypeScript aprovada.
 - O novo guard de `mod.rs` foi exercitado com oito exemplos temporários, incluindo agregadores válidos, comentários/literais, ausência de cabeçalho e implementações proibidas.

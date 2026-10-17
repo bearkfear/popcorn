@@ -5,7 +5,7 @@ use super::{
     preparation::{Preparation, PreparedMedia},
     tools::MediaTools,
 };
-use crate::core::media::profile::Quality;
+use crate::core::media::value_objects::playback_profile::Quality;
 use serde_json::json;
 use std::{
     sync::Arc,

@@ -1,7 +1,8 @@
 //! Retrieves one title from external metadata or the installed snapshot.
 
+use crate::application::catalog::cached::Cached;
 use crate::application::catalog::ports::{MetadataProvider, SnapshotQueries};
-use crate::core::catalog::{Cached, CatalogError, TitleData, TitleId};
+use crate::core::catalog::{CatalogError, TitleData, TitleId};
 
 #[derive(Debug)]
 pub(crate) struct GetTitle {

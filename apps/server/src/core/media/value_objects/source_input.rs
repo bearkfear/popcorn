@@ -1,6 +1,6 @@
-//! Defines source inputs, validates their bounds and describes torrent file metadata.
+//! Defines torrent source inputs and validates magnet and torrent payload bounds.
 
-use super::{Content, InvalidMedia};
+use crate::core::media::InvalidMedia;
 
 #[derive(Debug, Clone)]
 pub(crate) enum SourceInput {
@@ -16,19 +16,4 @@ impl SourceInput {
         };
         if valid { Ok(()) } else { Err(InvalidMedia) }
     }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct SourceFile {
-    pub(crate) file_index: u32,
-    pub(crate) name: String,
-    pub(crate) size_bytes: u64,
-    pub(crate) likely_media: bool,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct Source {
-    pub(crate) id: String,
-    pub(crate) content: Content,
-    pub(crate) files: Vec<SourceFile>,
 }

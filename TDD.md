@@ -58,6 +58,8 @@ Arquivos Rust manuais do servidor têm no máximo 250 linhas, funções têm lim
 
 O [ADR 0001](docs/adr/0001-backend-file-responsibilities.md) formaliza o comentário inicial de uma linha e restringe `mod.rs` a declarações de módulos e imports/reexports. Cada caso de uso fica em `commands/<operacao>.rs` ou `queries/<operacao>.rs`, com o pedido e sua função `handle` juntos. Os `mod.rs` dessas pastas apenas declaram casos de uso e reexportam tipos. Os adaptadores chamam as funções diretamente. No catálogo elas recebem os ports necessários; na mídia recebem `MediaContext`, que compartilha os ports e a trava dos comandos. A [revisão do backend](docs/backend-health.md) registra a organização atual e os pontos de concorrência ainda abertos.
 
+O [ADR 0002](docs/adr/0002-domain-type-roles.md) organiza `core/catalog` e `core/media` em `entities/` (identidade), `value_objects/` (valores e suas validações) e `rules/` (regras puras, quando necessárias). Projeções e resultados ficam junto do pedido e de `handle` em cada caso de uso da aplicação. Ports e adapters podem importar esses tipos diretamente. Somente contratos compartilhados sem proprietário único ficam em arquivos específicos; não há pasta obrigatória `read_models` nem dependência de `core` para `application`. Os `mod.rs` reexportam tipos sem esconder sua classificação em arquivos genéricos `models.rs` ou `values.rs`.
+
 Tipos `librqbit`, processos FFmpeg e conexões SQL não atravessam os contratos RPC. Introduzir interfaces somente nas fronteiras externas que precisem de substituição/testes, sem repositório genérico ou camada obrigatória para cada struct.
 
 ### 2.2 Propriedade do estado e concorrência

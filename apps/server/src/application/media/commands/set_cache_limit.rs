@@ -1,7 +1,8 @@
 //! Validates and persists the cache quota, evicting unused files when necessary.
 
+use crate::application::media::queries::get_cache_settings::CacheSettings;
 use crate::application::media::{Cache, MediaError, Sources, Transfers, context::MediaContext};
-use crate::core::media::{CacheSettings, validate_cache_limit};
+use crate::core::media::validate_cache_limit;
 
 pub(crate) struct SetCacheLimit {
     pub(crate) bytes: u64,

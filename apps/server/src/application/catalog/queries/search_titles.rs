@@ -1,7 +1,9 @@
 //! Defines a catalog search and retrieves matching titles from metadata.
 
+use crate::application::catalog::cached::Cached;
 use crate::application::catalog::ports::MetadataProvider;
-use crate::core::catalog::{Cached, CatalogError, MediaType, Page, SearchQuery, TitlePage};
+use crate::application::catalog::title_page::TitlePage;
+use crate::core::catalog::{CatalogError, MediaType, Page, SearchQuery};
 
 #[derive(Debug)]
 pub(crate) struct SearchTitles {

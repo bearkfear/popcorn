@@ -1,6 +1,6 @@
 //! Selects explicit or default audio tracks without silently changing the requested language.
 
-use super::{InvalidMedia, PlaybackAudioTrack};
+use crate::core::media::{InvalidMedia, PlaybackAudioTrack};
 
 pub(crate) fn select_audio_index(
     tracks: &[PlaybackAudioTrack],

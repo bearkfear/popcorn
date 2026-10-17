@@ -1,7 +1,9 @@
 //! Defines catalog browsing criteria and retrieves a cached title page.
 
+use crate::application::catalog::cached::Cached;
 use crate::application::catalog::ports::MetadataProvider;
-use crate::core::catalog::{Cached, CatalogError, Category, MediaType, Page, TitlePage};
+use crate::application::catalog::title_page::TitlePage;
+use crate::core::catalog::{CatalogError, Category, MediaType, Page};
 
 #[derive(Debug)]
 pub(crate) struct BrowseTitles {

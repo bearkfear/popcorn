@@ -1,5 +1,6 @@
 //! Torrent session lifecycle and the application transfer-port adapter.
 
+use crate::application::media::queries::get_playback::Playback;
 use std::{collections::HashMap, fmt, path::PathBuf, sync::Arc};
 
 use librqbit::{ManagedTorrent, Session, SessionOptions};
@@ -11,7 +12,7 @@ use crate::{
         AccessError, ConvertedAccess, MediaAccess, MediaError, PlaybackFile, ResolvedSource,
         StartPlayback, Transfers,
     },
-    core::media::{Playback, SourceInput},
+    core::media::SourceInput,
 };
 
 use super::preparation::Processing;

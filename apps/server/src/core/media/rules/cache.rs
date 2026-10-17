@@ -1,13 +1,6 @@
-//! Defines cache settings, validates quota bounds and tests their boundary values.
+//! Validates cache quota bounds, defines the default and tests boundary values.
 
-use super::InvalidMedia;
-
-#[derive(Debug)]
-pub(crate) struct CacheSettings {
-    pub(crate) directory: String,
-    pub(crate) limit_bytes: u64,
-    pub(crate) used_bytes: u64,
-}
+use crate::core::media::InvalidMedia;
 
 pub(crate) const DEFAULT_CACHE_LIMIT: u64 = 20 * 1024 * 1024 * 1024;
 

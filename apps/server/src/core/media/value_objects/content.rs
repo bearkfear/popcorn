@@ -1,6 +1,6 @@
 //! Validated title identity and optional television episode coordinates.
 
-use super::InvalidMedia;
+use crate::core::media::InvalidMedia;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum MediaKind {

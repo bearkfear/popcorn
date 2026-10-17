@@ -119,7 +119,7 @@ fn decode_content(value: &proto::ContentRef) -> Result<Content, MediaError> {
 }
 
 fn encode_source(value: Source) -> proto::Source {
-    let recommended_file_index = crate::core::media::selection::recommend(&value.files);
+    let recommended_file_index = crate::core::media::rules::selection::recommend(&value.files);
     let media_type = match value.content.kind() {
         MediaKind::Movie => proto::MediaType::Movie,
         MediaKind::Tv => proto::MediaType::Tv,

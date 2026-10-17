@@ -8,7 +8,7 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
-use crate::core::media::profile::{AudioConversion, PlaybackPlan, Quality};
+use crate::core::media::value_objects::playback_profile::{AudioConversion, PlaybackPlan, Quality};
 
 use super::probe::InspectedMedia;
 use popcorn_diagnostics::ProcessContext;

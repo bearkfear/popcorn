@@ -388,10 +388,17 @@ integração do servidor. O linter limita arquivos manuais a 250 linhas e funç�
 a 60 linhas, exige um comentário inicial e verifica as fronteiras das camadas.
 O código gerado não entra nesses limites.
 
-O servidor se organiza em `core` (entidades e regras), `application` (comandos,
+O servidor se organiza em `core` (entidades, objetos de valor e regras), `application` (comandos,
 consultas e contratos), `infra` (SQLite, TMDB, torrents e disco), `interface`
 (RPC, HTTP e CLI) e `bootstrap` (composição e ciclo de vida). Comandos e consultas
 compartilham processo e banco; não há barramento nem event sourcing.
+
+Em `core/catalog` e `core/media`, as pastas `entities/` e `value_objects/`
+distinguem identidade e valores; regras puras de mídia ficam em `rules/`.
+Resultados de leitura ficam junto do pedido e da função `handle` no arquivo do
+caso de uso da aplicação. Contratos compartilhados sem proprietário único têm
+arquivos específicos, sem uma pasta obrigatória `read_models`. Os critérios e exemplos estão no
+[ADR 0002](docs/adr/0002-domain-type-roles.md).
 
 Os gates G2–G5 permanecem parciais: o caminho direto foi implementado, mas ainda
 precisa do seeder controlado, da matriz de runtimes WebView de Windows/macOS, de

@@ -1,4 +1,6 @@
 //! Map catalog domain entities into protobuf responses.
+
+use crate::application::catalog::connection_status::ConnectionStatus;
 use popcorn_proto::proto::popcorn::v1::{CastMember, ContentRef, Genre, Season, Title, TmdbStatus};
 
 use crate::core::catalog as tmdb;
@@ -60,8 +62,8 @@ impl From<tmdb::TitleData> for Title {
     }
 }
 
-impl From<tmdb::ConnectionStatus> for TmdbStatus {
-    fn from(value: tmdb::ConnectionStatus) -> Self {
+impl From<ConnectionStatus> for TmdbStatus {
+    fn from(value: ConnectionStatus) -> Self {
         Self {
             configured: value.configured,
             remembered: value.remembered,

@@ -4,8 +4,8 @@ use serde::Deserialize;
 use tokio::io::AsyncReadExt as _;
 
 use crate::core::media::PlaybackAudioTrack;
-use crate::core::media::audio::select_audio_index;
-use crate::core::media::profile::{AudioTrack, MediaInfo, VideoTrack};
+use crate::core::media::rules::audio::select_audio_index;
+use crate::core::media::value_objects::playback_profile::{AudioTrack, MediaInfo, VideoTrack};
 
 use super::tools::MediaTools;
 use popcorn_diagnostics::{self as process, ProcessContext};

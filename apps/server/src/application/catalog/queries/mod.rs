@@ -15,5 +15,5 @@ pub(crate) use get_tmdb_status::GetTmdbStatus;
 pub(crate) use list_episodes::ListEpisodes;
 pub(crate) use list_genres::ListGenres;
 pub(crate) use list_seasons::ListSeasons;
-pub(crate) use list_titles::{ListTitles, SnapshotPage};
+pub(crate) use list_titles::ListTitles;
 pub(crate) use search_titles::SearchTitles;

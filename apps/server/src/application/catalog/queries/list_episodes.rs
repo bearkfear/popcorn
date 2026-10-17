@@ -1,7 +1,8 @@
 //! Retrieves cached episodes for a requested series and season.
 
+use crate::application::catalog::cached::Cached;
 use crate::application::catalog::ports::MetadataProvider;
-use crate::core::catalog::{Cached, CatalogError, EpisodeData, EpisodeSelection};
+use crate::core::catalog::{CatalogError, EpisodeData, EpisodeSelection};
 
 #[derive(Debug)]
 pub(crate) struct ListEpisodes {

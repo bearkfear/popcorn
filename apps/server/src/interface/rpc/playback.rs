@@ -4,6 +4,7 @@ use crate::application::media::commands::{
     pause_playback, resume_playback, start_playback, stop_playback,
 };
 use crate::application::media::queries::get_playback;
+use crate::application::media::queries::get_playback::Playback;
 use connectrpc::{Encodable, RequestContext, Response, ServiceRequest, ServiceResult};
 use popcorn_proto::catalog::popcorn::v1::PlaybackService;
 use popcorn_proto::proto::popcorn::v1::{
@@ -17,10 +18,10 @@ use crate::application::media::{
     commands::{PausePlayback, ResumePlayback, StopPlayback},
     queries::GetPlayback,
 };
-use crate::core::media::profile::Quality;
+use crate::core::media::value_objects::playback_profile::Quality;
 use crate::{
     application::media::{Cache, Sources, StartPlayback, Transfers},
-    core::media::{Playback, PlaybackState},
+    core::media::PlaybackState,
 };
 
 use super::{

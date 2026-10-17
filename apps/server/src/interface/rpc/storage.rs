@@ -10,8 +10,8 @@ use popcorn_proto::proto::popcorn::v1::{
 };
 
 use crate::{
+    application::media::queries::get_cache_settings::CacheSettings,
     application::media::{Cache, Sources, Transfers},
-    core::media::CacheSettings,
 };
 
 use crate::application::media::{

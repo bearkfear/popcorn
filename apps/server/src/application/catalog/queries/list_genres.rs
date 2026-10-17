@@ -1,7 +1,8 @@
 //! Retrieves cached genres for a requested media type.
 
+use crate::application::catalog::cached::Cached;
 use crate::application::catalog::ports::MetadataProvider;
-use crate::core::catalog::{Cached, CatalogError, GenreData, MediaType};
+use crate::core::catalog::{CatalogError, GenreData, MediaType};
 
 #[derive(Debug)]
 pub(crate) struct ListGenres {

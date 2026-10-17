@@ -1,7 +1,8 @@
 //! Starts an idempotent playback after validating its file and available cache quota.
 
+use crate::application::media::queries::get_playback::Playback;
 use crate::application::media::{Cache, MediaError, Sources, Transfers, context::MediaContext};
-use crate::core::media::{Playback, profile::Quality};
+use crate::core::media::value_objects::playback_profile::Quality;
 
 pub(crate) struct StartPlayback {
     pub(crate) source_id: String,
