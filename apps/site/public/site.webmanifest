@@ -1,0 +1,16 @@
+{
+	"name": "Popcorn",
+	"short_name": "Popcorn",
+	"description": "Filmes e séries no seu desktop, do seu jeito.",
+	"start_url": "/",
+	"display": "browser",
+	"background_color": "#111113",
+	"theme_color": "#111113",
+	"icons": [
+		{
+			"src": "/favicon.svg",
+			"sizes": "any",
+			"type": "image/svg+xml"
+		}
+	]
+}

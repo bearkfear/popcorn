@@ -1,0 +1,103 @@
+/* Carrega o Tailwind e mantém apenas os estilos globais que não pertencem a componentes. */
+@import "tailwindcss";
+@import "@radix-ui/colors/slate-dark.css";
+@import "@radix-ui/colors/slate-dark-alpha.css";
+@import "@radix-ui/colors/sand.css";
+@import "@radix-ui/colors/sand-alpha.css";
+@import "@radix-ui/colors/tomato-dark.css";
+@import "@radix-ui/colors/tomato-dark-alpha.css";
+@import "@radix-ui/colors/amber-dark.css";
+@import "@radix-ui/colors/amber-dark-alpha.css";
+@import "@radix-ui/colors/jade-dark.css";
+@import "@radix-ui/colors/blue-dark.css";
+@import "@radix-ui/colors/bronze-dark.css";
+@import "@radix-ui/colors/ruby-dark.css";
+@import "@radix-ui/colors/teal-dark.css";
+@import "@radix-ui/colors/black-alpha.css";
+
+@theme inline {
+	--color-canvas: var(--slate-1);
+	--color-surface: var(--slate-2);
+	--color-surface-raised: var(--slate-3);
+	--color-surface-hover: var(--slate-4);
+	--color-line: var(--slate-a6);
+	--color-line-strong: var(--slate-a7);
+	--color-text: var(--slate-12);
+	--color-text-muted: var(--slate-11);
+	--color-text-subtle: var(--slate-10);
+	--color-accent: var(--tomato-9);
+	--color-accent-hover: var(--tomato-10);
+	--color-accent-text: var(--tomato-11);
+	--color-accent-contrast: var(--tomato-1);
+	--color-gold: var(--amber-9);
+	--color-success: var(--jade-11);
+	--color-focus: var(--blue-9);
+	--color-paper: var(--sand-2);
+	--color-paper-surface: var(--sand-1);
+	--color-paper-text: var(--sand-12);
+	--color-paper-muted: var(--sand-11);
+	--color-paper-subtle: var(--sand-10);
+	--color-paper-line: var(--sand-a6);
+}
+
+@font-face {
+	font-family: "Google Sans";
+	src: url("/fonts/google-sans-latin.woff2") format("woff2");
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+}
+
+@layer base {
+	:root {
+		color-scheme: dark;
+		font-family: "Google Sans", "Segoe UI", sans-serif;
+		font-synthesis: none;
+		text-rendering: optimizeLegibility;
+	}
+
+	html {
+		scroll-behavior: smooth;
+		scroll-padding-top: 5.75rem;
+	}
+
+	button,
+	a {
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	::selection {
+		color: var(--tomato-12);
+		background: var(--tomato-9);
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--blue-9);
+		outline-offset: 0.25rem;
+	}
+}
+
+.hero-noise {
+	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.13'/%3E%3C/svg%3E");
+}
+
+@keyframes expand {
+	from { height: 0; opacity: 0; }
+	to { height: var(--height); opacity: 1; }
+}
+
+@keyframes collapse {
+	from { height: var(--height); opacity: 1; }
+	to { height: 0; opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto !important;
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}

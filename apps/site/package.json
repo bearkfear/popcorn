@@ -1,0 +1,34 @@
+{
+	"name": "@popcorn/site",
+	"version": "2026.10.17",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"start": "node .output/server/index.mjs",
+		"preview": "vite preview",
+		"test": "bun test tests",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@ark-ui/solid": "^5.39.3",
+		"@radix-ui/colors": "^3.0.0",
+		"@solidjs/meta": "^0.29.4",
+		"@solidjs/router": "^1.0.0",
+		"@solidjs/start": "^2.0.6",
+		"lucide-solid": "^1.58.0",
+		"nitro": "^3.0.260610-beta",
+		"solid-js": "1.9.17",
+		"tailwind-variants": "^3.3.1",
+		"vite": "^8.3.4"
+	},
+	"devDependencies": {
+		"@tailwindcss/vite": "4.3.3",
+		"tailwindcss": "4.3.3",
+		"typescript": "7.0.2"
+	},
+	"engines": {
+		"node": ">=24"
+	}
+}

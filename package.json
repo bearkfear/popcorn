@@ -2,7 +2,10 @@
   "name": "popcorn",
   "private": true,
   "packageManager": "bun@1.3.14",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "release": "bun scripts/release.ts",
     "generate": "bash scripts/generate.sh",
@@ -10,6 +13,10 @@
     "catalog:generate": "bash scripts/generate-catalog.sh",
     "desktop:dev": "cd apps/desktop && bun --bun tauri dev",
     "desktop:build": "cd apps/desktop && bun --bun tauri build",
+    "site:dev": "bun run --filter @popcorn/site dev",
+    "site:build": "bun run --filter @popcorn/site build",
+    "site:test": "bun run --filter @popcorn/site test",
+    "site:typecheck": "bun run --filter @popcorn/site typecheck",
     "lint:server": "bun scripts/lint-server.ts && cargo fmt --manifest-path apps/server/Cargo.toml -p popcorn-server --check && CLIPPY_CONF_DIR=\"$PWD/apps/server\" cargo clippy -p popcorn-server --lib --bins -- -D warnings",
     "lint:desktop": "cd apps/desktop && bun run lint",
     "lint:desktop:fix": "cd apps/desktop && bun run lint:fix",
