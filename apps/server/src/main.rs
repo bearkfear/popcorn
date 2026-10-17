@@ -11,6 +11,7 @@ async fn main() -> ExitCode {
         .with_writer(popcorn_diagnostics::trace_writer)
         .with_max_level(tracing::Level::INFO)
         .init();
+
     match popcorn_server::run_cli().await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {

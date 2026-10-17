@@ -1,5 +1,9 @@
 //! Protobuf mapping and delegation for playback lifecycle use cases.
 
+use crate::application::media::commands::{
+    pause_playback, resume_playback, start_playback, stop_playback,
+};
+use crate::application::media::queries::get_playback;
 use connectrpc::{Encodable, RequestContext, Response, ServiceRequest, ServiceResult};
 use popcorn_proto::catalog::popcorn::v1::PlaybackService;
 use popcorn_proto::proto::popcorn::v1::{
@@ -9,6 +13,10 @@ use popcorn_proto::proto::popcorn::v1::{
 };
 use uuid::Uuid;
 
+use crate::application::media::{
+    commands::{PausePlayback, ResumePlayback, StopPlayback},
+    queries::GetPlayback,
+};
 use crate::core::media::profile::Quality;
 use crate::{
     application::media::{Cache, Sources, StartPlayback, Transfers},
@@ -37,9 +45,9 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> PlaybackS
                 "audio_stream_index": request.audio_stream_index,
             }),
         );
-        let playback = self
-            .service
-            .start(StartPlayback {
+        let playback = start_playback::handle(
+            self.context.as_ref(),
+            StartPlayback {
                 source_id: request.source_id.to_owned(),
                 file_index: request.file_index,
                 idempotency_key: request.idempotency_key.to_owned(),
@@ -50,17 +58,18 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> PlaybackS
                     3 => Quality::Hd,
                     _ => return Err(invalid("valid playback quality is required")),
                 },
-            })
-            .await
-            .inspect_err(|error| {
-                popcorn_diagnostics::record(
-                    "playback.start_rpc_failed",
-                    serde_json::json!({
-                        "attempt_id": attempt_id, "error": error.to_string(),
-                    }),
-                );
-            })
-            .map_err(source_error)?;
+            },
+        )
+        .await
+        .inspect_err(|error| {
+            popcorn_diagnostics::record(
+                "playback.start_rpc_failed",
+                serde_json::json!({
+                    "attempt_id": attempt_id, "error": error.to_string(),
+                }),
+            );
+        })
+        .map_err(source_error)?;
         popcorn_diagnostics::record(
             "playback.start_rpc_ready",
             serde_json::json!({
@@ -80,7 +89,9 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> PlaybackS
     ) -> ServiceResult<impl Encodable<GetPlaybackResponse> + Send + use<'a, R, T, C>> {
         let id = Uuid::parse_str(request.playback_id)
             .map_err(|_| invalid("valid playback ID is required"))?;
-        let playback = self.service.playback(id).await.map_err(source_error)?;
+        let playback = get_playback::handle(self.context.as_ref(), GetPlayback { id })
+            .await
+            .map_err(source_error)?;
         Response::ok(GetPlaybackResponse {
             playback: encode_playback(playback).into(),
             ..Default::default()
@@ -94,7 +105,9 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> PlaybackS
     ) -> ServiceResult<impl Encodable<StopPlaybackResponse> + Send + use<'a, R, T, C>> {
         let id = Uuid::parse_str(request.playback_id)
             .map_err(|_| invalid("valid playback ID is required"))?;
-        self.service.stop(id).await.map_err(source_error)?;
+        stop_playback::handle(self.context.as_ref(), StopPlayback { id })
+            .await
+            .map_err(source_error)?;
         Response::ok(StopPlaybackResponse::default())
     }
 
@@ -105,7 +118,9 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> PlaybackS
     ) -> ServiceResult<impl Encodable<PausePlaybackResponse> + Send + use<'a, R, T, C>> {
         let id = Uuid::parse_str(request.playback_id)
             .map_err(|_| invalid("valid playback ID is required"))?;
-        let playback = self.service.pause(id).await.map_err(source_error)?;
+        let playback = pause_playback::handle(self.context.as_ref(), PausePlayback { id })
+            .await
+            .map_err(source_error)?;
         Response::ok(PausePlaybackResponse {
             playback: encode_playback(playback).into(),
             ..Default::default()
@@ -119,7 +134,9 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> PlaybackS
     ) -> ServiceResult<impl Encodable<ResumePlaybackResponse> + Send + use<'a, R, T, C>> {
         let id = Uuid::parse_str(request.playback_id)
             .map_err(|_| invalid("valid playback ID is required"))?;
-        let playback = self.service.resume(id).await.map_err(source_error)?;
+        let playback = resume_playback::handle(self.context.as_ref(), ResumePlayback { id })
+            .await
+            .map_err(source_error)?;
         Response::ok(ResumePlaybackResponse {
             playback: encode_playback(playback).into(),
             ..Default::default()

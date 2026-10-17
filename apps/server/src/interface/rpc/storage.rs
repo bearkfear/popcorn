@@ -1,5 +1,7 @@
 //! Protobuf mapping and delegation for media cache use cases.
 
+use crate::application::media::commands::{clear_cache, set_cache_limit};
+use crate::application::media::queries::get_cache_settings;
 use connectrpc::{Encodable, RequestContext, Response, ServiceRequest, ServiceResult};
 use popcorn_proto::catalog::popcorn::v1::StorageService;
 use popcorn_proto::proto::popcorn::v1::{
@@ -12,6 +14,11 @@ use crate::{
     core::media::CacheSettings,
 };
 
+use crate::application::media::{
+    commands::{ClearCache, SetCacheLimit},
+    queries::GetCacheSettings,
+};
+
 use super::{errors::source_error, source::MediaRpc};
 
 impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> StorageService
@@ -22,7 +29,9 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> StorageSe
         _context: RequestContext,
         _request: ServiceRequest<'_, GetCacheSettingsRequest>,
     ) -> ServiceResult<impl Encodable<GetCacheSettingsResponse> + Send + use<'a, R, T, C>> {
-        let settings = self.service.cache_settings().await.map_err(source_error)?;
+        let settings = get_cache_settings::handle(self.context.as_ref(), GetCacheSettings)
+            .await
+            .map_err(source_error)?;
         Response::ok(GetCacheSettingsResponse {
             settings: encode_settings(settings).into(),
             ..Default::default()
@@ -34,11 +43,14 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> StorageSe
         _context: RequestContext,
         request: ServiceRequest<'_, SetCacheLimitRequest>,
     ) -> ServiceResult<impl Encodable<SetCacheLimitResponse> + Send + use<'a, R, T, C>> {
-        let settings = self
-            .service
-            .set_cache_limit(request.limit_bytes)
-            .await
-            .map_err(source_error)?;
+        let settings = set_cache_limit::handle(
+            self.context.as_ref(),
+            SetCacheLimit {
+                bytes: request.limit_bytes,
+            },
+        )
+        .await
+        .map_err(source_error)?;
         Response::ok(SetCacheLimitResponse {
             settings: encode_settings(settings).into(),
             ..Default::default()
@@ -50,7 +62,9 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> StorageSe
         _context: RequestContext,
         _request: ServiceRequest<'_, ClearCacheRequest>,
     ) -> ServiceResult<impl Encodable<ClearCacheResponse> + Send + use<'a, R, T, C>> {
-        let settings = self.service.clear_cache().await.map_err(source_error)?;
+        let settings = clear_cache::handle(self.context.as_ref(), ClearCache)
+            .await
+            .map_err(source_error)?;
         Response::ok(ClearCacheResponse {
             settings: encode_settings(settings).into(),
             ..Default::default()

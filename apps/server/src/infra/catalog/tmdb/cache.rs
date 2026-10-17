@@ -1,4 +1,4 @@
-//! TMDB cache adapter.
+//! Reads and refreshes cached TMDB responses with TTLs and stale fallback on transient failures.
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Serialize, de::DeserializeOwned};

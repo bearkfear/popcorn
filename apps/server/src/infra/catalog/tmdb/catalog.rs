@@ -1,4 +1,4 @@
-//! TMDB catalog adapter.
+//! Builds TMDB catalog requests and maps cached title, genre, season and episode responses.
 use super::mapping::{RawEpisode, RawEpisodes, RawGenres, RawPage, RawTitle};
 use super::{Cached, EpisodeData, GenreData, SeasonData, TitleData, TitlePage, Tmdb, TmdbError};
 

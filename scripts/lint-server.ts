@@ -1,4 +1,4 @@
-// Enforce handwritten server size, descriptive headers, domain tests and layer boundaries.
+// Enforce server headers, aggregation-only mod.rs files, size limits and layer boundaries.
 import { readdir } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 
@@ -56,6 +56,45 @@ function codeTokens(source: string): readonly { readonly value: string; readonly
   return tokens;
 }
 
+// Accept external module declarations and imports/reexports, with optional attributes.
+function checkModuleIndex(path: string, tokens: ReturnType<typeof codeTokens>): void {
+  let index = 0;
+  while (index < tokens.length) {
+    const start = tokens[index];
+    if (!start) break;
+    if (start.value === "#" && tokens[index + 1]?.value === "[") {
+      index += 2;
+      let depth = 1;
+      while (index < tokens.length && depth > 0) {
+        if (tokens[index]?.value === "[") depth++;
+        if (tokens[index]?.value === "]") depth--;
+        index++;
+      }
+      continue;
+    }
+    if (tokens[index]?.value === "pub") {
+      index++;
+      if (tokens[index]?.value === "(") {
+        while (index < tokens.length && tokens[index]?.value !== ")") index++;
+        index++;
+      }
+    }
+    const kind = tokens[index]?.value;
+    if (kind === "mod" && /^[A-Za-z_][A-Za-z_0-9]*$/.test(tokens[index + 1]?.value ?? "")
+      && tokens[index + 2]?.value === ";") {
+      index += 3;
+      continue;
+    }
+    if (kind === "use") {
+      while (index < tokens.length && tokens[index]?.value !== ";") index++;
+      index++;
+      continue;
+    }
+    report(path, start.line, "mod.rs may only declare external modules and imports/reexports; move implementation to a descriptive file");
+    return;
+  }
+}
+
 async function checkDirectory(directory: string): Promise<void> {
   const entries = await readdir(directory, { withFileTypes: true });
   entries.sort((left, right) => left.name.localeCompare(right.name));
@@ -82,6 +121,7 @@ async function checkDirectory(directory: string): Promise<void> {
     const isApplication = localPath === "application.rs" || localPath.startsWith("application/");
     const isInterface = localPath === "interface.rs" || localPath.startsWith("interface/");
     const tokens = codeTokens(source);
+    if (entry.name === "mod.rs") checkModuleIndex(path, tokens);
     if (!isCore && tokens.some((token) => token.value === "test")) {
       report(path, 1, "server tests belong in core only");
     }

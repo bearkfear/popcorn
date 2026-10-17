@@ -1,4 +1,4 @@
-//! Coordinates domain commands and queries through external boundary contracts.
+//! Declares catalog and media use cases and the backend readiness probe boundary.
 
 pub mod catalog;
 pub mod health;

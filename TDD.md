@@ -56,6 +56,8 @@ DDD é aplicado de forma leve, sem repositórios genéricos nem uma interface po
 
 Arquivos Rust manuais do servidor têm no máximo 250 linhas, funções têm limite de 60 linhas pelo Clippy, e todo arquivo começa com um comentário sobre sua finalidade. O código gerado é excluído. A suíte automatizada do servidor se limita a poucos testes das regras puras em `core`; essa decisão substitui a abrangência de testes do servidor proposta na seção 12.
 
+O [ADR 0001](docs/adr/0001-backend-file-responsibilities.md) formaliza o comentário inicial de uma linha e restringe `mod.rs` a declarações de módulos e imports/reexports. Cada caso de uso fica em `commands/<operacao>.rs` ou `queries/<operacao>.rs`, com o pedido e sua função `handle` juntos. Os `mod.rs` dessas pastas apenas declaram casos de uso e reexportam tipos. Os adaptadores chamam as funções diretamente. No catálogo elas recebem os ports necessários; na mídia recebem `MediaContext`, que compartilha os ports e a trava dos comandos. A [revisão do backend](docs/backend-health.md) registra a organização atual e os pontos de concorrência ainda abertos.
+
 Tipos `librqbit`, processos FFmpeg e conexões SQL não atravessam os contratos RPC. Introduzir interfaces somente nas fronteiras externas que precisem de substituição/testes, sem repositório genérico ou camada obrigatória para cada struct.
 
 ### 2.2 Propriedade do estado e concorrência

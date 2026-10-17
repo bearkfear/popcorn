@@ -1,4 +1,4 @@
-//! TMDB client adapter.
+//! Executes bounded TMDB HTTP requests with concurrency limits, cooldowns and status translation.
 use std::time::Duration;
 
 use reqwest::StatusCode;

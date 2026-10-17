@@ -1,4 +1,4 @@
-//! TMDB mapping adapter.
+//! Deserializes TMDB response models and converts them into catalog entities and safe image URLs.
 use serde::Deserialize;
 
 use super::{CastData, EpisodeData, GenreData, SeasonData, TitleData, TitlePage, TmdbError};

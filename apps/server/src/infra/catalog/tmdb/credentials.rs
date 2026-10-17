@@ -1,4 +1,4 @@
-//! TMDB credentials adapter.
+//! Prepares private temporary credential files and removes remembered TMDB tokens.
 use std::{io::Write as _, path::Path};
 
 pub(super) fn prepare_token(

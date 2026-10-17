@@ -1,4 +1,4 @@
-//! Implements persistence, external metadata and local media engine adapters.
+//! Declares storage, authentication, health, catalog and media infrastructure adapters.
 
 pub mod auth;
 pub mod catalog;

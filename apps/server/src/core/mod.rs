@@ -1,4 +1,4 @@
-//! Defines domain values and rules without transport or infrastructure dependencies.
+//! Declares authentication, catalog and media domain modules without external adapters.
 
 pub mod auth;
 pub mod catalog;

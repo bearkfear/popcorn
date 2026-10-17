@@ -1,5 +1,7 @@
 //! Protobuf mapping and delegation for source commands and queries.
 
+use crate::application::media::commands::{add_source, remove_source};
+use crate::application::media::queries::list_sources;
 use std::sync::Arc;
 
 use connectrpc::{Encodable, RequestContext, Response, ServiceRequest, ServiceResult};
@@ -12,20 +14,22 @@ use popcorn_proto::{
 };
 
 use crate::{
-    application::media::{AddSource, Cache, MediaError, MediaService, Sources, Transfers},
+    application::media::{AddSource, Cache, MediaContext, MediaError, Sources, Transfers},
     core::media::{Content, Coordinates, MediaKind, Source, SourceInput},
 };
+
+use crate::application::media::{commands::RemoveSource, queries::ListSources};
 
 use super::errors::{invalid, source_error};
 
 #[derive(Debug)]
 pub(super) struct MediaRpc<R, T, C> {
-    pub(super) service: Arc<MediaService<R, T, C>>,
+    pub(super) context: Arc<MediaContext<R, T, C>>,
 }
 
 impl<R, T, C> MediaRpc<R, T, C> {
-    pub(super) const fn new(service: Arc<MediaService<R, T, C>>) -> Self {
-        Self { service }
+    pub(super) const fn new(context: Arc<MediaContext<R, T, C>>) -> Self {
+        Self { context }
     }
 }
 
@@ -50,9 +54,7 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> SourceSer
             Input::TorrentFile(bytes) => SourceInput::TorrentFile(bytes),
         };
         let content = decode_content(content).map_err(source_error)?;
-        let source = self
-            .service
-            .add(AddSource { content, input })
+        let source = add_source::handle(self.context.as_ref(), AddSource { content, input })
             .await
             .map_err(source_error)?;
         Response::ok(AddSourceResponse {
@@ -72,7 +74,10 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> SourceSer
             .as_option()
             .ok_or_else(|| invalid("content is required"))?;
         let content = decode_content(content).map_err(source_error)?;
-        let sources = self.service.list(&content).await.map_err(source_error)?;
+        let sources =
+            list_sources::handle(self.context.as_ref(), ListSources { content: &content })
+                .await
+                .map_err(source_error)?;
         Response::ok(ListSourcesResponse {
             sources: sources.into_iter().map(encode_source).collect(),
             ..Default::default()
@@ -87,10 +92,14 @@ impl<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static> SourceSer
         if request.source_id.is_empty() {
             return Err(invalid("source ID is required"));
         }
-        self.service
-            .remove(request.source_id)
-            .await
-            .map_err(source_error)?;
+        remove_source::handle(
+            self.context.as_ref(),
+            RemoveSource {
+                source_id: request.source_id,
+            },
+        )
+        .await
+        .map_err(source_error)?;
         Response::ok(RemoveSourceResponse::default())
     }
 }
