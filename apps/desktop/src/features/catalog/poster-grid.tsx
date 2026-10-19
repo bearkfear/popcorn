@@ -1,3 +1,4 @@
+import { Pagination } from "@ark-ui/solid/pagination";
 import { buttonStyles } from "../../shared/ui/styles";
 // UI component for displaying the catalog poster grid, status states, and pagination.
 
@@ -15,36 +16,55 @@ interface PosterGridProps {
 
 function getCatalogHeading(vm: CatalogViewModel): string {
   if (vm.query()) return `Resultados para "${vm.query()}"`;
-  if (vm.genreId()) {
-    const match = vm.genres().find((item) => item.id === vm.genreId());
-    if (match) return `Gênero: ${match.name}`;
-  }
+  const genre = vm.genres().find((item) => item.id === vm.genreId());
+  let heading = "Populares agora";
   if (vm.category() === CatalogCategory.UPCOMING) {
-    return vm.mediaType() === MediaType.MOVIE ? "Próximos lançamentos" : "Em exibição";
+    heading = vm.mediaType() === MediaType.MOVIE ? "Próximos lançamentos" : "Em exibição";
   }
-  if (vm.category() === CatalogCategory.TOP_RATED) return "Mais bem avaliados";
-  return "Populares no TMDB";
+  if (vm.category() === CatalogCategory.TOP_RATED) heading = "Mais bem avaliados";
+  return genre ? `${heading} · ${genre.name}` : heading;
 }
 
 export function PosterGrid(props: PosterGridProps) {
   const { vm, selectedTitle, onSelectTitle } = props;
   const heading = () => getCatalogHeading(vm);
-  const eyebrow = () => {
-    return vm.mediaType() === MediaType.MOVIE ? "FILMES / TMDB" : "SÉRIES / TMDB";
-  };
+  let headingElement: HTMLHeadingElement | undefined;
+
+  function changePage(page: number) {
+    if (vm.catalogBusy() || page === vm.page()) return;
+    vm.changePage(page);
+    headingElement?.scrollIntoView({ block: "start", behavior: "instant" });
+    headingElement?.focus({ preventScroll: true });
+  }
 
   return (
     <>
-      <div class="collection-header m-[32px_0_16px] [&_h2]:mt-[3px] [&_h2]:text-[25px] [&_>_.muted]:text-[12px] max-[560px]:items-end max-[560px]:[&_>_.muted]:max-w-[42%] max-[560px]:[&_>_.muted]:text-right cluster flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p class="eyebrow text-accent-strong text-[11px] font-bold tracking-[0.13em]">
-            {eyebrow()}
-          </p>
-          <h2>{heading()}</h2>
-        </div>
-        <span class="muted text-muted">
-          {vm.catalogLoaded() ? `${vm.titles().length} títulos carregados` : "Ainda não consultado"}
-        </span>
+      <div class="collection-header mt-8 mb-5 flex flex-wrap items-baseline justify-between gap-3">
+        <h2
+          ref={headingElement}
+          tabindex="-1"
+          class="min-w-0 scroll-mt-24 text-[22px] font-medium tracking-[-0.025em] wrap-anywhere focus:outline-none"
+        >
+          {heading()}
+        </h2>
+        <Show when={vm.totalPages() > 0}>
+          <span
+            class="flex shrink-0 items-center gap-2 text-xs text-muted"
+            role="status"
+            aria-live="polite"
+          >
+            <Show
+              when={vm.catalogBusy()}
+              fallback={
+                <>
+                  Página {vm.page()} de {vm.totalPages()}
+                </>
+              }
+            >
+              <Icon name="loading" class="animate-spin" /> Carregando página {vm.requestedPage()}…
+            </Show>
+          </span>
+        </Show>
       </div>
 
       <Show when={vm.catalogStale()}>
@@ -54,7 +74,7 @@ export function PosterGrid(props: PosterGridProps) {
       </Show>
 
       <section
-        class="catalog-panel [min-inline-size:0] border border-line rounded-panel bg-slate-2 wrap-anywhere overflow-hidden"
+        class="catalog-panel min-w-0 wrap-anywhere"
         aria-label="Títulos do catálogo"
         aria-busy={vm.catalogBusy()}
       >
@@ -69,16 +89,16 @@ export function PosterGrid(props: PosterGridProps) {
               type="button"
               class={buttonStyles({ variant: "secondary" })}
               disabled={vm.catalogBusy()}
-              onClick={() => void vm.loadCatalog(vm.catalogLoaded() && vm.hasMore())}
+              onClick={vm.retryCatalog}
             >
               Tentar novamente
             </button>
           </div>
         </Show>
 
-        <Show when={vm.catalogBusy()}>
+        <Show when={vm.catalogBusy() && !vm.catalogLoaded()}>
           <p class="loading-message p-[12px_16px] text-muted text-[13px]" role="status">
-            {vm.catalogLoaded() ? "Carregando mais títulos..." : "Consultando títulos..."}
+            Consultando títulos...
           </p>
         </Show>
 
@@ -91,7 +111,7 @@ export function PosterGrid(props: PosterGridProps) {
             <button
               type="button"
               class={buttonStyles({ variant: "secondary" })}
-              onClick={() => vm.changeCategory(CatalogCategory.POPULAR)}
+              onClick={() => vm.changeCategory(CatalogCategory.POPULAR, 0)}
             >
               Voltar aos populares
             </button>
@@ -105,7 +125,7 @@ export function PosterGrid(props: PosterGridProps) {
           </div>
         </Show>
 
-        <ul class="poster-grid grid grid-cols-[repeat(auto-fill,_minmax(148px,_1fr))] gap-[clamp(14px,_2vw,_22px)] m-0 p-5 list-none [&_li]:min-w-0 max-[820px]:grid-cols-[repeat(auto-fill,_minmax(138px,_1fr))] max-[560px]:grid-cols-[repeat(2,_minmax(0,_1fr))] max-[560px]:gap-[16px_12px] max-[560px]:p-3">
+        <ul class="poster-grid m-0 grid list-none grid-cols-[repeat(auto-fill,_minmax(180px,_1fr))] gap-x-5 gap-y-7 p-0 [&_li]:min-w-0 max-[820px]:grid-cols-[repeat(auto-fill,_minmax(138px,_1fr))] max-[560px]:grid-cols-2 max-[560px]:gap-x-3 max-[560px]:gap-y-5">
           <For each={vm.titles()}>
             {(title) => (
               <li>
@@ -118,17 +138,15 @@ export function PosterGrid(props: PosterGridProps) {
                   onClick={() => onSelectTitle(title)}
                 >
                   <Artwork url={title.posterUrl} title={`Pôster de ${title.title}`} />
-                  <span class="card-copy block p-[10px_2px_2px] [&_strong]:line-clamp-2 [&_strong]:min-h-[42px] [&_strong]:overflow-hidden [&_strong]:text-[14px] [&_strong]:font-[650] [&_strong]:leading-[1.45]">
+                  <span class="card-copy block pt-3 [&_strong]:line-clamp-2 [&_strong]:min-h-10 [&_strong]:text-[14px] [&_strong]:font-medium [&_strong]:leading-5">
                     <strong>{title.title || "Título não informado"}</strong>
-                    <span class="row-meta block mt-[2px] text-muted text-[12px]">
-                      {title.releaseYear || "Ano não informado"}
-                      {title.voteAverage > 0 ? (
-                        <>
-                          · <Icon name="star" /> {title.voteAverage.toFixed(1)}
-                        </>
-                      ) : (
-                        " · Sem avaliação"
-                      )}
+                    <span class="row-meta mt-1 flex items-center justify-between gap-2 text-xs text-muted">
+                      <span>{title.releaseYear || "Ano não informado"}</span>
+                      <Show when={title.voteAverage > 0}>
+                        <span class="flex items-center gap-1 text-amber-11">
+                          <Icon name="star" /> {title.voteAverage.toFixed(1)}
+                        </span>
+                      </Show>
                     </span>
                   </span>
                 </button>
@@ -137,17 +155,67 @@ export function PosterGrid(props: PosterGridProps) {
           </For>
         </ul>
 
-        <Show when={vm.catalogLoaded() && vm.hasMore()}>
-          <div class="pagination p-4 border-t border-line text-center">
-            <button
-              type="button"
-              class={buttonStyles({ variant: "secondary" })}
-              disabled={vm.catalogBusy()}
-              onClick={() => void vm.loadCatalog(true)}
+        <Show when={vm.totalPages() > 1}>
+          {/* The API returns a page count, so each item represents one API page. */}
+          <Pagination.Root
+            class="pagination mt-10 flex items-center justify-center gap-1 border-t border-slate-6 pt-6"
+            count={vm.totalPages()}
+            pageSize={1}
+            page={vm.page() || 1}
+            siblingCount={0}
+            onPageChange={({ page }) => changePage(page)}
+            translations={{
+              rootLabel: "Paginação do catálogo",
+              prevTriggerLabel: "Página anterior",
+              nextTriggerLabel: "Próxima página",
+              itemLabel: ({ page, totalPages }) => `Página ${page} de ${totalPages}`,
+            }}
+          >
+            <Pagination.PrevTrigger
+              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-[13px] text-muted transition-colors hover:bg-slate-4 hover:text-ink max-[560px]:size-9 max-[560px]:min-h-9 max-[560px]:p-0"
+              disabled={vm.catalogBusy() || vm.page() <= 1}
             >
-              Carregar mais títulos
-            </button>
-          </div>
+              <Icon name="caret-down" class="size-4 rotate-90" />
+              <span class="max-[560px]:hidden">Anterior</span>
+            </Pagination.PrevTrigger>
+            <Pagination.Context>
+              {(pagination) => (
+                <For each={pagination().pages}>
+                  {(page, index) => (
+                    <Show
+                      when={page.type === "page" && page}
+                      keyed
+                      fallback={
+                        <Pagination.Ellipsis
+                          index={index()}
+                          class="grid size-9 place-items-center text-xs text-muted"
+                        >
+                          …
+                        </Pagination.Ellipsis>
+                      }
+                    >
+                      {(item) => (
+                        <Pagination.Item
+                          {...item}
+                          disabled={vm.catalogBusy()}
+                          class="grid size-10 place-items-center rounded-lg border border-transparent text-[13px] text-muted tabular-nums transition-colors hover:bg-slate-4 hover:text-ink data-[selected]:border-slate-7 data-[selected]:bg-slate-4 data-[selected]:font-semibold data-[selected]:text-ink max-[560px]:size-9"
+                        >
+                          {item.value}
+                        </Pagination.Item>
+                      )}
+                    </Show>
+                  )}
+                </For>
+              )}
+            </Pagination.Context>
+            <Pagination.NextTrigger
+              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-[13px] text-muted transition-colors hover:bg-slate-4 hover:text-ink max-[560px]:size-9 max-[560px]:min-h-9 max-[560px]:p-0"
+              disabled={vm.catalogBusy() || vm.page() >= vm.totalPages()}
+            >
+              <span class="max-[560px]:hidden">Próxima</span>
+              <Icon name="caret-down" class="size-4 -rotate-90" />
+            </Pagination.NextTrigger>
+          </Pagination.Root>
         </Show>
       </section>
     </>

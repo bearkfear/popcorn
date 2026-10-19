@@ -8,7 +8,7 @@ export const selectFieldStyles = tv({
     ],
     content: [
       "select-field-content select-field-listbox z-50 max-h-[min(320px,var(--available-height,320px))]",
-      "overflow-auto border bg-surface shadow-[0_12px_32px_var(--black-a6)] m-0 outline-none list-none",
+      "overflow-auto overscroll-contain border bg-surface shadow-[0_12px_32px_var(--black-a6)] m-0 outline-none list-none",
     ],
     item: [
       "select-field-item flex items-center justify-between gap-3 text-ink cursor-pointer text-[13px]",
@@ -37,10 +37,10 @@ export const selectFieldStyles = tv({
         itemIndicator: "flex shrink-0",
       },
       genre: {
-        root: "genre-select grid col-span-full grid-cols-subgrid items-center gap-3 max-[560px]:grid-cols-1",
-        label: "genre-select-label mb-0",
+        root: "genre-select w-[220px] max-[760px]:w-full",
+        label: "genre-select-label sr-only",
         trigger:
-          "genre-select-trigger min-h-10 gap-3 px-3 py-2 border-line rounded-control bg-slate-2 disabled:opacity-[0.65]",
+          "genre-select-trigger min-h-10 gap-3 px-3 py-2 border-slate-6 rounded-lg bg-transparent text-[13px] hover:bg-slate-3 disabled:opacity-[0.65]",
         content:
           "genre-select-content genre-select-listbox w-[min(280px,calc(100vw-32px))] p-1 border-line rounded-control",
         item: "genre-select-item min-h-9 px-[9px] py-[7px] rounded-[3px] data-[highlighted]:bg-soft",

@@ -19,13 +19,16 @@ fn query_trims_when_parsed() {
     assert_eq!(query.text(), "cinema");
 }
 #[test]
-fn filters_reject_when_category_is_not_popular() {
-    // Given
-    let genre = 18;
-    // When
-    let result = Category::parse(2, genre);
-    // Then
-    assert!(result.is_err());
+fn categories_accept_all_supported_collections() {
+    for (value, path) in [
+        (0, "popular"),
+        (1, "popular"),
+        (2, "upcoming"),
+        (3, "top_rated"),
+    ] {
+        assert_eq!(Category::parse(value).unwrap().path(), path);
+    }
+    assert!(Category::parse(4).is_err());
 }
 #[test]
 fn cursor_rejects_when_coordinates_are_invalid() {

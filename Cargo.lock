@@ -3997,6 +3997,7 @@ version = "2026.10.1703"
 dependencies = [
  "axum",
  "base64 0.22.1",
+ "chrono",
  "clap",
  "connectrpc",
  "librqbit",

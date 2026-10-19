@@ -3,6 +3,7 @@ import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { Icon } from "./icon";
 import { type SelectFieldVariants, selectFieldStyles } from "./select-field.styles";
+import { createSelectScrollDismiss } from "./select-scroll";
 
 export interface SelectOption {
   readonly value: string;
@@ -26,6 +27,8 @@ export function SelectField(props: SelectFieldProps) {
   const collection = createMemo(() => createListCollection({ items: [...props.options] }));
   const [portalMount, setPortalMount] = createSignal<HTMLDialogElement>();
   let trigger: HTMLButtonElement | undefined;
+  let content: HTMLDivElement | undefined;
+  const menu = createSelectScrollDismiss(() => content);
 
   // Native modal dialogs make portals mounted on document.body inert.
   onMount(() => setPortalMount(trigger?.closest("dialog") ?? undefined));
@@ -34,6 +37,8 @@ export function SelectField(props: SelectFieldProps) {
     <Select.Root
       class={styles().root({ class: props.class })}
       collection={collection()}
+      open={menu.open()}
+      onOpenChange={({ open }) => menu.setOpen(open)}
       value={[props.value]}
       disabled={props.disabled ?? false}
       positioning={{
@@ -61,6 +66,7 @@ export function SelectField(props: SelectFieldProps) {
       <Portal mount={portalMount() ?? document.body}>
         <Select.Positioner>
           <Select.Content
+            ref={content}
             class={styles().content({
               class: portalMount()
                 ? "w-[var(--reference-width)] max-w-[var(--available-width)]"

@@ -8,6 +8,7 @@ import { CatalogCategory, MediaType } from "@popcorn/sdk";
 import { createMemo, For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { Icon } from "../../shared/ui/icon";
+import { createSelectScrollDismiss } from "../../shared/ui/select-scroll";
 import type { CatalogViewModel } from "./catalog.viewmodel";
 
 interface GenreOption {
@@ -42,55 +43,44 @@ export function CatalogControls(props: CatalogControlsProps) {
   };
 
   const genreStyles = selectFieldStyles({ variant: "genre" });
+  let genreContent: HTMLDivElement | undefined;
+  const genreMenu = createSelectScrollDismiss(() => genreContent);
 
   return (
     <section
-      class="catalog-controls grid grid-cols-[auto_minmax(240px,_1fr)_auto] gap-4 items-end mt-6 p-4 border border-line rounded-panel bg-slate-2 max-[1120px]:grid-cols-[1fr_1fr] max-[560px]:grid-cols-[1fr]"
-      aria-label="Explorar o TMDB"
+      class="catalog-controls flex flex-wrap items-center gap-3"
+      aria-label="Buscar e filtrar títulos"
     >
-      <ToggleGroup.Root
-        class="cluster flex flex-wrap items-center justify-between gap-3 media-tabs justify-start max-[560px]:flex-nowrap max-[560px]:overflow-x-auto"
-        aria-label="Tipo de mídia"
-        value={[String(vm.mediaType())]}
-        onValueChange={({ value }) => value[0] && vm.changeMediaType(Number(value[0]) as MediaType)}
-      >
-        <ToggleGroup.Item
-          class={buttonStyles({ variant: "secondary", size: "tab" })}
-          value={String(MediaType.MOVIE)}
-        >
-          Filmes
-        </ToggleGroup.Item>
-        <ToggleGroup.Item
-          class={buttonStyles({ variant: "secondary", size: "tab" })}
-          value={String(MediaType.TV)}
-        >
-          Séries
-        </ToggleGroup.Item>
-      </ToggleGroup.Root>
-
       <form
-        class="search-form [&_>_label]:block [&_>_label]:mb-[6px] [&_>_label]:text-muted [&_>_label]:text-[12px] [&_>_label]:font-bold min-w-0 max-[1120px]:col-span-full max-[1120px]:[grid-row:1] max-[560px]:[grid-column:1]"
+        class="search-form flex h-10 min-w-0 basis-full items-stretch overflow-hidden rounded-lg border border-slate-7 bg-slate-3 transition-colors focus-within:border-slate-10 min-[1120px]:basis-[320px] min-[1120px]:flex-1"
         onSubmit={handleSearch}
       >
-        <label for="catalog-search">
+        <label class="sr-only" for="catalog-search">
           Buscar {vm.mediaType() === MediaType.MOVIE ? "filmes" : "séries"}
         </label>
-        <div class="search-fields [&_input]:w-full [&_input]:min-h-[44px] [&_input]:p-[9px_12px] [&_input]:border [&_input]:border-line [&_input]:rounded-[5px_0_0_5px] [&_input]:bg-slate-2 [&_input]:text-ink [&_input]:min-w-0 flex [&_.button]:rounded-[0_5px_5px_0]">
+        <div class="search-fields flex min-w-0 flex-1 items-center gap-3 px-3">
+          <Icon name="search" class="size-[18px] text-muted" />
           <input
             id="catalog-search"
             type="search"
+            class="h-full min-w-0 flex-1 bg-transparent text-sm text-ink focus-visible:outline-none"
             value={vm.searchInput()}
             onInput={(e) => vm.setSearchInput(e.currentTarget.value)}
-            placeholder={vm.mediaType() === MediaType.MOVIE ? "Nome do filme" : "Nome da série"}
+            placeholder={
+              vm.mediaType() === MediaType.MOVIE ? "Buscar um filme..." : "Buscar uma série..."
+            }
           />
-          <button class={buttonStyles()} type="submit">
-            Buscar
-          </button>
         </div>
+        <button
+          class="shrink-0 border-l border-transparent bg-accent px-4 text-[13px] font-medium text-accent-contrast transition-colors hover:bg-accent-hover focus-visible:-outline-offset-2"
+          type="submit"
+        >
+          Buscar
+        </button>
       </form>
 
       <ToggleGroup.Root
-        class="cluster flex flex-wrap items-center justify-between gap-3 category-tabs justify-start max-[560px]:flex-nowrap max-[560px]:overflow-x-auto"
+        class="category-tabs flex min-w-0 items-center gap-2 overflow-x-auto max-[560px]:basis-full"
         aria-label="Categoria do catálogo"
         value={vm.query() ? [] : [String(vm.category())]}
         onValueChange={({ value }) =>
@@ -98,39 +88,37 @@ export function CatalogControls(props: CatalogControlsProps) {
         }
       >
         <ToggleGroup.Item
-          class={buttonStyles({ variant: "secondary", size: "tab" })}
+          class="min-h-10 shrink-0 rounded-md px-3 text-[13px] font-medium text-muted transition-colors hover:text-ink data-[state=on]:bg-slate-4 data-[state=on]:text-ink"
           value={String(CatalogCategory.POPULAR)}
         >
           Populares
         </ToggleGroup.Item>
         <ToggleGroup.Item
-          class={buttonStyles({ variant: "secondary", size: "tab" })}
+          class="min-h-10 shrink-0 rounded-md px-3 text-[13px] font-medium text-muted transition-colors hover:text-ink data-[state=on]:bg-slate-4 data-[state=on]:text-ink"
           value={String(CatalogCategory.UPCOMING)}
         >
-          {vm.mediaType() === MediaType.MOVIE ? "Próximos lançamentos" : "Em exibição"}
+          {vm.mediaType() === MediaType.MOVIE ? "Em breve" : "Em exibição"}
         </ToggleGroup.Item>
         <ToggleGroup.Item
-          class={buttonStyles({ variant: "secondary", size: "tab" })}
+          class="min-h-10 shrink-0 rounded-md px-3 text-[13px] font-medium text-muted transition-colors hover:text-ink data-[state=on]:bg-slate-4 data-[state=on]:text-ink"
           value={String(CatalogCategory.TOP_RATED)}
         >
           Mais bem avaliados
         </ToggleGroup.Item>
       </ToggleGroup.Root>
 
-      <div class="genre-filter [&_>_label]:block [&_>_label]:mb-[6px] [&_>_label]:text-muted [&_>_label]:text-[12px] [&_>_label]:font-bold col-span-full grid grid-cols-[auto_minmax(180px,_280px)_1fr] items-center gap-3 pt-3 border-t border-line max-[1120px]:grid-cols-[auto_minmax(180px,_1fr)] max-[1120px]:[&_.cache-label]:col-span-full max-[1120px]:[&_.error-text]:col-span-full max-[1120px]:[&_.button]:col-span-full max-[560px]:[grid-column:1] max-[560px]:grid-cols-[1fr]">
+      <div class="genre-filter ml-auto flex flex-wrap items-center justify-end gap-3 max-[560px]:ml-0 max-[560px]:w-full">
         <Select.Root
           class={genreStyles.root()}
           collection={collection()}
+          open={genreMenu.open()}
+          onOpenChange={({ open }) => genreMenu.setOpen(open)}
           value={[String(vm.genreId())]}
           disabled={vm.genresBusy()}
           positioning={{ placement: "bottom-start" }}
-          onValueChange={({ value }) =>
-            vm.changeCategory(CatalogCategory.POPULAR, Number(value[0] ?? 0))
-          }
+          onValueChange={({ value }) => vm.changeCategory(vm.category(), Number(value[0] ?? 0))}
         >
-          <Select.Label class={genreStyles.label()}>
-            Gênero <span class="muted text-muted">· em Populares</span>
-          </Select.Label>
+          <Select.Label class={genreStyles.label()}>Filtrar por gênero</Select.Label>
           <Select.Trigger class={genreStyles.trigger()}>
             <Select.ValueText class={genreStyles.valueText()} placeholder="Todos os gêneros" />
             <Select.Indicator class={genreStyles.indicator()} aria-hidden="true">
@@ -139,7 +127,7 @@ export function CatalogControls(props: CatalogControlsProps) {
           </Select.Trigger>
           <Portal>
             <Select.Positioner>
-              <Select.Content class={genreStyles.content()}>
+              <Select.Content ref={genreContent} class={genreStyles.content()}>
                 <For each={collection().items}>
                   {(item) => (
                     <Select.Item class={genreStyles.item()} item={item}>

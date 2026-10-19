@@ -10,6 +10,7 @@ publish = false
 
 [workspace.dependencies]
 base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 axum = "=0.8.9"
 buffa = { version = "=0.9.1", features = ["json"] }
 connectrpc = { version = "=0.9.0", features = ["axum"] }

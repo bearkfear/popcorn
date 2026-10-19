@@ -7,6 +7,8 @@ import tmdbLogo from "./assets/tmdb.svg";
 import { createBootstrapViewModel } from "./features/bootstrap/bootstrap.viewmodel";
 import { createCatalogViewModel } from "./features/catalog/catalog.viewmodel";
 import { CatalogControls } from "./features/catalog/catalog-controls";
+import { CatalogMediaTabs } from "./features/catalog/catalog-media-tabs";
+import { CatalogSpotlight } from "./features/catalog/catalog-spotlight";
 import { PosterGrid } from "./features/catalog/poster-grid";
 import { createDetailsViewModel } from "./features/details/details.viewmodel";
 import { DetailsPanel } from "./features/details/details-panel";
@@ -37,6 +39,7 @@ export function App() {
   const player = createPlayerViewModel(() => bootstrap.getClients().playback);
   const history = createHistoryViewModel(() => bootstrap.getClients().history);
   const [page, setPage] = createSignal<Page>("search");
+  const [librarySelected, setLibrarySelected] = createSignal(false);
   const [session, setSession] = createSignal<WatchContext>();
   let settingsReturnPage: Page = "search";
   let openingWindow = false;
@@ -271,41 +274,43 @@ export function App() {
       }
     >
       <div class="app-shell min-h-screen">
-        <header class="app-header sticky z-[20] top-0 min-h-[64px] p-[0_clamp(18px,_4vw,_54px)] border-b border-slate-6 bg-slate-2 shadow-[0_2px_12px_var(--black-a4)] backdrop-blur-[14px] max-[560px]:min-h-[56px] cluster flex flex-wrap items-center justify-between gap-3">
-          <button
-            class="brand-lockup flex min-h-10 items-center brand-button border-0 p-0 text-inherit bg-transparent"
-            type="button"
-            onClick={backToSearch}
-            aria-label="Ir para pesquisa"
-          >
-            <span class="wordmark text-[22px] font-bold tracking-[-0.04em] lowercase max-[560px]:text-[20px]">
-              popcorn<span class="wordmark-dot text-accent">.</span>
-            </span>
-          </button>
-          <nav
-            class="cluster flex flex-wrap items-center justify-between gap-3"
-            aria-label="Navegação principal"
-          >
+        <header class="app-header sticky z-[20] top-0 border-b border-slate-6 bg-slate-2 shadow-[0_2px_12px_var(--black-a4)] backdrop-blur-[14px]">
+          <div class="w-full max-w-[1480px] mx-auto px-[clamp(18px,_4vw,_54px)] max-[560px]:px-[14px] min-h-[64px] max-[560px]:min-h-[56px] cluster flex flex-wrap items-center justify-between gap-3">
             <button
-              class="text-button flex min-h-10 items-center gap-2 rounded-control border-0 bg-transparent px-3 text-[13px] text-muted hover:bg-slate-4 hover:text-ink aria-[current=page]:bg-slate-4 aria-[current=page]:text-ink"
+              class="brand-lockup flex min-h-10 items-center brand-button border-0 p-0 text-inherit bg-transparent"
               type="button"
               onClick={backToSearch}
-              aria-current={page() !== "settings" ? "page" : undefined}
+              aria-label="Ir para pesquisa"
             >
-              Explorar
+              <span class="wordmark text-[22px] font-bold tracking-[-0.04em] lowercase max-[560px]:text-[20px]">
+                popcorn<span class="wordmark-dot text-accent">.</span>
+              </span>
             </button>
-            <button
-              class="text-button flex min-h-10 items-center gap-2 rounded-control border-0 bg-transparent px-3 text-[13px] text-muted hover:bg-slate-4 hover:text-ink aria-[current=page]:bg-slate-4 aria-[current=page]:text-ink"
-              type="button"
-              aria-current={page() === "settings" ? "page" : undefined}
-              onClick={openSettings}
+            <nav
+              class="cluster flex flex-wrap items-center justify-between gap-3"
+              aria-label="Navegação principal"
             >
-              <Icon name="settings" /> Configurações
-            </button>
-          </nav>
+              <button
+                class="text-button flex min-h-10 items-center gap-2 rounded-control border-0 bg-transparent px-3 text-[13px] text-muted hover:bg-slate-4 hover:text-ink aria-[current=page]:bg-slate-4 aria-[current=page]:text-ink"
+                type="button"
+                onClick={backToSearch}
+                aria-current={page() !== "settings" ? "page" : undefined}
+              >
+                Explorar
+              </button>
+              <button
+                class="text-button flex min-h-10 items-center gap-2 rounded-control border-0 bg-transparent px-3 text-[13px] text-muted hover:bg-slate-4 hover:text-ink aria-[current=page]:bg-slate-4 aria-[current=page]:text-ink"
+                type="button"
+                aria-current={page() === "settings" ? "page" : undefined}
+                onClick={openSettings}
+              >
+                <Icon name="settings" /> Configurações
+              </button>
+            </nav>
+          </div>
         </header>
         <main
-          class={`page w-[min(1480px,_100%)] m-[0_auto] p-[32px_clamp(18px,_4vw,_54px)_24px] max-[820px]:pt-6 max-[560px]:px-[14px] ${page() === "details" ? "details-page max-w-[1120px]" : "search-page max-w-[1500px]"}`}
+          class={`page w-full max-w-[1480px] mx-auto px-[clamp(18px,_4vw,_54px)] max-[560px]:px-[14px] pt-8 pb-6 max-[820px]:pt-6 ${page() === "details" ? "details-page" : "search-page"}`}
         >
           <Show when={page() === "settings"}>
             <SettingsPage
@@ -430,30 +435,35 @@ export function App() {
                   </>
                 }
               >
-                <section
-                  class="introduction mb-6 [&_h1]:m-[4px_0_8px] [&_h1]:text-[clamp(30px,_4vw,_46px)] [&_h1]:font-normal [&_h1]:leading-[1.12] [&_h1]:tracking-[-0.035em] [&_>_.muted]:max-w-[620px] max-[560px]:[&_h1]:text-[31px]"
-                  aria-labelledby="library-title"
-                >
-                  <p class="eyebrow text-accent-strong text-[11px] font-bold tracking-[0.13em]">
-                    SEU CINEMA, SEU TEMPO
-                  </p>
-                  <h1 id="library-title">O que vamos assistir?</h1>
-                  <p class="muted text-muted">
-                    Encontre uma nova história ou continue de onde parou.
-                  </p>
-                </section>
-                <CatalogControls vm={catalog} />
-                <HistoryShelf
-                  vm={history}
-                  disabled={player.busy()}
-                  onOpen={(entry) => openTitle(entry.title, entry.content)}
-                  onResume={(entry) => void resume(entry)}
-                />
-                <PosterGrid
+                <h1 class="sr-only">
+                  {librarySelected() ? "Minha biblioteca" : "Explorar filmes e séries"}
+                </h1>
+                <CatalogMediaTabs
                   vm={catalog}
-                  selectedTitle={details.selected}
-                  onSelectTitle={(title) => openTitle(title)}
+                  librarySelected={librarySelected()}
+                  onLibraryChange={setLibrarySelected}
                 />
+                <Show when={!librarySelected()}>
+                  <CatalogSpotlight
+                    vm={catalog}
+                    history={history}
+                    onSelectTitle={(title) => openTitle(title)}
+                  />
+                  <CatalogControls vm={catalog} />
+                  <PosterGrid
+                    vm={catalog}
+                    selectedTitle={details.selected}
+                    onSelectTitle={(title) => openTitle(title)}
+                  />
+                </Show>
+                <Show when={librarySelected()}>
+                  <HistoryShelf
+                    vm={history}
+                    disabled={player.busy()}
+                    onOpen={(entry) => openTitle(entry.title, entry.content)}
+                    onResume={(entry) => void resume(entry)}
+                  />
+                </Show>
               </Show>
             </Show>
           </Show>

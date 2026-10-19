@@ -53,7 +53,7 @@ export function SettingsPage(props: {
     })[props.bootstrap.connection()];
 
   return (
-    <section class="settings-page mx-auto max-w-[1120px]" aria-labelledby="settings-title">
+    <section class="settings-page" aria-labelledby="settings-title">
       <button
         class="mb-7 flex min-h-10 items-center gap-2 text-[13px] text-muted hover:text-ink"
         type="button"

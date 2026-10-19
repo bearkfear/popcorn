@@ -1,4 +1,4 @@
-//! Validates catalog categories and the combinations allowed with genre filters.
+//! Validates catalog categories independently of the genre filter.
 
 use crate::core::catalog::CatalogError;
 
@@ -9,18 +9,13 @@ pub(crate) enum Category {
     TopRated,
 }
 impl Category {
-    pub(crate) const fn parse(value: i32, genre: u32) -> Result<Self, CatalogError> {
+    pub(crate) const fn parse(value: i32) -> Result<Self, CatalogError> {
         let category = match value {
             0 | 1 => Self::Popular,
             2 => Self::Upcoming,
             3 => Self::TopRated,
             _ => return Err(CatalogError::Invalid("unknown catalog category")),
         };
-        if genre > 0 && !matches!(category, Self::Popular) {
-            return Err(CatalogError::Invalid(
-                "genre filtering applies to popular titles",
-            ));
-        }
         Ok(category)
     }
     pub(crate) const fn path(self) -> &'static str {

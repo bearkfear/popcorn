@@ -30,6 +30,7 @@ function fromWire(entry: WireEntry): WatchEntry[] {
 export function createHistoryViewModel(getClient: () => HistoryClient | undefined) {
   const [entries, setEntries] = createSignal<WatchEntry[]>([]);
   const [error, setError] = createSignal("");
+  const [loaded, setLoaded] = createSignal(false);
   let pending = Promise.resolve();
   function enqueue(work: (client: HistoryClient) => Promise<void>) {
     const client = getClient();
@@ -46,7 +47,10 @@ export function createHistoryViewModel(getClient: () => HistoryClient | undefine
     return pending;
   }
   function accept(client: HistoryClient, values: WireEntry[]) {
-    if (getClient() === client) setEntries(values.flatMap(fromWire));
+    if (getClient() === client) {
+      setEntries(values.flatMap(fromWire));
+      setLoaded(true);
+    }
   }
   function refresh() {
     return enqueue(async (client) => accept(client, (await client.listHistory({})).entries));
@@ -54,6 +58,7 @@ export function createHistoryViewModel(getClient: () => HistoryClient | undefine
   createEffect(
     on(getClient, (client) => {
       setEntries([]);
+      setLoaded(false);
       if (!client) return;
       void enqueue(async (current) => {
         accept(current, (await loadHistory(current)).entries);
@@ -89,6 +94,6 @@ export function createHistoryViewModel(getClient: () => HistoryClient | undefine
     } while (current !== pending);
     return !error();
   }
-  return { entries, error, find, mark, progress, refresh, flush };
+  return { entries, loaded, error, find, mark, progress, refresh, flush };
 }
 export type HistoryViewModel = ReturnType<typeof createHistoryViewModel>;

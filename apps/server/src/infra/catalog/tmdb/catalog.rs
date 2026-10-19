@@ -1,6 +1,7 @@
 //! Builds TMDB catalog requests and maps cached title, genre, season and episode responses.
 use super::mapping::{RawEpisode, RawEpisodes, RawGenres, RawPage, RawTitle};
 use super::{Cached, EpisodeData, GenreData, SeasonData, TitleData, TitlePage, Tmdb, TmdbError};
+use chrono::{Duration, Utc};
 
 pub(super) const SHORT_TTL: i64 = 3_600;
 pub(super) const DETAIL_TTL: i64 = 86_400;
@@ -21,9 +22,31 @@ impl Tmdb {
         let path = if genre_id > 0 {
             params.extend([
                 ("with_genres", genre_id.to_string()),
-                ("sort_by", "popularity.desc".into()),
                 ("include_adult", "false".into()),
             ]);
+            match category {
+                "popular" => params.push(("sort_by", "popularity.desc".into())),
+                "top_rated" => params.extend([
+                    ("sort_by", "vote_average.desc".into()),
+                    ("vote_count.gte", "200".into()),
+                ]),
+                "upcoming" => {
+                    let today = Utc::now().date_naive();
+                    let until = today + Duration::days(if media_type == 1 { 30 } else { 7 });
+                    let (from_key, until_key) = if media_type == 1 {
+                        params.push(("with_release_type", "2|3".into()));
+                        ("release_date.gte", "release_date.lte")
+                    } else {
+                        ("air_date.gte", "air_date.lte")
+                    };
+                    params.extend([
+                        ("sort_by", "popularity.desc".into()),
+                        (from_key, today.to_string()),
+                        (until_key, until.to_string()),
+                    ]);
+                }
+                _ => return Err(TmdbError::Configuration),
+            }
             format!("discover/{kind}")
         } else {
             let category = match (category, media_type) {

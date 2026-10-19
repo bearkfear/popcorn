@@ -19,8 +19,7 @@ type CatalogRequest = {
   readonly category: CatalogCategory;
   readonly genreId: number;
   readonly query: string;
-  readonly more: boolean;
-  readonly current: CatalogPage | undefined;
+  readonly page: number;
 };
 
 type GenreRequest = {
@@ -48,28 +47,25 @@ export function createCatalogViewModel(
     const options = { timeoutMs: 10_000 };
 
     try {
-      const nextPage = request.more ? (request.current?.page ?? 0) + 1 : 1;
       const response = request.query
         ? await request.client.searchTitles(
-            { mediaType: request.mediaType, query: request.query, page: nextPage },
+            { mediaType: request.mediaType, query: request.query, page: request.page },
             options,
           )
         : await request.client.browseTitles(
             {
               mediaType: request.mediaType,
               category: request.category,
-              page: nextPage,
+              page: request.page,
               genreId: request.genreId,
             },
             options,
           );
       return {
-        titles: request.more
-          ? [...(request.current?.titles ?? []), ...response.titles]
-          : response.titles,
-        page: response.page || nextPage,
+        titles: response.titles,
+        page: response.page || request.page,
         totalPages: response.totalPages,
-        stale: Boolean(request.more && request.current?.stale) || response.stale,
+        stale: response.stale,
       } satisfies CatalogPage;
     } catch (error) {
       onRequireSetup(error);
@@ -102,7 +98,7 @@ export function createCatalogViewModel(
   const genresStale = () => genreResponseValue()?.stale ?? false;
   const page = () => catalogValue()?.page ?? 0;
   const totalPages = () => catalogValue()?.totalPages ?? 0;
-  const hasMore = () => page() < totalPages();
+  const requestedPage = () => catalogRequest()?.page ?? 1;
 
   function resetCatalog() {
     setCatalogRequest(undefined);
@@ -110,19 +106,39 @@ export function createCatalogViewModel(
     onResetDetail();
   }
 
-  function loadCatalog(more = false) {
+  function requestPage(nextPage: number) {
     const client = getClient();
-    if (!client || (more && (catalogBusy() || !hasMore()))) return;
-    if (!more) resetCatalog();
+    if (!client) return;
     setCatalogRequest({
       client,
       mediaType: mediaType(),
       category: category(),
       genreId: genreId(),
       query: query(),
-      more,
-      current: catalogValue(),
+      page: nextPage,
     });
+  }
+
+  function loadCatalog() {
+    resetCatalog();
+    requestPage(1);
+  }
+
+  function changePage(nextPage: number) {
+    if (
+      catalogBusy() ||
+      !Number.isInteger(nextPage) ||
+      nextPage < 1 ||
+      nextPage > totalPages() ||
+      nextPage === page()
+    )
+      return;
+    onResetDetail();
+    requestPage(nextPage);
+  }
+
+  function retryCatalog() {
+    if (!catalogBusy()) requestPage(requestedPage());
   }
 
   function loadGenres() {
@@ -141,7 +157,7 @@ export function createCatalogViewModel(
     loadGenres();
   }
 
-  function changeCategory(next: CatalogCategory, genre = 0) {
+  function changeCategory(next: CatalogCategory, genre = genreId()) {
     setCategory(next);
     setGenreId(genre);
     setQuery("");
@@ -174,9 +190,11 @@ export function createCatalogViewModel(
     genresBusy,
     genresError,
     genresStale,
-    hasMore,
+    requestedPage,
     loadGenres,
     loadCatalog,
+    changePage,
+    retryCatalog,
     resetCatalog,
     changeMediaType,
     changeCategory,

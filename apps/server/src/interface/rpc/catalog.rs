@@ -49,8 +49,7 @@ impl<M: MetadataProvider + 'static, S: SnapshotQueries + 'static> CatalogService
         _context: RequestContext,
         request: ServiceRequest<'_, BrowseTitlesRequest>,
     ) -> ServiceResult<impl Encodable<BrowseTitlesResponse> + Send + use<'a, M, S>> {
-        let category =
-            Category::parse(request.category.to_i32(), request.genre_id).map_err(catalog_error)?;
+        let category = Category::parse(request.category.to_i32()).map_err(catalog_error)?;
         let result = browse_titles::handle(
             self.metadata.as_ref(),
             BrowseTitles {
