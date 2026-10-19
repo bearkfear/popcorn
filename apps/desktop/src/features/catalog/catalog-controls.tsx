@@ -52,7 +52,7 @@ export function CatalogControls(props: CatalogControlsProps) {
       aria-label="Buscar e filtrar títulos"
     >
       <form
-        class="search-form flex h-10 min-w-0 basis-full items-stretch overflow-hidden rounded-lg border border-slate-7 bg-slate-3 transition-colors focus-within:border-slate-10 min-[1120px]:basis-[320px] min-[1120px]:flex-1"
+        class="search-form flex h-10 min-w-0 basis-full items-stretch overflow-hidden rounded-lg border border-tomato-8 bg-slate-3 transition-colors hover:border-accent focus-within:border-accent min-[1120px]:basis-[320px] min-[1120px]:flex-1"
         onSubmit={handleSearch}
       >
         <label class="sr-only" for="catalog-search">
