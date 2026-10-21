@@ -1,6 +1,7 @@
 import type { ContentRef, Title, WatchEntry as WireEntry } from "@popcorn/sdk";
 import { PlaybackQuality } from "@popcorn/sdk";
 import { createEffect, createSignal, on } from "solid-js";
+import { randomId } from "../../shared/random-id";
 import type { HistoryClient } from "../../shared/types";
 import { loadHistory } from "./history.migration";
 import { contentKey, type WatchEntry, type WatchStatus } from "./history.model";
@@ -29,8 +30,7 @@ function fromWire(entry: WireEntry): WatchEntry[] {
 
 function notifyHistoryChange() {
   try {
-    if (typeof window !== "undefined")
-      localStorage.setItem("popcorn-history-updated", crypto.randomUUID());
+    if (typeof window !== "undefined") localStorage.setItem("popcorn-history-updated", randomId());
   } catch {
     /* History remains on the server when browser storage is unavailable. */
   }

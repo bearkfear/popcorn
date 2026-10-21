@@ -8,5 +8,13 @@ captureBrowserTicket();
 
 const root = document.getElementById("root");
 if (root) {
-  render(() => (window.location.hash === "#video" ? <PlayerWindow /> : <App />), root);
+  render(
+    () =>
+      window.location.hash === "#video" || window.location.hash.startsWith("#video=") ? (
+        <PlayerWindow />
+      ) : (
+        <App />
+      ),
+    root,
+  );
 }

@@ -45,7 +45,7 @@ export const playerControlsStyles = tv({
       "min-w-0 p-[18px_22px_16px] border border-white-a2 rounded-[22px] bg-slate-3",
       "shadow-[0_8px_32px_var(--black-a6),_inset_0_1px_0_var(--white-a1)] backdrop-blur-[24px] text-ink",
       "[transform:translateX(-50%)] opacity-0 pointer-events-none [transition:opacity_180ms_ease]",
-      "[&:focus-within]:opacity-[1] [&:focus-within]:pointer-events-auto max-[540px]:p-[14px_12px]",
+      "max-[540px]:p-[14px_12px]",
       "max-[540px]:rounded-[16px] motion-reduce:[transition:none]",
     ],
     top: [

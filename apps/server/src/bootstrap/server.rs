@@ -1,6 +1,6 @@
 //! Serves HTTP with bounded graceful shutdown after the owner's signal.
 
-use std::{future::Future, time::Duration};
+use std::{future::Future, io, net::Ipv4Addr, time::Duration};
 
 use axum::Router;
 use tokio::net::TcpListener;
@@ -31,5 +31,18 @@ pub(super) async fn serve(
                 .map_err(|_| Error::ShutdownTimeout)
                 .and_then(|result| result.map_err(Error::Io))
         }
+    }
+}
+
+pub(super) async fn listen(address: (Ipv4Addr, u16), fallback: bool) -> io::Result<TcpListener> {
+    match TcpListener::bind(address).await {
+        Err(error) if fallback && error.kind() == io::ErrorKind::AddrInUse => {
+            tracing::info!(
+                preferred_port = address.1,
+                "preferred HTTP port occupied; selecting a free port"
+            );
+            TcpListener::bind((address.0, 0)).await
+        }
+        result => result,
     }
 }

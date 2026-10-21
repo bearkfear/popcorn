@@ -4,6 +4,7 @@ pub mod auth;
 pub mod catalog;
 pub mod health;
 pub mod media;
+pub mod network;
 pub mod storage;
 
 pub mod history;

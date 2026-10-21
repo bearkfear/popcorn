@@ -9,6 +9,7 @@ import {
   playerRangeStyles,
 } from "./player-controls.styles";
 import { type PlayerAction, playerShortcut } from "./player-shortcuts";
+import { useInlinePlayer } from "./player-tab";
 import type { TimelineRange } from "./timeline-ranges";
 
 function clock(seconds: number): string {
@@ -29,25 +30,34 @@ export function PlayerControls(props: {
   volume: () => number;
   play: () => void;
   present: (mode: "fullscreen" | "picture-in-picture") => void;
+  pictureInPictureAvailable: () => boolean;
   audioTracks: Playback["audioTracks"];
   audioIndex: number | undefined;
   onAudioChange: (index: number) => void;
 }) {
+  const television = useInlinePlayer();
   const [visible, setVisible] = createSignal(true);
   const [dragging, setDragging] = createSignal<number>();
   const [pendingSeek, setPendingSeek] = createSignal<number>();
   let panel: HTMLFieldSetElement | undefined;
   let timer: number | undefined;
-  const shown = () =>
-    visible() || props.paused() || dragging() !== undefined || pendingSeek() !== undefined;
+  const shown = () => visible() || (!television && props.paused()) || dragging() !== undefined;
   const position = () => dragging() ?? pendingSeek() ?? props.position();
   const progress = () => Math.min(100, (100 * position()) / (props.duration() || 1));
+  function hideWhenIdle() {
+    const active = document.activeElement;
+    const keyboardFocus =
+      !television && panel?.contains(active) && active?.matches(":focus-visible");
+    if (keyboardFocus || panel?.querySelector('[aria-expanded="true"]')) {
+      timer = window.setTimeout(hideWhenIdle, 2500);
+      return;
+    }
+    setVisible(false);
+  }
   function reveal() {
     setVisible(true);
     window.clearTimeout(timer);
-    timer = window.setTimeout(() => {
-      if (!panel?.matches(":hover") && !panel?.contains(document.activeElement)) setVisible(false);
-    }, 2500);
+    timer = window.setTimeout(hideWhenIdle, 2500);
   }
   function seek(position: number) {
     const video = props.video();
@@ -87,7 +97,7 @@ export function PlayerControls(props: {
         props.present("fullscreen");
         break;
       case "pip":
-        props.present("picture-in-picture");
+        if (props.pictureInPictureAvailable()) props.present("picture-in-picture");
         break;
     }
   }
@@ -111,6 +121,7 @@ export function PlayerControls(props: {
     for (const event of settledEvents) video?.addEventListener(event, settled);
     video?.addEventListener("error", failed);
     const keydown = (event: KeyboardEvent) => {
+      reveal();
       if (event.defaultPrevented) return;
       // Native WebKit fullscreen and PiP have their own controls and key handling.
       const mode = (props.video() as HTMLVideoElement & { webkitPresentationMode?: string })
@@ -129,15 +140,23 @@ export function PlayerControls(props: {
       event.preventDefault();
       if (!event.repeat || !["play", "mute", "fullscreen", "pip"].includes(action)) act(action);
     };
+    let pointer: { x: number; y: number } | undefined;
+    const pointermove = (event: PointerEvent) => {
+      if (pointer?.x === event.clientX && pointer?.y === event.clientY) return;
+      pointer = { x: event.clientX, y: event.clientY };
+      reveal();
+    };
     window.addEventListener("keydown", keydown);
-    window.addEventListener("pointermove", reveal);
+    window.addEventListener("pointermove", pointermove);
+    window.addEventListener("pointerdown", reveal);
     reveal();
     onCleanup(() => {
       for (const event of settledEvents) video?.removeEventListener(event, settled);
       video?.removeEventListener("error", failed);
       window.clearTimeout(timer);
       window.removeEventListener("keydown", keydown);
-      window.removeEventListener("pointermove", reveal);
+      window.removeEventListener("pointermove", pointermove);
+      window.removeEventListener("pointerdown", reveal);
     });
   });
   const styles = playerControlsStyles();
@@ -244,16 +263,18 @@ export function PlayerControls(props: {
               onChange={(value) => props.onAudioChange(Number(value))}
             />
           </Show>
-          <button
-            class={playerButtonStyles()}
-            type="button"
-            aria-label="Picture-in-picture"
-            title="Picture-in-picture (P)"
-            aria-keyshortcuts="p"
-            onClick={() => act("pip")}
-          >
-            <Icon name="picture-in-picture" class={styles.icon()} />
-          </button>
+          <Show when={props.pictureInPictureAvailable()}>
+            <button
+              class={playerButtonStyles()}
+              type="button"
+              aria-label="Picture-in-picture"
+              title="Picture-in-picture (P)"
+              aria-keyshortcuts="p"
+              onClick={() => act("pip")}
+            >
+              <Icon name="picture-in-picture" class={styles.icon()} />
+            </button>
+          </Show>
           <button
             class={playerButtonStyles()}
             type="button"

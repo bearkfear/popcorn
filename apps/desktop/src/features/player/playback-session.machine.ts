@@ -1,5 +1,6 @@
 import { type Playback, type PlaybackQuality, PlaybackState } from "@popcorn/sdk";
 import { assign, fromPromise, setup } from "xstate";
+import { randomId } from "../../shared/random-id";
 import type { PlaybackClient } from "../../shared/types";
 import { diagnostic, errorDetails } from "./media-diagnostics";
 
@@ -41,7 +42,7 @@ export const playbackSessionMachine = setup({
     start: fromPromise(
       async ({ input, signal }: { input: PlaybackRequest; signal: AbortSignal }) => {
         const started = performance.now();
-        const attemptId = crypto.randomUUID();
+        const attemptId = randomId();
         diagnostic(
           "playback.start_requested",
           {},

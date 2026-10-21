@@ -15,6 +15,7 @@ use crate::core::auth::SessionToken;
 pub(crate) struct AccessPolicy {
     pub(crate) token: SessionToken,
     pub(crate) host: String,
+    pub(crate) lan_hosts: Vec<String>,
     pub(crate) origin: Option<String>,
     pub(crate) browser: Option<Arc<super::browser::Browser>>,
 }
@@ -25,26 +26,7 @@ pub(super) async fn authorize(
     next: Next,
 ) -> Result<Response, StatusCode> {
     let headers = request.headers();
-    if headers.get_all(header::HOST).iter().count() != 1
-        || headers
-            .get(header::HOST)
-            .is_none_or(|value| value.as_bytes() != access.host.as_bytes())
-    {
-        return Err(StatusCode::FORBIDDEN);
-    }
-    let origin = match headers.get_all(header::ORIGIN).iter().count() {
-        0 => None,
-        1 => {
-            let origin = headers.get(header::ORIGIN).ok_or(StatusCode::FORBIDDEN)?;
-            if origin == "null"
-                || access.origin.as_deref().map(str::as_bytes) != Some(origin.as_bytes())
-            {
-                return Err(StatusCode::FORBIDDEN);
-            }
-            Some(origin.clone())
-        }
-        _ => return Err(StatusCode::FORBIDDEN),
-    };
+    let origin = access.validate_origin(headers)?;
     if request.method() == Method::OPTIONS {
         if origin.is_none() || !valid_preflight(headers) {
             return Err(StatusCode::FORBIDDEN);
@@ -66,7 +48,8 @@ pub(super) async fn authorize(
     let public = access.browser.is_some()
         && (matches!(*request.method(), Method::GET | Method::HEAD)
             && (request.uri().path() == "/" || request.uri().path().starts_with("/assets/"))
-            || request.method() == Method::POST && request.uri().path() == "/browser/session");
+            || request.method() == Method::POST
+                && matches!(request.uri().path(), "/browser/session" | "/browser/pair"));
     let authorization = if public {
         Ok(())
     } else {
@@ -150,5 +133,46 @@ fn add_cors(response: &mut Response, origin: Option<HeaderValue>) {
                 "connect-protocol-version,connect-content-encoding,connect-accept-encoding,grpc-status,grpc-message,grpc-status-details-bin",
             ),
         );
+    }
+}
+
+impl AccessPolicy {
+    pub(crate) fn validate_origin(
+        &self,
+        headers: &HeaderMap,
+    ) -> Result<Option<HeaderValue>, StatusCode> {
+        if headers.get_all(header::HOST).iter().count() != 1
+            || headers.get(header::HOST).is_none_or(|value| {
+                value.as_bytes() != self.host.as_bytes()
+                    && !self
+                        .lan_hosts
+                        .iter()
+                        .any(|host| value.as_bytes() == host.as_bytes())
+            })
+        {
+            return Err(StatusCode::FORBIDDEN);
+        }
+        let origin = match headers.get_all(header::ORIGIN).iter().count() {
+            0 => None,
+            1 => {
+                let origin = headers.get(header::ORIGIN).ok_or(StatusCode::FORBIDDEN)?;
+                if origin == "null" || !self.accepts_origin(headers, origin) {
+                    return Err(StatusCode::FORBIDDEN);
+                }
+                Some(origin.clone())
+            }
+            _ => return Err(StatusCode::FORBIDDEN),
+        };
+        Ok(origin)
+    }
+
+    fn accepts_origin(&self, headers: &HeaderMap, origin: &HeaderValue) -> bool {
+        if self.browser.is_none() {
+            return self.origin.as_deref().map(str::as_bytes) == Some(origin.as_bytes());
+        }
+        headers
+            .get(header::HOST)
+            .and_then(|h| h.to_str().ok())
+            .is_some_and(|host| origin.as_bytes() == format!("http://{host}").as_bytes())
     }
 }

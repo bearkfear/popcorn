@@ -221,7 +221,7 @@ function attachMse(
         activeBuffer = buffer;
         source.duration = config.durationSeconds;
         report("buffer_created");
-        const url = new URL(config.mediaUrl);
+        const url = new URL(config.mediaUrl, window.location.href);
         url.searchParams.set("start", String(time));
         url.searchParams.set("generation", String(requestGeneration));
         phase = "iniciar a transmissão";

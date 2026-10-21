@@ -9,12 +9,14 @@ import {
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useMachine } from "@xstate/solid";
+import { createSignal } from "solid-js";
 import { waitFor } from "xstate";
 import type { Bootstrap, Connection } from "../../shared/types";
 import { bootstrapMachine } from "./bootstrap.machine";
-import { browserBootstrap, isBrowserServer } from "./browser-session";
+import { browserBootstrap, isBrowserServer, PairingRequired } from "./browser-session";
 
 export function createBootstrapViewModel() {
+  const [pairingRequired, setPairingRequired] = createSignal(false);
   const [snapshot, send, actor] = useMachine(bootstrapMachine, {
     input: {
       isDesktop: isTauri,
@@ -22,7 +24,11 @@ export function createBootstrapViewModel() {
       bootstrap: async (signal) => {
         const data = isTauri()
           ? await invoke<Bootstrap>("bootstrap")
-          : await browserBootstrap(signal);
+          : await browserBootstrap(signal).catch((error: unknown) => {
+              if (error instanceof PairingRequired && !signal.aborted) setPairingRequired(true);
+              throw error;
+            });
+        setPairingRequired(false);
         signal.throwIfAborted();
         const baseUrl = `http://${data.address}`;
         return {
@@ -61,6 +67,7 @@ export function createBootstrapViewModel() {
   }
 
   return {
+    pairingRequired,
     connection: (): Connection => (snapshot.value === "waiting" ? "connecting" : snapshot.value),
     connectionError: () => snapshot.context.error,
     catalogVersion: () => snapshot.context.catalogVersion,

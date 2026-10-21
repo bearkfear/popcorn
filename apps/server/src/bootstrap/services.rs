@@ -30,3 +30,18 @@ pub(super) async fn catalog(
         snapshot: Arc::new(SqliteSnapshot::new(storage.catalog.clone())),
     })
 }
+
+pub(super) fn access(
+    token: crate::core::auth::SessionToken,
+    address: std::net::SocketAddr,
+    origin: Option<String>,
+    browser: Option<(PathBuf, crate::core::auth::SessionToken)>,
+) -> Arc<crate::interface::AccessPolicy> {
+    crate::interface::browser::access(
+        token,
+        address,
+        origin,
+        browser,
+        crate::infra::network::hosts(address.port()),
+    )
+}

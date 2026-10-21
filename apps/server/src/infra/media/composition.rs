@@ -13,11 +13,12 @@ pub(crate) fn media_application(
     pool: SqlitePool,
     data_dir: &Path,
     address: String,
+    relative_urls: bool,
 ) -> MediaApplication {
     let downloads = data_dir.join("downloads");
     MediaContext::new(
         SqliteSources::new(pool.clone()),
-        TorrentEngine::new(downloads.clone(), address),
+        TorrentEngine::new(downloads.clone(), address, relative_urls),
         DiskCache::new(pool, downloads),
     )
 }

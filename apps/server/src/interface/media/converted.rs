@@ -30,12 +30,7 @@ pub(super) async fn media<R: Sources + 'static, T: Transfers + 'static, C: Cache
     Query(query): Query<StreamQuery>,
     headers: HeaderMap,
 ) -> Result<Response, StatusCode> {
-    if headers
-        .get(header::ORIGIN)
-        .is_some_and(|origin| Some(origin.as_bytes()) != state.origin.as_deref().map(str::as_bytes))
-    {
-        return Err(StatusCode::FORBIDDEN);
-    }
+    state.access.validate_origin(&headers)?;
     let access = start_converted_stream::handle(
         state.context.as_ref(),
         StartConvertedStream {

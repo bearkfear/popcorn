@@ -32,6 +32,20 @@ pub(super) enum Credential {
 }
 
 impl ServerConfig {
+    pub(super) const fn bind_address(&self) -> (std::net::Ipv4Addr, u16) {
+        let host = if self.browser.is_some() {
+            std::net::Ipv4Addr::UNSPECIFIED
+        } else {
+            std::net::Ipv4Addr::LOCALHOST
+        };
+        let port = if self.browser.is_some() && self.port == 0 {
+            8080
+        } else {
+            self.port
+        };
+        (host, port)
+    }
+
     /// Uses an OS-assigned loopback port and the supplied paths.
     #[must_use]
     pub const fn new(catalog: PathBuf, data_dir: PathBuf, token_file: PathBuf) -> Self {

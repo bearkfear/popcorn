@@ -51,6 +51,7 @@ export function PlayerWindow() {
 
   onMount(() => {
     let disposed = false;
+    const controller = new AbortController();
     if (isTauri()) {
       const listener = getCurrentWindow().onCloseRequested((event) => {
         event.preventDefault();
@@ -68,12 +69,13 @@ export function PlayerWindow() {
     }
     onCleanup(() => {
       disposed = true;
+      controller.abort();
     });
     void (async () => {
       try {
         const current = isTauri()
           ? await invoke<WindowSession>("take_player_session")
-          : readPlayerSession();
+          : await readPlayerSession(controller.signal);
         if (disposed) return;
         setSession(current);
         document.title = `${current.context.title.title} · Popcorn`;

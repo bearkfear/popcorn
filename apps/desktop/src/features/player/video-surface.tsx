@@ -4,8 +4,9 @@ import { createMemo, createSignal, type JSX, onCleanup, onMount, Show } from "so
 import { buttonStyles } from "../../shared/ui/styles";
 import { diagnostic, errorDetails } from "./media-diagnostics";
 import { PlayerControls } from "./player-controls";
+import { useInlinePlayer } from "./player-tab";
 import { bufferSegments, downloadSegments, type TimelineRange } from "./timeline-ranges";
-import { videoPresentation } from "./video-presentation";
+import { supportsPictureInPicture, videoPresentation } from "./video-presentation";
 
 type NativeVideo = HTMLVideoElement & {
   requestPictureInPicture?: () => Promise<unknown>;
@@ -13,6 +14,7 @@ type NativeVideo = HTMLVideoElement & {
   webkitDisplayingFullscreen?: boolean;
   webkitPresentationMode?: string;
   webkitSetPresentationMode?: (mode: string) => void;
+  webkitSupportsPresentationMode?: (mode: string) => boolean;
 };
 
 type PresentationDocument = Document & {
@@ -42,6 +44,7 @@ export function VideoSurface(props: {
   const [ready, setReady] = createSignal(false);
   const [pictureInPicture, setPictureInPicture] = createSignal(false);
   const [fullscreen, setFullscreen] = createSignal(false);
+  const [pictureInPictureAvailable, setPictureInPictureAvailable] = createSignal(false);
   let canvas: HTMLCanvasElement | undefined;
   let surface: HTMLDivElement | undefined;
 
@@ -118,6 +121,9 @@ export function VideoSurface(props: {
       }
     };
     const sync = () => {
+      setPictureInPictureAvailable(
+        supportsPictureInPicture(video as NativeVideo, document, useInlinePlayer()),
+      );
       setPaused(video.paused);
       setPosition(video.currentTime);
       // MSE briefly loses metadata when an unbuffered seek replaces the source.
@@ -227,7 +233,7 @@ export function VideoSurface(props: {
   function present(mode: "fullscreen" | "picture-in-picture" | "inline") {
     void (async () => {
       const video = props.video() as NativeVideo | undefined;
-      if (!video) return;
+      if (!video || (mode === "picture-in-picture" && !pictureInPictureAvailable())) return;
       try {
         if (useCanvas) {
           setPresentation(mode);
@@ -243,10 +249,13 @@ export function VideoSurface(props: {
             await surface.requestFullscreen();
           }
         } else if (mode === "picture-in-picture") {
-          if (!video.requestPictureInPicture) throw new Error("Picture-in-picture API unavailable");
-          await video.requestPictureInPicture();
+          if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
+            await video.requestPictureInPicture();
+          } else video.webkitSetPresentationMode?.("picture-in-picture");
         } else if (presentationDocument.pictureInPictureElement === video) {
           await presentationDocument.exitPictureInPicture?.();
+        } else if (video.webkitPresentationMode === "picture-in-picture") {
+          video.webkitSetPresentationMode?.("inline");
         } else if (document.fullscreenElement) {
           await document.exitFullscreen();
         }
@@ -312,6 +321,7 @@ export function VideoSurface(props: {
           volume={volume}
           play={() => void play()}
           present={present}
+          pictureInPictureAvailable={pictureInPictureAvailable}
           audioTracks={props.audioTracks}
           audioIndex={props.audioIndex}
           onAudioChange={props.onAudioChange}

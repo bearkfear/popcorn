@@ -1,5 +1,7 @@
 //! Validates session credentials and compares them without exposing their contents.
 
+pub mod pairing;
+
 use std::fmt;
 
 use subtle::ConstantTimeEq;

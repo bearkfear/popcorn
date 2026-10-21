@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { videoPresentation } from "../src/features/player/video-presentation";
+import {
+  supportsPictureInPicture,
+  videoPresentation,
+} from "../src/features/player/video-presentation";
 
 describe("native video presentation", () => {
   test("returning to the window wins over WebKit's stale fullscreen flag", () => {
@@ -35,5 +38,31 @@ describe("native video presentation", () => {
     expect(videoPresentation(video, { fullscreenElement: {} })).toBe("fullscreen");
     expect(videoPresentation(video, { pictureInPictureElement: video })).toBe("picture-in-picture");
     expect(videoPresentation(video, {})).toBe("inline");
+  });
+});
+
+describe("picture-in-picture availability", () => {
+  test("an exposed but disabled API and TV presentation do not offer PiP", () => {
+    const video = { requestPictureInPicture: () => Promise.resolve() };
+    expect(supportsPictureInPicture(video, { pictureInPictureEnabled: false }, false)).toBe(false);
+    expect(supportsPictureInPicture(video, { pictureInPictureEnabled: true }, true)).toBe(false);
+    expect(
+      supportsPictureInPicture(
+        { ...video, disablePictureInPicture: true },
+        { pictureInPictureEnabled: true },
+        false,
+      ),
+    ).toBe(false);
+    expect(supportsPictureInPicture(video, { pictureInPictureEnabled: true }, false)).toBe(true);
+  });
+
+  test("WebKit requires an explicitly supported PiP mode and its setter", () => {
+    const video = {
+      webkitSupportsPresentationMode: (mode: string) => mode === "picture-in-picture",
+    };
+    expect(supportsPictureInPicture(video, {}, false)).toBe(false);
+    expect(
+      supportsPictureInPicture({ ...video, webkitSetPresentationMode: () => {} }, {}, false),
+    ).toBe(true);
   });
 });

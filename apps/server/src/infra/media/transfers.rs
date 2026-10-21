@@ -36,6 +36,7 @@ impl Drop for ActivePlayback {
 pub(crate) struct TorrentEngine {
     directory: PathBuf,
     pub(super) address: String,
+    pub(super) relative_urls: bool,
     session: Mutex<Option<Arc<Session>>>,
     pub(super) playbacks: Mutex<HashMap<Uuid, ActivePlayback>>,
     pub(super) idempotency: Mutex<HashMap<String, Uuid>>,
@@ -52,10 +53,11 @@ impl fmt::Debug for TorrentEngine {
 }
 
 impl TorrentEngine {
-    pub(super) fn new(directory: PathBuf, address: String) -> Self {
+    pub(super) fn new(directory: PathBuf, address: String, relative_urls: bool) -> Self {
         Self {
             directory,
             address,
+            relative_urls,
             session: Mutex::new(None),
             playbacks: Mutex::new(HashMap::new()),
             idempotency: Mutex::new(HashMap::new()),

@@ -5,6 +5,7 @@ import { listen } from "@tauri-apps/api/event";
 import { createEffect, createSignal, on, onCleanup, onMount, Show } from "solid-js";
 import tmdbLogo from "./assets/tmdb.svg";
 import { createBootstrapViewModel } from "./features/bootstrap/bootstrap.viewmodel";
+import { PairingPanel } from "./features/bootstrap/pairing-panel";
 import { createCatalogViewModel } from "./features/catalog/catalog.viewmodel";
 import { CatalogControls } from "./features/catalog/catalog-controls";
 import { CatalogMediaTabs } from "./features/catalog/catalog-media-tabs";
@@ -17,7 +18,7 @@ import { createHistoryViewModel } from "./features/history/history.viewmodel";
 import { HistoryShelf } from "./features/history/history-shelf";
 import { createPlayerViewModel } from "./features/player/player.viewmodel";
 import { PlayerPage } from "./features/player/player-page";
-import { openPlayerTab } from "./features/player/player-tab";
+import { openPlayerTab, useInlinePlayer } from "./features/player/player-tab";
 import { createSettingsViewModel } from "./features/settings/settings.viewmodel";
 import { SettingsPage } from "./features/settings/settings-page";
 import { createSourcesViewModel } from "./features/sources/sources.viewmodel";
@@ -58,7 +59,7 @@ export function App() {
           videoTab.focus();
           return;
         }
-        videoTab = openPlayerTab({ context, position });
+        videoTab = await openPlayerTab({ context, position });
         if (!videoTab) throw new Error("Permita abrir novas abas para assistir ao vídeo.");
       }
       setVideoWindowOpen(true);
@@ -166,11 +167,25 @@ export function App() {
       ...(audioStreamIndex !== undefined ? { audioStreamIndex } : {}),
     };
     setSession(selected);
+    if (!isTauri() && useInlinePlayer()) {
+      navigate("player");
+      await player.launch(position);
+      return;
+    }
     await openVideo(selected, position);
   }
   async function resume(entry: WatchEntry) {
     if (entry.sourceId === undefined || entry.fileIndex === undefined) {
       openTitle(entry.title, entry.content);
+      return;
+    }
+    if (!isTauri() && useInlinePlayer()) {
+      openTitle(entry.title, entry.content);
+      player.setQuality(entry.quality);
+      player.setAudioStreamIndex(entry.audioStreamIndex);
+      setSession(entry);
+      navigate("player");
+      await player.playFile(entry.sourceId, entry.fileIndex, true, resumePosition(entry));
       return;
     }
     await openVideo(entry, resumePosition(entry));
@@ -260,234 +275,239 @@ export function App() {
 
   return (
     <Show
-      when={!player.viewing()}
-      fallback={
-        <Show when={session()} keyed>
-          {(context) => (
-            <PlayerPage
-              vm={player}
-              title={context.title.title}
-              onBack={backFromPlayer}
-              onProgress={(position, duration) => history.progress(context, position, duration)}
-              onEnded={() => {
-                history.mark(context.title, context.content, "watched");
-                backFromPlayer();
-              }}
-            />
-          )}
-        </Show>
-      }
+      when={!bootstrap.pairingRequired()}
+      fallback={<PairingPanel onConnected={() => void connect()} />}
     >
-      <div class="app-shell min-h-screen">
-        <header class="app-header sticky z-[20] top-0 border-b border-slate-6 bg-slate-2 shadow-[0_2px_12px_var(--black-a4)] backdrop-blur-[14px]">
-          <div class="w-full max-w-[1480px] mx-auto px-[clamp(18px,_4vw,_54px)] max-[560px]:px-[14px] min-h-[64px] max-[560px]:min-h-[56px] cluster flex flex-wrap items-center justify-between gap-3">
-            <button
-              class="brand-lockup flex min-h-10 items-center brand-button border-0 p-0 text-inherit bg-transparent"
-              type="button"
-              onClick={backToSearch}
-              aria-label="Ir para pesquisa"
-            >
-              <span class="wordmark text-[22px] font-bold tracking-[-0.04em] lowercase max-[560px]:text-[20px]">
-                popcorn<span class="wordmark-dot text-accent">.</span>
-              </span>
-            </button>
-            <nav
-              class="cluster flex flex-wrap items-center justify-between gap-3"
-              aria-label="Navegação principal"
-            >
+      <Show
+        when={!player.viewing()}
+        fallback={
+          <Show when={session()} keyed>
+            {(context) => (
+              <PlayerPage
+                vm={player}
+                title={context.title.title}
+                onBack={backFromPlayer}
+                onProgress={(position, duration) => history.progress(context, position, duration)}
+                onEnded={() => {
+                  history.mark(context.title, context.content, "watched");
+                  backFromPlayer();
+                }}
+              />
+            )}
+          </Show>
+        }
+      >
+        <div class="app-shell min-h-screen">
+          <header class="app-header sticky z-[20] top-0 border-b border-slate-6 bg-slate-2 shadow-[0_2px_12px_var(--black-a4)] backdrop-blur-[14px]">
+            <div class="w-full max-w-[1480px] mx-auto px-[clamp(18px,_4vw,_54px)] max-[560px]:px-[14px] min-h-[64px] max-[560px]:min-h-[56px] cluster flex flex-wrap items-center justify-between gap-3">
               <button
-                class="text-button flex min-h-10 items-center gap-2 rounded-control border-0 bg-transparent px-3 text-[13px] text-muted hover:bg-slate-4 hover:text-ink aria-[current=page]:bg-slate-4 aria-[current=page]:text-ink"
+                class="brand-lockup flex min-h-10 items-center brand-button border-0 p-0 text-inherit bg-transparent"
                 type="button"
                 onClick={backToSearch}
-                aria-current={page() !== "settings" ? "page" : undefined}
+                aria-label="Ir para pesquisa"
               >
-                Explorar
+                <span class="wordmark text-[22px] font-bold tracking-[-0.04em] lowercase max-[560px]:text-[20px]">
+                  popcorn<span class="wordmark-dot text-accent">.</span>
+                </span>
               </button>
-              <button
-                class="text-button flex min-h-10 items-center gap-2 rounded-control border-0 bg-transparent px-3 text-[13px] text-muted hover:bg-slate-4 hover:text-ink aria-[current=page]:bg-slate-4 aria-[current=page]:text-ink"
-                type="button"
-                aria-current={page() === "settings" ? "page" : undefined}
-                onClick={openSettings}
+              <nav
+                class="cluster flex flex-wrap items-center justify-between gap-3"
+                aria-label="Navegação principal"
               >
-                <Icon name="settings" /> Configurações
-              </button>
-            </nav>
-          </div>
-        </header>
-        <main
-          class={`page w-full max-w-[1480px] mx-auto px-[clamp(18px,_4vw,_54px)] max-[560px]:px-[14px] pt-8 pb-6 max-[820px]:pt-6 ${page() === "details" ? "details-page" : "search-page"}`}
-        >
-          <Show when={page() === "settings"}>
-            <SettingsPage
-              vm={settings}
-              bootstrap={bootstrap}
-              playbackActive={Boolean(player.playback()) || videoWindowOpen()}
-              onBack={closeSettings}
-              onReconnect={() => void connect()}
-              onImported={() => {
-                const target = sources.content();
-                if (target) sources.selectContent(target);
-              }}
-              onConfigured={configured}
-              onRemoved={() => {
-                player.close();
-                details.resetDetail();
-                sources.reset();
-                catalog.resetCatalog();
-              }}
-            />
-          </Show>
-          <Show when={page() !== "settings"}>
-            <Show when={bootstrap.connectionError()}>
-              <p
-                class="service-error mt-3 p-[12px_16px] border border-tomato-7 rounded-control bg-negative-bg text-negative"
-                role="alert"
-              >
-                {bootstrap.connectionError()}
-              </p>
-            </Show>
-            <Show when={bootstrap.connection() === "browser"}>
-              <section class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5">
-                <h2>Abra o Popcorn no desktop</h2>
-                <p>O aplicativo conecta o catálogo e prepara a reprodução.</p>
-              </section>
-            </Show>
-            <Show when={bootstrap.connection() === "connecting"}>
-              <p
-                class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5"
-                role="status"
-              >
-                Iniciando o Popcorn…
-              </p>
-            </Show>
-            <Show when={bootstrap.connection() === "ready" && !settings.status()?.configured}>
-              <section class="mx-auto max-w-[620px] rounded-panel border border-line bg-slate-2 p-8">
-                <h1 class="text-2xl">Seu catálogo começa aqui</h1>
-                <p class="mt-3 text-[14px] text-muted">
-                  Conecte sua conta TMDB nas configurações para explorar filmes e séries.
-                </p>
                 <button
-                  class={buttonStyles({ class: "mt-5" })}
+                  class="text-button flex min-h-10 items-center gap-2 rounded-control border-0 bg-transparent px-3 text-[13px] text-muted hover:bg-slate-4 hover:text-ink aria-[current=page]:bg-slate-4 aria-[current=page]:text-ink"
                   type="button"
+                  onClick={backToSearch}
+                  aria-current={page() !== "settings" ? "page" : undefined}
+                >
+                  Explorar
+                </button>
+                <button
+                  class="text-button flex min-h-10 items-center gap-2 rounded-control border-0 bg-transparent px-3 text-[13px] text-muted hover:bg-slate-4 hover:text-ink aria-[current=page]:bg-slate-4 aria-[current=page]:text-ink"
+                  type="button"
+                  aria-current={page() === "settings" ? "page" : undefined}
                   onClick={openSettings}
                 >
-                  <Icon name="settings" /> Configurar catálogo
+                  <Icon name="settings" /> Configurações
                 </button>
-              </section>
+              </nav>
+            </div>
+          </header>
+          <main
+            class={`page w-full max-w-[1480px] mx-auto px-[clamp(18px,_4vw,_54px)] max-[560px]:px-[14px] pt-8 pb-6 max-[820px]:pt-6 ${page() === "details" ? "details-page" : "search-page"}`}
+          >
+            <Show when={page() === "settings"}>
+              <SettingsPage
+                vm={settings}
+                bootstrap={bootstrap}
+                playbackActive={Boolean(player.playback()) || videoWindowOpen()}
+                onBack={closeSettings}
+                onReconnect={() => void connect()}
+                onImported={() => {
+                  const target = sources.content();
+                  if (target) sources.selectContent(target);
+                }}
+                onConfigured={configured}
+                onRemoved={() => {
+                  player.close();
+                  details.resetDetail();
+                  sources.reset();
+                  catalog.resetCatalog();
+                }}
+              />
             </Show>
-            <Show when={bootstrap.connection() === "ready" && settings.status()?.configured}>
-              <Show
-                when={page() === "search"}
-                fallback={
-                  <>
-                    <nav
-                      class="detail-navigation mb-6 max-[600px]:items-start max-[600px]:gap-4 cluster flex flex-wrap items-center justify-between gap-3"
-                      aria-label="Navegação do título"
-                    >
-                      <button
-                        class={buttonStyles({ variant: "secondary" })}
-                        type="button"
-                        onClick={backToSearch}
+            <Show when={page() !== "settings"}>
+              <Show when={bootstrap.connectionError()}>
+                <p
+                  class="service-error mt-3 p-[12px_16px] border border-tomato-7 rounded-control bg-negative-bg text-negative"
+                  role="alert"
+                >
+                  {bootstrap.connectionError()}
+                </p>
+              </Show>
+              <Show when={bootstrap.connection() === "browser"}>
+                <section class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5">
+                  <h2>Abra o Popcorn no desktop</h2>
+                  <p>O aplicativo conecta o catálogo e prepara a reprodução.</p>
+                </section>
+              </Show>
+              <Show when={bootstrap.connection() === "connecting"}>
+                <p
+                  class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5"
+                  role="status"
+                >
+                  Iniciando o Popcorn…
+                </p>
+              </Show>
+              <Show when={bootstrap.connection() === "ready" && !settings.status()?.configured}>
+                <section class="mx-auto max-w-[620px] rounded-panel border border-line bg-slate-2 p-8">
+                  <h1 class="text-2xl">Seu catálogo começa aqui</h1>
+                  <p class="mt-3 text-[14px] text-muted">
+                    Conecte sua conta TMDB nas configurações para explorar filmes e séries.
+                  </p>
+                  <button
+                    class={buttonStyles({ class: "mt-5" })}
+                    type="button"
+                    onClick={openSettings}
+                  >
+                    <Icon name="settings" /> Configurar catálogo
+                  </button>
+                </section>
+              </Show>
+              <Show when={bootstrap.connection() === "ready" && settings.status()?.configured}>
+                <Show
+                  when={page() === "search"}
+                  fallback={
+                    <>
+                      <nav
+                        class="detail-navigation mb-6 max-[600px]:items-start max-[600px]:gap-4 cluster flex flex-wrap items-center justify-between gap-3"
+                        aria-label="Navegação do título"
                       >
-                        <Icon name="arrow-left" /> Voltar à pesquisa
-                      </button>
-                      <Show when={details.detail()?.content}>
-                        {(content) => (
-                          <div class="cluster flex flex-wrap items-center justify-between gap-3">
-                            <Toggle.Root
-                              class={buttonStyles({ variant: "secondary" })}
-                              type="button"
-                              pressed={selectedEntry()?.status === "want"}
-                              onPressedChange={(pressed) => {
-                                if (!pressed) return;
-                                const title = details.detail();
-                                if (title) history.mark(title, content(), "want");
-                              }}
-                            >
-                              <Icon name="plus" /> Quero assistir
-                            </Toggle.Root>
-                            <Toggle.Root
-                              class={buttonStyles({ variant: "secondary" })}
-                              type="button"
-                              pressed={selectedEntry()?.status === "watched"}
-                              onPressedChange={(pressed) => {
-                                if (!pressed) return;
-                                const title = details.detail();
-                                if (title)
-                                  history.mark(title, sources.content() ?? content(), "watched");
-                              }}
-                            >
-                              <Icon name="check" /> Já assisti
-                            </Toggle.Root>
-                          </div>
-                        )}
+                        <button
+                          class={buttonStyles({ variant: "secondary" })}
+                          type="button"
+                          onClick={backToSearch}
+                        >
+                          <Icon name="arrow-left" /> Voltar à pesquisa
+                        </button>
+                        <Show when={details.detail()?.content}>
+                          {(content) => (
+                            <div class="cluster flex flex-wrap items-center justify-between gap-3">
+                              <Toggle.Root
+                                class={buttonStyles({ variant: "secondary" })}
+                                type="button"
+                                pressed={selectedEntry()?.status === "want"}
+                                onPressedChange={(pressed) => {
+                                  if (!pressed) return;
+                                  const title = details.detail();
+                                  if (title) history.mark(title, content(), "want");
+                                }}
+                              >
+                                <Icon name="plus" /> Quero assistir
+                              </Toggle.Root>
+                              <Toggle.Root
+                                class={buttonStyles({ variant: "secondary" })}
+                                type="button"
+                                pressed={selectedEntry()?.status === "watched"}
+                                onPressedChange={(pressed) => {
+                                  if (!pressed) return;
+                                  const title = details.detail();
+                                  if (title)
+                                    history.mark(title, sources.content() ?? content(), "watched");
+                                }}
+                              >
+                                <Icon name="check" /> Já assisti
+                              </Toggle.Root>
+                            </div>
+                          )}
+                        </Show>
+                      </nav>
+                      <DetailsPanel
+                        vm={details}
+                        online
+                        sources={{ ...sources, selectContent }}
+                        player={player}
+                        onPrepare={(id, index) => void prepareFile(id, index)}
+                        resumeSeconds={resumeSeconds()}
+                        onLaunch={(position) => void launch(position)}
+                      />
+                      <Show when={history.error()}>
+                        <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
+                          {history.error()}
+                        </p>
                       </Show>
-                    </nav>
-                    <DetailsPanel
-                      vm={details}
-                      online
-                      sources={{ ...sources, selectContent }}
-                      player={player}
-                      onPrepare={(id, index) => void prepareFile(id, index)}
-                      resumeSeconds={resumeSeconds()}
-                      onLaunch={(position) => void launch(position)}
+                    </>
+                  }
+                >
+                  <h1 class="sr-only">
+                    {librarySelected() ? "Minha biblioteca" : "Explorar filmes e séries"}
+                  </h1>
+                  <CatalogMediaTabs
+                    vm={catalog}
+                    librarySelected={librarySelected()}
+                    onLibraryChange={setLibrarySelected}
+                  />
+                  <Show when={!librarySelected()}>
+                    <CatalogSpotlight
+                      vm={catalog}
+                      history={history}
+                      onSelectTitle={(title) => openTitle(title)}
                     />
-                    <Show when={history.error()}>
-                      <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
-                        {history.error()}
-                      </p>
-                    </Show>
-                  </>
-                }
-              >
-                <h1 class="sr-only">
-                  {librarySelected() ? "Minha biblioteca" : "Explorar filmes e séries"}
-                </h1>
-                <CatalogMediaTabs
-                  vm={catalog}
-                  librarySelected={librarySelected()}
-                  onLibraryChange={setLibrarySelected}
-                />
-                <Show when={!librarySelected()}>
-                  <CatalogSpotlight
-                    vm={catalog}
-                    history={history}
-                    onSelectTitle={(title) => openTitle(title)}
-                  />
-                  <CatalogControls vm={catalog} />
-                  <PosterGrid
-                    vm={catalog}
-                    selectedTitle={details.selected}
-                    onSelectTitle={(title) => openTitle(title)}
-                  />
-                </Show>
-                <Show when={librarySelected()}>
-                  <HistoryShelf
-                    vm={history}
-                    disabled={player.busy()}
-                    onOpen={(entry) => openTitle(entry.title, entry.content)}
-                    onResume={(entry) => void resume(entry)}
-                  />
+                    <CatalogControls vm={catalog} />
+                    <PosterGrid
+                      vm={catalog}
+                      selectedTitle={details.selected}
+                      onSelectTitle={(title) => openTitle(title)}
+                    />
+                  </Show>
+                  <Show when={librarySelected()}>
+                    <HistoryShelf
+                      vm={history}
+                      disabled={player.busy()}
+                      onOpen={(entry) => openTitle(entry.title, entry.content)}
+                      onResume={(entry) => void resume(entry)}
+                    />
+                  </Show>
                 </Show>
               </Show>
             </Show>
-          </Show>
-          <footer
-            class="page-footer grid grid-cols-[1fr_auto] gap-6 items-end mt-12 p-[24px_0] border-t border-line text-muted text-[11px] [&_>_.cluster]:justify-start max-[820px]:grid-cols-[1fr]"
-            role="contentinfo"
-            aria-label="Sobre e créditos"
-          >
-            <div>
-              <span>Popcorn · Filmes e séries</span>
-              <p class="muted text-muted">Seu progresso fica salvo neste dispositivo.</p>
-            </div>
-            <div class="attribution flex items-center justify-end gap-3 max-w-[440px] text-right [&_img]:w-[80px] [&_img]:h-auto [&_img]:flex-none max-[820px]:justify-start max-[820px]:text-left">
-              <img src={tmdbLogo} width="80" height="11" alt="TMDB" />
-              <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
-            </div>
-          </footer>
-        </main>
-      </div>
+            <footer
+              class="page-footer grid grid-cols-[1fr_auto] gap-6 items-end mt-12 p-[24px_0] border-t border-line text-muted text-[11px] [&_>_.cluster]:justify-start max-[820px]:grid-cols-[1fr]"
+              role="contentinfo"
+              aria-label="Sobre e créditos"
+            >
+              <div>
+                <span>Popcorn · Filmes e séries</span>
+                <p class="muted text-muted">Seu progresso fica salvo neste dispositivo.</p>
+              </div>
+              <div class="attribution flex items-center justify-end gap-3 max-w-[440px] text-right [&_img]:w-[80px] [&_img]:h-auto [&_img]:flex-none max-[820px]:justify-start max-[820px]:text-left">
+                <img src={tmdbLogo} width="80" height="11" alt="TMDB" />
+                <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+              </div>
+            </footer>
+          </main>
+        </div>
+      </Show>
     </Show>
   );
 }

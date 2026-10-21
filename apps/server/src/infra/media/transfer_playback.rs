@@ -29,10 +29,12 @@ impl TorrentEngine {
             Preparation::Ready(prepared) => {
                 let direct = prepared.plan.direct;
                 let path = if direct { "" } else { "/stream" };
-                playback.media_url = format!(
-                    "http://{}/media/{id}{path}?token={}",
-                    self.address, active.credential
-                );
+                let base = if self.relative_urls {
+                    String::new()
+                } else {
+                    format!("http://{}", self.address)
+                };
+                playback.media_url = format!("{base}/media/{id}{path}?token={}", active.credential);
                 playback.duration_seconds = prepared.inspected.info.duration;
                 playback.delivery = if direct { "direct" } else { "mse" };
                 playback.conversion = prepared.plan.description();

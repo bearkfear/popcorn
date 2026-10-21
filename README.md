@@ -8,17 +8,29 @@ Requisitos originais em `PRD.md` e desenho técnico em `TDD.md`.
 O Tauri funciona como launcher e supervisor: ao abrir o Popcorn, inicia o backend
 Rust e abre a interface no navegador padrão. Não há janela nativa de catálogo ou
 player neste fluxo. O backend serve o build SolidJS, a API e o vídeo no mesmo
-endereço HTTP local, em uma porta livre. Os instaladores continuam incluindo
+endereço HTTP local, preferindo a porta **8080**. Se ela já estiver ocupada, o
+servidor solicita uma porta livre ao sistema e anuncia o endereço efetivo. Os instaladores continuam incluindo
 backend, interface, FFmpeg, ffprobe e catálogo; não é necessário instalar essas
 ferramentas separadamente.
 
-A reprodução abre em uma nova aba, preservando busca, filtros, paginação e posição
-da aba do catálogo. Ao retornar ao catálogo, o histórico é consultado novamente;
-salvamentos do player também notificam as outras abas para atualizar o progresso.
-O botão **Voltar aos detalhes** encerra a reprodução e fecha a aba do player.
+No PC/Mac, a reprodução abre em uma nova aba, preservando busca, filtros, paginação
+e posição da aba do catálogo. A intenção de reprodução é transferida por uma rota
+autenticada no servidor, sem depender de armazenamento herdado da aba original.
+O servidor mantém no máximo 32 intenções por até cinco minutos; a aba do player
+lembra seu próprio contexto e progresso para atualização da página.
+
+No Silk/Fire TV, a reprodução acontece na mesma aba para evitar a confirmação de
+abertura de abas do navegador. Os controles desaparecem após 2,5 segundos sem
+interação, inclusive com o vídeo pausado, e reaparecem ao usar o controle remoto ou
+mover o cursor. Foco e hover parados não mantêm o painel visível. Picture-in-picture
+fica oculto no Silk e nos navegadores sem uma API habilitada; no computador, as
+integrações padrão e WebKit continuam disponíveis quando suportadas. **Voltar aos detalhes** encerra a reprodução e retorna
+ao catálogo; no PC/Mac, esse botão fecha a aba do player. Ao retornar ao catálogo,
+o histórico é consultado novamente; salvamentos do player também notificam as
+outras abas para atualizar o progresso.
 
 O ícone na bandeja do Windows ou na barra de menus do macOS permite **Abrir
-Popcorn**, **Abrir pasta de vídeos** e **Encerrar Popcorn**. Fechar a aba mantém o
+Popcorn**, **Acessar pela TV**, **Abrir pasta de vídeos** e **Encerrar Popcorn**. Fechar a aba mantém o
 servidor ativo. Abrir o aplicativo novamente reutiliza a instância em execução e
 abre o navegador. Encerrar pelo menu aguarda a parada do backend e das conversões.
 
@@ -29,10 +41,27 @@ entregue à página nem gravado no armazenamento JavaScript. A API continua exig
 autenticação, Host exato e Origin permitido. Se o navegador perder a sessão,
 abra o Popcorn novamente pelo ícone ou pelo menu da bandeja.
 
-Esta primeira etapa atende ao próprio PC/Mac e escuta somente em `127.0.0.1`.
-Acesso pela rede, pareamento de TVs e navegação por controle remoto ainda precisam
-ser implementados. O computador continua responsável por arquivos, conversão e
-histórico; a reprodução depende dos formatos aceitos pelo navegador utilizado.
+O aplicativo instalado escuta em IPv4 para atender ao PC/Mac e a outros aparelhos
+na rede local. O menu **Acessar pela TV** mostra os endereços das interfaces privadas
+e um código de seis dígitos. Na Fire TV, abra o Silk, digite um dos endereços
+completos (incluindo a porta) e informe o código. A TV e o computador devem estar
+na mesma rede; mantenha o computador ligado. A navegação usa o navegador da TV e
+seus controles disponíveis, sem aplicativo nativo de TV.
+
+O código expira em dez minutos; reabrir o menu gera outro quando o anterior expira.
+Cinco códigos incorretos bloqueiam novas tentativas até completar um minuto da
+janela de tentativas. O pareamento concede uma sessão de acesso ao Popcorn;
+reiniciar o servidor invalida as sessões anteriores. Host e Origin continuam
+restritos aos endereços anunciados e à mesma origem de cada cliente. O modo CLI
+standalone continua limitado ao loopback. Trocar a rede do computador exige
+reiniciar o aplicativo para atualizar os endereços permitidos.
+
+O computador mantém arquivos, conversão e histórico. Os endereços públicos de vídeo
+são relativos à origem de cada navegador; FFmpeg e ffprobe acessam os arquivos pelo
+loopback interno. A transmissão direta oferece HTTP Range, e a conversão oferece
+fMP4. A compatibilidade final depende do navegador e do modelo da TV. Se o sistema
+pedir autorização do firewall para a rede local, permita o acesso do Popcorn; redes
+de convidados com isolamento entre aparelhos podem impedir a conexão.
 
 Para desenvolver o aplicativo completo, use `bun run desktop:dev`. Ele prepara o
 backend e as ferramentas, compila a interface web e inicia o launcher. Alterações
@@ -41,13 +70,14 @@ e atualização da aba. O Vite em `localhost:1420` continua disponível para pr�
 visual, sem iniciar outro backend. Para encerrar o launcher, use seu menu ou pare
 o comando de desenvolvimento.
 
-Para verificar sessões web, assets, autenticação RPC, rejeição de origens externas,
+Para verificar sessões web, acesso LAN, pareamento, assets, autenticação RPC e rejeição de origens externas,
 diagnósticos, reabertura e encerramento com um diretório de dados temporário:
 
 ```sh
 bun run --filter @popcorn/desktop build
 cargo build -p popcorn-server
 bun run test:browser
+bun run test:browser --occupied-port
 ```
 
 ## Catálogo e reprodução progressiva
@@ -55,7 +85,7 @@ bun run test:browser
 O repositório contém a fundação do backend standalone e o primeiro fluxo completo
 de exploração do catálogo:
 
-- backend Rust/Axum em loopback, com catálogo SQLite somente leitura e `user.sqlite`
+- backend Rust/Axum com acesso autenticado local e pela rede, catálogo SQLite somente leitura e `user.sqlite`
   separado, migração inicial e exclusividade do diretório de dados;
 - `CatalogService` via Connect RPC, com contratos Protobuf e cliente TypeScript
   gerados para snapshot local, configuração do TMDB, listas, busca, gêneros,

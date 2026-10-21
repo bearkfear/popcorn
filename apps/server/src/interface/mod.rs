@@ -2,7 +2,10 @@
 
 pub mod access;
 pub(crate) mod browser;
+mod browser_assets;
 mod browser_diagnostics;
+mod browser_pairing;
+mod browser_player;
 pub mod cli;
 mod diagnostics;
 pub mod health;

@@ -73,6 +73,8 @@ impl Backend {
     /// Returns an error for invalid inputs, occupied data, incompatible catalog,
     /// migration failure or a port that cannot be bound.
     pub async fn prepare(config: ServerConfig) -> Result<Self, Error> {
+        let bind = config.bind_address();
+        let fallback_port = config.browser.is_some() && config.port == 0;
         let token = match config.credential {
             Credential::File(path) => session_token(&path).await?,
             Credential::Private(token) => token,
@@ -96,21 +98,22 @@ impl Backend {
                 return Err(error);
             }
         };
-        let listener = match TcpListener::bind((Ipv4Addr::LOCALHOST, config.port)).await {
+        let listener = match server::listen(bind, fallback_port).await {
             Ok(listener) => listener,
             Err(error) => {
                 storage.close().await;
                 return Err(Error::Io(error));
             }
         };
-        let address = listener.local_addr()?;
+        let address = SocketAddr::from((Ipv4Addr::LOCALHOST, listener.local_addr()?.port()));
         let media = Arc::new(media_application(
             storage.user.clone(),
             &config.data_dir,
             address.to_string(),
+            config.browser.is_some(),
         ));
         let ready = Ready::new(address, storage.catalog_version.clone());
-        let access = interface::browser::access(token, address, config.origin, config.browser);
+        let access = services::access(token, address, config.origin, config.browser);
         popcorn_diagnostics::record(
             "server.ready",
             serde_json::json!({
@@ -143,7 +146,7 @@ impl Backend {
         self,
         shutdown: impl Future<Output = ()> + Send + 'static,
     ) -> Result<(), Error> {
-        let media = interface::media::router(self.media.clone(), self.access.origin.clone());
+        let media = interface::media::router(self.media.clone(), self.access.clone());
         let rpc = interface::rpc::router(
             Arc::new(crate::application::history::History::new(
                 crate::infra::history::SqliteHistory(self.storage.user.clone()),

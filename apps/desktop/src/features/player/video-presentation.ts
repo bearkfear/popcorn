@@ -19,3 +19,28 @@ export function videoPresentation(
   if (mode === "inline" || mode === "fullscreen" || mode === "picture-in-picture") return mode;
   return video.webkitDisplayingFullscreen ? "fullscreen" : "inline";
 }
+
+// PiP is offered only when the browser exposes an enabled presentation API.
+export function supportsPictureInPicture(
+  video:
+    | {
+        readonly disablePictureInPicture?: boolean;
+        readonly requestPictureInPicture?: () => unknown;
+        readonly webkitSupportsPresentationMode?: (mode: string) => boolean;
+        readonly webkitSetPresentationMode?: (mode: string) => void;
+      }
+    | undefined,
+  presentationDocument: { readonly pictureInPictureEnabled?: boolean },
+  television: boolean,
+): boolean {
+  if (!video || television || video.disablePictureInPicture) return false;
+  if (
+    presentationDocument.pictureInPictureEnabled &&
+    typeof video.requestPictureInPicture === "function"
+  )
+    return true;
+  return (
+    typeof video.webkitSetPresentationMode === "function" &&
+    video.webkitSupportsPresentationMode?.("picture-in-picture") === true
+  );
+}

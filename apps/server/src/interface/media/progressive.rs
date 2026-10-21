@@ -25,12 +25,12 @@ use crate::{
 
 pub(super) struct MediaState<R, T, C> {
     pub(super) context: Arc<MediaContext<R, T, C>>,
-    pub(super) origin: Option<String>,
+    pub(super) access: Arc<crate::interface::AccessPolicy>,
 }
 
 pub(crate) fn router<R: Sources + 'static, T: Transfers + 'static, C: Cache + 'static>(
     context: Arc<MediaContext<R, T, C>>,
-    origin: Option<String>,
+    access: Arc<crate::interface::AccessPolicy>,
 ) -> Router {
     Router::new()
         .route("/media/{playback_id}", get(media::<R, T, C>))
@@ -38,7 +38,7 @@ pub(crate) fn router<R: Sources + 'static, T: Transfers + 'static, C: Cache + 's
             "/media/{playback_id}/stream",
             get(converted::media::<R, T, C>),
         )
-        .with_state(Arc::new(MediaState { context, origin }))
+        .with_state(Arc::new(MediaState { context, access }))
 }
 
 #[derive(Deserialize)]
@@ -87,11 +87,7 @@ async fn media_response<R: Sources + 'static, T: Transfers + 'static, C: Cache +
     if !matches!(*method, Method::GET | Method::HEAD) {
         return Err(StatusCode::METHOD_NOT_ALLOWED.into());
     }
-    if let Some(origin) = headers.get(header::ORIGIN)
-        && state.origin.as_deref().map(str::as_bytes) != Some(origin.as_bytes())
-    {
-        return Err(StatusCode::FORBIDDEN.into());
-    }
+    state.access.validate_origin(headers)?;
     let access = open_media::handle(state.context.as_ref(), OpenMedia { id, credential })
         .await
         .map_err(|error| match error {

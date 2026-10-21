@@ -2,7 +2,9 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use popcorn_desktop::Supervisor;
+mod network;
+
+use popcorn_desktop::{Bootstrap, Supervisor};
 use std::{
     path::PathBuf,
     sync::atomic::{AtomicBool, Ordering},
@@ -74,11 +76,11 @@ fn open_browser(app: &tauri::AppHandle) {
     });
 }
 
-async fn start_and_open(app: &tauri::AppHandle) -> Result<(), String> {
+async fn connection(app: &tauri::AppHandle) -> Result<Bootstrap, String> {
     let state = app.state::<DesktopState>();
     let mut supervisor = state.supervisor.lock().await;
     if state.closing.load(Ordering::Acquire) {
-        return Ok(());
+        return Err("O Popcorn está encerrando.".into());
     }
     let (backend, catalog, data, web_root) = locations(app)?;
     let ready = supervisor
@@ -92,6 +94,11 @@ async fn start_and_open(app: &tauri::AppHandle) -> Result<(), String> {
         .await
         .map_err(|e| e.to_string())?;
     drop(supervisor);
+    Ok(ready)
+}
+
+async fn start_and_open(app: &tauri::AppHandle) -> Result<(), String> {
+    let ready = connection(app).await?;
     // The one-use ticket is carried in a fragment, never in HTTP paths or server logs.
     let response = reqwest::Client::new()
         .post(format!("http://{}/browser/launch", ready.address))
@@ -151,6 +158,7 @@ fn request_shutdown(app: &tauri::AppHandle) {
 
 fn setup_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let open = MenuItem::with_id(app, "open", "Abrir Popcorn", true, None::<&str>)?;
+    let network = MenuItem::with_id(app, "network", "Acessar pela TV", true, None::<&str>)?;
     let folder = MenuItem::with_id(
         app,
         "downloads",
@@ -159,12 +167,13 @@ fn setup_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> 
         None::<&str>,
     )?;
     let quit = MenuItem::with_id(app, "quit", "Encerrar Popcorn", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&open, &folder, &quit])?;
+    let menu = Menu::with_items(app, &[&open, &network, &folder, &quit])?;
     let mut tray = TrayIconBuilder::with_id("popcorn")
         .tooltip("Popcorn · servidor local")
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "open" => open_browser(app),
+            "network" => network::show(app),
             "quit" => request_shutdown(app),
             "downloads" => {
                 if let Ok((_, _, data, _)) = locations(app) {
