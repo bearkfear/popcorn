@@ -83,6 +83,8 @@ struct Initialize<'a> {
     data_dir: &'a Path,
     token: &'a str,
     origin: &'a str,
+    web_root: &'a Path,
+    browser_ticket: &'a str,
 }
 
 struct Process {
@@ -122,6 +124,7 @@ impl Supervisor {
         catalog: &Path,
         data_dir: &Path,
         origin: &str,
+        web_root: &Path,
     ) -> Result<Bootstrap, SupervisorError> {
         if let Some(process) = &mut self.process {
             if process.child.try_wait()?.is_none() {
@@ -158,9 +161,18 @@ impl Supervisor {
         });
         // Two independently generated UUIDs provide a 244-bit ephemeral secret.
         let token = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
+        let browser_ticket = format!("{}{}", Uuid::new_v4().simple(), Uuid::new_v4().simple());
         let result = timeout(
             START_TIMEOUT,
-            self.initialize(catalog, data_dir, origin, &token),
+            self.initialize(&Initialize {
+                event: "initialize",
+                catalog,
+                data_dir,
+                token: &token,
+                origin,
+                web_root,
+                browser_ticket: &browser_ticket,
+            }),
         )
         .await
         .map_err(|_| SupervisorError::StartupTimeout)
@@ -179,23 +191,14 @@ impl Supervisor {
 
     async fn initialize(
         &mut self,
-        catalog: &Path,
-        data_dir: &Path,
-        origin: &str,
-        token: &str,
+        initialization: &Initialize<'_>,
     ) -> Result<Bootstrap, SupervisorError> {
         let process = self
             .process
             .as_mut()
             .ok_or(SupervisorError::PendingProcess)?;
-        let mut frame = serde_json::to_vec(&Initialize {
-            event: "initialize",
-            catalog,
-            data_dir,
-            token,
-            origin,
-        })
-        .map_err(|_| SupervisorError::InvalidReadiness)?;
+        let mut frame =
+            serde_json::to_vec(initialization).map_err(|_| SupervisorError::InvalidReadiness)?;
         frame.push(b'\n');
         process.stdin.write_all(&frame).await?;
         process.stdin.flush().await?;
@@ -220,7 +223,7 @@ impl Supervisor {
         }
         Ok(Bootstrap {
             address: ready.address,
-            token: token.to_owned(),
+            token: initialization.token.to_owned(),
             protocol_version: ready.protocol_version,
             instance_id: ready.instance_id,
             catalog_version: ready.catalog_version,

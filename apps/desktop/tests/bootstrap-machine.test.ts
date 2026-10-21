@@ -108,6 +108,26 @@ describe("bootstrap lifecycle", () => {
     }
   });
 
+  test("a server-hosted browser connects without registering native listeners", async () => {
+    const listen = mock(async () => () => {});
+    const actor = createActor(bootstrapMachine, {
+      input: services({
+        isDesktop: () => false,
+        isBrowserServer: () => true,
+        bootstrap: async () => result("web-server"),
+        listenForShutdown: listen,
+      }),
+    }).start();
+    try {
+      actor.send({ type: "CONNECT" });
+      await waitFor(actor, (state) => state.matches("ready"));
+      expect(actor.getSnapshot().context.catalogVersion).toBe("web-server");
+      expect(listen).not.toHaveBeenCalled();
+    } finally {
+      actor.stop();
+    }
+  });
+
   test("failed bootstrap can reconnect successfully", async () => {
     let fail = true;
     const actor = createActor(bootstrapMachine, {

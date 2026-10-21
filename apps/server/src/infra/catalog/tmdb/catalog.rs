@@ -58,6 +58,7 @@ impl Tmdb {
         };
         self.cached::<RawPage, _, _>(&path, params, SHORT_TTL, |raw| raw.into_page(media_type))
             .await
+            .map(filter_page)
     }
 
     pub(crate) async fn search(
@@ -78,6 +79,7 @@ impl Tmdb {
             |raw| raw.into_page(media_type),
         )
         .await
+        .map(filter_page)
     }
 
     pub(crate) async fn title(
@@ -137,4 +139,10 @@ pub(super) const fn media_path(media_type: u32) -> Result<&'static str, TmdbErro
         2 => Ok("tv"),
         _ => Err(TmdbError::Configuration),
     }
+}
+
+fn filter_page(mut page: Cached<TitlePage>) -> Cached<TitlePage> {
+    // Apply the same policy to fresh, previously cached and stale fallback pages.
+    page.data.titles.retain(TitleData::has_catalog_metadata);
+    page
 }

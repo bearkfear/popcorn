@@ -27,6 +27,15 @@ function fromWire(entry: WireEntry): WatchEntry[] {
   ];
 }
 
+function notifyHistoryChange() {
+  try {
+    if (typeof window !== "undefined")
+      localStorage.setItem("popcorn-history-updated", crypto.randomUUID());
+  } catch {
+    /* History remains on the server when browser storage is unavailable. */
+  }
+}
+
 export function createHistoryViewModel(getClient: () => HistoryClient | undefined) {
   const [entries, setEntries] = createSignal<WatchEntry[]>([]);
   const [error, setError] = createSignal("");
@@ -75,6 +84,7 @@ export function createHistoryViewModel(getClient: () => HistoryClient | undefine
         markStatus: status,
       });
       accept(client, response.entries);
+      notifyHistoryChange();
     });
   }
   function progress(context: WatchContext, position: number, duration: number, ended = false) {
@@ -84,6 +94,7 @@ export function createHistoryViewModel(getClient: () => HistoryClient | undefine
         ended,
       });
       accept(client, response.entries);
+      notifyHistoryChange();
     });
   }
   async function flush() {

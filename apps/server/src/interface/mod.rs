@@ -1,6 +1,8 @@
 //! Declares HTTP, RPC and CLI adapters and reexports routing, access policy and health state.
 
 pub mod access;
+pub(crate) mod browser;
+mod browser_diagnostics;
 pub mod cli;
 mod diagnostics;
 pub mod health;

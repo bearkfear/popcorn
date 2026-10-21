@@ -1,17 +1,14 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { createBootstrapViewModel } from "../bootstrap/bootstrap.viewmodel";
-import type { WatchEntry } from "../history/history.model";
 import { createHistoryViewModel } from "../history/history.viewmodel";
 import { diagnostic, errorDetails } from "./media-diagnostics";
 import { createPlayerViewModel } from "./player.viewmodel";
 import { PlayerPage } from "./player-page";
+import { readPlayerSession, savePlayerSession, type WindowSession } from "./player-tab";
 
-export type WindowSession = {
-  context: Omit<WatchEntry, "key" | "status" | "position" | "duration" | "updatedAt">;
-  position: number;
-};
+export type { WindowSession } from "./player-tab";
 
 export function PlayerWindow() {
   const bootstrap = createBootstrapViewModel();
@@ -24,7 +21,7 @@ export function PlayerWindow() {
   async function close() {
     if (closing) return;
     closing = true;
-    // Flush the last position before stopping the stream and destroying its webview.
+    // Flush the last position before stopping the stream and closing the player.
     document.querySelector("video")?.pause();
     window.dispatchEvent(new Event("pagehide"));
     if (!(await history.flush())) {
@@ -44,23 +41,39 @@ export function PlayerWindow() {
         errorDetails(cause),
       );
     } finally {
-      await getCurrentWindow().destroy();
+      if (isTauri()) await getCurrentWindow().destroy();
+      else {
+        window.opener?.focus();
+        window.close();
+      }
     }
   }
 
   onMount(() => {
     let disposed = false;
-    const listener = getCurrentWindow().onCloseRequested((event) => {
-      event.preventDefault();
-      void close();
-    });
+    if (isTauri()) {
+      const listener = getCurrentWindow().onCloseRequested((event) => {
+        event.preventDefault();
+        void close();
+      });
+      onCleanup(() => {
+        void listener.then((unlisten) => unlisten());
+      });
+    } else {
+      const unload = () => {
+        if (!closing) player.close();
+      };
+      window.addEventListener("pagehide", unload);
+      onCleanup(() => window.removeEventListener("pagehide", unload));
+    }
     onCleanup(() => {
       disposed = true;
-      void listener.then((unlisten) => unlisten());
     });
     void (async () => {
       try {
-        const current = await invoke<WindowSession>("take_player_session");
+        const current = isTauri()
+          ? await invoke<WindowSession>("take_player_session")
+          : readPlayerSession();
         if (disposed) return;
         setSession(current);
         document.title = `${current.context.title.title} · Popcorn`;
@@ -82,7 +95,7 @@ export function PlayerWindow() {
       when={session()}
       fallback={
         <p class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5">
-          Preparando reprodução…
+          {error() || "Preparando reprodução…"}
         </p>
       }
     >
@@ -96,18 +109,16 @@ export function PlayerWindow() {
           <PlayerPage
             vm={player}
             title={current().context.title.title}
-            dedicated
+            dedicated={isTauri()}
             onBack={() => void close()}
-            onProgress={(position, duration, audioIndex) =>
-              history.progress(
-                {
-                  ...current().context,
-                  ...(audioIndex !== undefined ? { audioStreamIndex: audioIndex } : {}),
-                },
-                position,
-                duration,
-              )
-            }
+            onProgress={(position, duration, audioIndex) => {
+              const context = {
+                ...current().context,
+                ...(audioIndex !== undefined ? { audioStreamIndex: audioIndex } : {}),
+              };
+              if (!isTauri()) savePlayerSession({ context, position });
+              void history.progress(context, position, duration);
+            }}
             onEnded={() => {
               history.mark(current().context.title, current().context.content, "watched");
               void close();

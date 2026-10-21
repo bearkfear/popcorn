@@ -110,6 +110,7 @@ impl Backend {
             address.to_string(),
         ));
         let ready = Ready::new(address, storage.catalog_version.clone());
+        let access = interface::browser::access(token, address, config.origin, config.browser);
         popcorn_diagnostics::record(
             "server.ready",
             serde_json::json!({
@@ -119,11 +120,7 @@ impl Backend {
         Ok(Self {
             listener,
             storage,
-            access: Arc::new(AccessPolicy {
-                token,
-                host: address.to_string(),
-                origin: config.origin,
-            }),
+            access,
             ready,
             catalog,
             media,

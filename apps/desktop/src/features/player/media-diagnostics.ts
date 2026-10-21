@@ -1,5 +1,6 @@
 import type { Playback } from "@popcorn/sdk";
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { isBrowserServer } from "../bootstrap/browser-session";
 
 type Context = {
   readonly playbackId?: string | undefined;
@@ -9,10 +10,19 @@ let warned = false;
 
 // Native persistence performs a second redaction pass and bounds every record.
 export function diagnostic(event: string, context: Context, data: Record<string, unknown>) {
-  if (!isTauri()) return;
-  void invoke("media_diagnostic", {
-    sample: { event, ...context, clientTimeMs: Date.now(), data },
-  }).catch(() => {
+  if (!isTauri() && !isBrowserServer()) return;
+  const sample = { event, ...context, clientTimeMs: Date.now(), data };
+  const pending = isTauri()
+    ? invoke("media_diagnostic", { sample })
+    : fetch("/browser/diagnostic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sample),
+        keepalive: true,
+      }).then((response) => {
+        if (!response.ok) throw new Error("diagnostic unavailable");
+      });
+  void pending.catch(() => {
     if (!warned) console.warn("Popcorn: não foi possível salvar o diagnóstico local.");
     warned = true;
   });

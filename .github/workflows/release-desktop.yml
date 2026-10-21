@@ -121,6 +121,12 @@ jobs:
           bun run lint:server
           cargo test -p popcorn-server --lib core::
 
+      - name: Verify browser interface and sessions
+        run: |
+          bun run --filter @popcorn/desktop build
+          cargo build -p popcorn-server --locked
+          bun run test:browser
+
   windows:
     name: Build Windows x64 installer
     needs: [validate, quality]

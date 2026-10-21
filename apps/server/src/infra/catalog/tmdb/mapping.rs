@@ -58,6 +58,7 @@ impl RawPage {
                 .results
                 .into_iter()
                 .map(|title| title.into_title(media_type))
+                .filter(TitleData::has_catalog_metadata)
                 .collect(),
             page: self.page,
             total_pages: self.total_pages.min(500),

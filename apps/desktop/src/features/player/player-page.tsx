@@ -52,7 +52,7 @@ export function PlayerPage(props: {
             <strong>{props.title}</strong>
             <Show when={props.vm.playback()}>
               {(playback) => (
-                <>
+                <Show when={!props.vm.downloadComplete()}>
                   <span>
                     {bytesLabel(playback().sizeBytes)} · {props.vm.progress().toFixed(1)}% recebido
                     · {rateLabel(playback().downloadBytesPerSecond)} · {playback().peers} peers
@@ -62,20 +62,22 @@ export function PlayerPage(props: {
                     value={props.vm.progress()}
                     aria-label="Progresso do download"
                   />
-                </>
+                </Show>
               )}
             </Show>
           </div>
-          <button
-            class={buttonStyles({ variant: "secondary" })}
-            type="button"
-            disabled={props.vm.busy() || !props.vm.mediaReady()}
-            onClick={() => void props.vm.toggleDownload()}
-          >
-            {props.vm.playback()?.state === PlaybackState.PAUSED
-              ? "Retomar download"
-              : "Pausar download"}
-          </button>
+          <Show when={props.vm.playback() && !props.vm.downloadComplete()}>
+            <button
+              class={buttonStyles({ variant: "secondary" })}
+              type="button"
+              disabled={props.vm.busy() || !props.vm.mediaReady()}
+              onClick={() => void props.vm.toggleDownload()}
+            >
+              {props.vm.playback()?.state === PlaybackState.PAUSED
+                ? "Retomar download"
+                : "Pausar download"}
+            </button>
+          </Show>
         </header>
       </Show>
       <Show when={props.vm.displayError() || props.vm.monitorError() || !props.vm.mediaReady()}>

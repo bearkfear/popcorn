@@ -16,6 +16,7 @@ pub(crate) struct AccessPolicy {
     pub(crate) token: SessionToken,
     pub(crate) host: String,
     pub(crate) origin: Option<String>,
+    pub(crate) browser: Option<Arc<super::browser::Browser>>,
 }
 
 pub(super) async fn authorize(
@@ -62,7 +63,15 @@ pub(super) async fn authorize(
         add_cors(&mut response, origin);
         return Ok(response);
     }
-    let authorization = authorize_token(&access, headers);
+    let public = access.browser.is_some()
+        && (matches!(*request.method(), Method::GET | Method::HEAD)
+            && (request.uri().path() == "/" || request.uri().path().starts_with("/assets/"))
+            || request.method() == Method::POST && request.uri().path() == "/browser/session");
+    let authorization = if public {
+        Ok(())
+    } else {
+        authorize_token(&access, headers)
+    };
     let mut response = match authorization {
         Ok(()) => next.run(request).await,
         Err(status) => status.into_response(),
@@ -72,6 +81,13 @@ pub(super) async fn authorize(
 }
 
 fn authorize_token(access: &AccessPolicy, headers: &HeaderMap) -> Result<(), StatusCode> {
+    if access
+        .browser
+        .as_ref()
+        .is_some_and(|browser| browser.authorized(headers))
+    {
+        return Ok(());
+    }
     if headers.get_all(header::AUTHORIZATION).iter().count() != 1 {
         return Err(StatusCode::UNAUTHORIZED);
     }

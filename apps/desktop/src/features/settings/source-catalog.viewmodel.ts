@@ -1,6 +1,6 @@
 // Coordinates source catalog previews, explicit replacement and native export.
 import { ConnectError, type SourceCatalogPreview } from "@popcorn/sdk";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { createSignal } from "solid-js";
 import type { SourceCatalogClient } from "../../shared/types";
 
@@ -19,10 +19,20 @@ function errorText(error: unknown): string {
   return "Não foi possível concluir a operação. Verifique a conexão e tente novamente.";
 }
 
+async function saveInBrowser(document: string): Promise<boolean> {
+  const url = URL.createObjectURL(new Blob([document], { type: "application/json" }));
+  const link = window.document.createElement("a");
+  link.href = url;
+  link.download = "popcorn-catalog.json";
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return true;
+}
+
 export function createSourceCatalogViewModel(
   getClient: () => SourceCatalogClient | undefined,
   saveDocument: (document: string) => Promise<boolean> = (document) =>
-    invoke<boolean>("save_source_catalog", { document }),
+    isTauri() ? invoke<boolean>("save_source_catalog", { document }) : saveInBrowser(document),
 ) {
   const [name, setName] = createSignal("Meu catálogo");
   const [description, setDescription] = createSignal("");

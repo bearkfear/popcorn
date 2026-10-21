@@ -1,6 +1,54 @@
 # Popcorn
 
-Aplicativo desktop em desenvolvimento. Requisitos em `PRD.md` e desenho técnico em `TDD.md`.
+Aplicativo instalável para Windows e macOS, com servidor local e interface no navegador.
+Requisitos originais em `PRD.md` e desenho técnico em `TDD.md`.
+
+## Aplicativo instalado e interface web
+
+O Tauri funciona como launcher e supervisor: ao abrir o Popcorn, inicia o backend
+Rust e abre a interface no navegador padrão. Não há janela nativa de catálogo ou
+player neste fluxo. O backend serve o build SolidJS, a API e o vídeo no mesmo
+endereço HTTP local, em uma porta livre. Os instaladores continuam incluindo
+backend, interface, FFmpeg, ffprobe e catálogo; não é necessário instalar essas
+ferramentas separadamente.
+
+A reprodução abre em uma nova aba, preservando busca, filtros, paginação e posição
+da aba do catálogo. Ao retornar ao catálogo, o histórico é consultado novamente;
+salvamentos do player também notificam as outras abas para atualizar o progresso.
+O botão **Voltar aos detalhes** encerra a reprodução e fecha a aba do player.
+
+O ícone na bandeja do Windows ou na barra de menus do macOS permite **Abrir
+Popcorn**, **Abrir pasta de vídeos** e **Encerrar Popcorn**. Fechar a aba mantém o
+servidor ativo. Abrir o aplicativo novamente reutiliza a instância em execução e
+abre o navegador. Encerrar pelo menu aguarda a parada do backend e das conversões.
+
+O launcher autoriza o navegador com um ticket de uso único, transportado no
+fragmento do endereço e removido antes de iniciar a interface. O ticket é trocado
+por um cookie de sessão `HttpOnly` e `SameSite=Strict`; o segredo da API não é
+entregue à página nem gravado no armazenamento JavaScript. A API continua exigindo
+autenticação, Host exato e Origin permitido. Se o navegador perder a sessão,
+abra o Popcorn novamente pelo ícone ou pelo menu da bandeja.
+
+Esta primeira etapa atende ao próprio PC/Mac e escuta somente em `127.0.0.1`.
+Acesso pela rede, pareamento de TVs e navegação por controle remoto ainda precisam
+ser implementados. O computador continua responsável por arquivos, conversão e
+histórico; a reprodução depende dos formatos aceitos pelo navegador utilizado.
+
+Para desenvolver o aplicativo completo, use `bun run desktop:dev`. Ele prepara o
+backend e as ferramentas, compila a interface web e inicia o launcher. Alterações
+na interface servida pelo backend exigem `bun run --filter @popcorn/desktop build`
+e atualização da aba. O Vite em `localhost:1420` continua disponível para prévia
+visual, sem iniciar outro backend. Para encerrar o launcher, use seu menu ou pare
+o comando de desenvolvimento.
+
+Para verificar sessões web, assets, autenticação RPC, rejeição de origens externas,
+diagnósticos, reabertura e encerramento com um diretório de dados temporário:
+
+```sh
+bun run --filter @popcorn/desktop build
+cargo build -p popcorn-server
+bun run test:browser
+```
 
 ## Catálogo e reprodução progressiva
 
@@ -14,11 +62,11 @@ de exploração do catálogo:
   detalhes, temporadas e episódios;
 - integração TMDB v3 com credencial do usuário, cache SQLite, expiração, fallback
   offline, limite de concorrência, cooldown de rate limit e imagens validadas;
-- cliente SolidJS/Tailwind no Tauri 2, com configuração da credencial, filmes e
+- cliente SolidJS/Tailwind no navegador, iniciado pelo Tauri 2, com configuração da credencial, filmes e
   séries, paginação manual, detalhes e estados reais de loading/empty/error/retry;
-- bootstrap privado por stdin, credencial efêmera entregue à UI por IPC e
+- bootstrap privado por stdin, sessão web autorizada pelo launcher e
   supervisão do processo com prazos de inicialização e encerramento;
-- autenticação bearer, Host exato e CORS restrito ao origin do WebView;
+- autenticação bearer ou cookie local, Host exato e Origin restrito;
 - `/health`, prontidão JSON em stdout e logs em stderr sem credenciais;
 - atribuição permanente ao TMDB com o logo oficial aprovado e o aviso exigido;
 - fontes manuais por magnet ou arquivo `.torrent`, associadas ao filme ou episódio
@@ -30,6 +78,14 @@ de exploração do catálogo:
   pausar/retomar a transferência;
 - interface escura orientada por pôsteres, inspirada no fluxo clássico de catálogo,
   detalhe e reprodução sem reutilizar marca ou assets proprietários.
+
+As listas e buscas do TMDB exibem somente filmes e séries com identidade válida,
+nome, sinopse, ano de quatro dígitos e capa preenchidos. O adaptador de infraestrutura
+aplica a regra da entidade `TitleData` às respostas novas, ao cache existente e ao
+fallback offline. Trailer, elenco, duração, gêneros e imagem de fundo são opcionais.
+O filtro preserva a ordem e a numeração de páginas do provedor: uma página pode ter
+menos itens ou ficar vazia depois da filtragem. Detalhes acessados diretamente e
+histórico existente continuam disponíveis, mesmo quando seus metadados são parciais.
 
 O snapshot distribuído é intencionalmente vazio. Os testes do servidor cobrem
 somente regras puras do core, sem rede ou bancos temporários.
@@ -53,15 +109,15 @@ faixas. Depois escolha a qualidade e o áudio disponível e clique em **Reproduz
 Arquivos com múltiplas faixas passam pelo conversor para respeitar o áudio escolhido.
 O player ocupa uma página própria, sem o catálogo ou um modal atrás do vídeo.
 
-O desktop informa o progresso a cada cinco segundos e ao pausar/sair do player.
+A interface informa o progresso a cada cinco segundos e ao pausar/sair do player.
 O backend persiste o histórico no `user.sqlite`, decide a conclusão aos 95%,
 protege o ponto salvo contra um carregamento falho em zero e calcula a retomada.
 A pesquisa tem **Continuar assistindo**, **Já assistidos** e **Quero assistir**.
 Cada episódio mantém seu próprio ponto. O histórico antigo do WebView é importado
 na conexão e removido somente depois da confirmação do servidor; repetir a
-importação não sobrescreve registros existentes. As duas janelas usam a mesma API.
+importação não sobrescreve registros existentes. O catálogo e o player usam a mesma API.
 O histórico pertence ao diretório de dados do backend, sem sincronização entre dispositivos.
-A janela do player aguarda os salvamentos pendentes antes de fechar.
+Ao sair do player, a interface envia os salvamentos pendentes.
 
 Para verificar as regras de histórico e retomada:
 
@@ -103,10 +159,10 @@ bun install --frozen-lockfile
 bun run desktop:dev
 ```
 
-O comando prepara o `popcorn-server` para o target Rust e inicia o Vite em
-`http://localhost:1420` e o shell nativo. O shell inicia o backend, resolve o
-snapshot e os dados persistentes sem depender do diretório de trabalho e entrega
-o endereço e o segredo somente por IPC. Uma segunda chamada de bootstrap reutiliza
+O comando prepara o `popcorn-server` para o target Rust, compila a interface e
+inicia o Vite em `http://localhost:1420` e o launcher nativo. O launcher inicia o
+backend, resolve o snapshot e os dados persistentes sem depender do diretório de
+trabalho e abre o navegador no endereço servido pelo backend. Uma segunda chamada de bootstrap reutiliza
 a instância viva. Uma tentativa falha é encerrada e aguardada antes de permitir outra.
 
 Para compilar o desktop:
@@ -456,8 +512,8 @@ precisa do seeder controlado, da matriz de runtimes WebView de Windows/macOS, de
 FFmpeg, quota/limpeza e homologação dos instaladores. O código atual ainda não é
 o MVP completo definido no PRD.
 
-As regras de negócio pertencem ao backend. O desktop coleta intenções e eventos
-do player, apresenta respostas e integra o WebView e o sistema operacional.
+As regras de negócio pertencem ao backend. A interface web coleta intenções e eventos
+do player e apresenta respostas; o launcher integra o sistema operacional.
 Limites de cache vêm da API; o servidor também determina o total de páginas
 acessíveis do catálogo. Critérios e divisão de responsabilidades estão no
 [ADR 0003](docs/adr/0003-backend-business-rules.md).

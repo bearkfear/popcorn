@@ -25,6 +25,7 @@
     "check:desktop": "bun run --filter @popcorn/desktop check",
     "check:sdk": "bun run --filter @popcorn/sdk check",
     "check:scripts": "tsc -p tsconfig.json",
+    "test:browser": "bun scripts/check-browser.ts",
     "typecheck": "bun run check:scripts && bun run check:sdk && bun run --filter @popcorn/desktop typecheck"
   },
   "devDependencies": {

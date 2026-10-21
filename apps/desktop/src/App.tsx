@@ -17,6 +17,7 @@ import { createHistoryViewModel } from "./features/history/history.viewmodel";
 import { HistoryShelf } from "./features/history/history-shelf";
 import { createPlayerViewModel } from "./features/player/player.viewmodel";
 import { PlayerPage } from "./features/player/player-page";
+import { openPlayerTab } from "./features/player/player-tab";
 import { createSettingsViewModel } from "./features/settings/settings.viewmodel";
 import { SettingsPage } from "./features/settings/settings-page";
 import { createSourcesViewModel } from "./features/sources/sources.viewmodel";
@@ -43,13 +44,23 @@ export function App() {
   const [session, setSession] = createSignal<WatchContext>();
   let settingsReturnPage: Page = "search";
   let openingWindow = false;
+  let videoTab: Window | null = null;
   const [videoWindowOpen, setVideoWindowOpen] = createSignal(false);
 
   async function openVideo(context: WatchContext, position: number) {
     if (openingWindow) return;
     openingWindow = true;
     try {
-      await invoke("open_player_window", { session: { context, position } });
+      if (isTauri()) {
+        await invoke("open_player_window", { session: { context, position } });
+      } else {
+        if (videoTab && !videoTab.closed) {
+          videoTab.focus();
+          return;
+        }
+        videoTab = openPlayerTab({ context, position });
+        if (!videoTab) throw new Error("Permita abrir novas abas para assistir ao vídeo.");
+      }
       setVideoWindowOpen(true);
       player.close(false);
     } catch (error) {
@@ -133,6 +144,10 @@ export function App() {
     sources.selectContent(content);
   }
   async function prepareFile(sourceId: string, fileIndex: number) {
+    if (videoTab && !videoTab.closed) {
+      videoTab.focus();
+      return;
+    }
     if (isTauri() && (await invoke<boolean>("player_window_active"))) return;
     const title = details.detail() ?? details.selected();
     const content = sources.content();
@@ -151,35 +166,14 @@ export function App() {
       ...(audioStreamIndex !== undefined ? { audioStreamIndex } : {}),
     };
     setSession(selected);
-    if (isTauri()) {
-      await openVideo(selected, position);
-      return;
-    }
-    navigate("player");
-    await player.launch(position);
+    await openVideo(selected, position);
   }
   async function resume(entry: WatchEntry) {
     if (entry.sourceId === undefined || entry.fileIndex === undefined) {
       openTitle(entry.title, entry.content);
       return;
     }
-    if (isTauri()) {
-      await openVideo(entry, resumePosition(entry));
-      return;
-    }
-    openTitle(entry.title, entry.content);
-    player.setQuality(entry.quality);
-    player.setAudioStreamIndex(entry.audioStreamIndex);
-    setSession({
-      title: entry.title,
-      content: entry.content,
-      sourceId: entry.sourceId,
-      fileIndex: entry.fileIndex,
-      quality: entry.quality,
-      ...(entry.audioStreamIndex !== undefined ? { audioStreamIndex: entry.audioStreamIndex } : {}),
-    });
-    navigate("player");
-    await player.playFile(entry.sourceId, entry.fileIndex, true, resumePosition(entry));
+    await openVideo(entry, resumePosition(entry));
   }
   const selectedEntry = () => history.find(sources.content() ?? details.selected()?.content);
   const resumeSeconds = () => {
@@ -229,10 +223,21 @@ export function App() {
         void closed.then((unlisten) => unlisten());
       });
     }
-    const syncHistory = () => history.refresh();
+    const syncHistory = () => {
+      void history.refresh();
+      if (videoTab?.closed) {
+        videoTab = null;
+        setVideoWindowOpen(false);
+      }
+    };
+    const visible = () => {
+      if (document.visibilityState === "visible") syncHistory();
+    };
+    document.addEventListener("visibilitychange", visible);
     window.addEventListener("storage", syncHistory);
     window.addEventListener("focus", syncHistory);
     onCleanup(() => {
+      document.removeEventListener("visibilitychange", visible);
       window.removeEventListener("storage", syncHistory);
       window.removeEventListener("focus", syncHistory);
     });

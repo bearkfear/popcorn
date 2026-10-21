@@ -28,6 +28,12 @@ export function createPlayerViewModel(getClient: () => PlaybackClient | undefine
     if (!current || current.totalBytes <= 0n) return 0;
     return Math.min(100, Number((current.downloadedBytes * 10_000n) / current.totalBytes) / 100);
   };
+  const downloadComplete = () => {
+    const current = playback();
+    return Boolean(
+      current && current.totalBytes > 0n && current.downloadedBytes >= current.totalBytes,
+    );
+  };
   const mediaReady = () => {
     const current = playback();
     return Boolean(
@@ -136,7 +142,8 @@ export function createPlayerViewModel(getClient: () => PlaybackClient | undefine
   }
 
   async function toggleDownload() {
-    if (!playback() || busy() || actor.getSnapshot().status === "stopped") return;
+    if (!playback() || downloadComplete() || busy() || actor.getSnapshot().status === "stopped")
+      return;
     send({ type: "TOGGLE_DOWNLOAD" });
     await waitFor(actor, (state) => !state.matches({ active: "mutating" })).catch(
       (cause: unknown) => {
@@ -168,6 +175,7 @@ export function createPlayerViewModel(getClient: () => PlaybackClient | undefine
     setMediaError,
     monitorError,
     progress,
+    downloadComplete,
     mediaReady,
     preparationError,
     displayError,

@@ -12,6 +12,7 @@ pub struct ServerConfig {
     pub(super) credential: Credential,
     pub(super) port: u16,
     pub(super) origin: Option<String>,
+    pub(super) browser: Option<(PathBuf, SessionToken)>,
     pub(super) tmdb_token: Option<TmdbToken>,
     pub(super) tmdb_api_base: Option<String>,
 }
@@ -40,6 +41,7 @@ impl ServerConfig {
             credential: Credential::File(token_file),
             port: 0,
             origin: None,
+            browser: None,
             tmdb_token: None,
             tmdb_api_base: None,
         }
@@ -73,9 +75,22 @@ impl ServerConfig {
             ),
             port: 0,
             origin: Some(origin),
+            browser: None,
             tmdb_token: None,
             tmdb_api_base: None,
         })
+    }
+
+    /// Enables the packaged browser interface with a private launch ticket.
+    ///
+    /// # Errors
+    /// Rejects malformed launch tickets.
+    pub fn with_browser(mut self, root: PathBuf, ticket: &[u8]) -> Result<Self, Error> {
+        self.browser = Some((
+            root,
+            SessionToken::parse(ticket).map_err(|_| Error::InvalidToken)?,
+        ));
+        Ok(self)
     }
 
     /// Supplies a private TMDB read access token, without writing it to disk.

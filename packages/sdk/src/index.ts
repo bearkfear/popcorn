@@ -48,10 +48,17 @@ function authenticatedTransport(baseUrl: string, token: string) {
   return createConnectTransport({
       baseUrl,
       useBinaryFormat: true,
+      // Preserve fetch's platform-specific helpers while keeping final progress alive.
+      fetch: Object.assign((...args: Parameters<typeof globalThis.fetch>) => globalThis.fetch(args[0], {
+        ...args[1],
+        ...(/\/popcorn\.v1\.(HistoryService\/UpdateHistory|PlaybackService\/StopPlayback)$/.test(String(args[0]))
+          ? { keepalive: true }
+          : {}),
+      }), globalThis.fetch),
       defaultTimeoutMs: 10_000,
       interceptors: [
         (next) => (request) => {
-          request.header.set("Authorization", `Bearer ${token}`);
+          if (token) request.header.set("Authorization", `Bearer ${token}`);
           return next(request);
         },
       ],

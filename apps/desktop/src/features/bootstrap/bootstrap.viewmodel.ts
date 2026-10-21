@@ -12,13 +12,17 @@ import { useMachine } from "@xstate/solid";
 import { waitFor } from "xstate";
 import type { Bootstrap, Connection } from "../../shared/types";
 import { bootstrapMachine } from "./bootstrap.machine";
+import { browserBootstrap, isBrowserServer } from "./browser-session";
 
 export function createBootstrapViewModel() {
   const [snapshot, send, actor] = useMachine(bootstrapMachine, {
     input: {
       isDesktop: isTauri,
+      isBrowserServer,
       bootstrap: async (signal) => {
-        const data = await invoke<Bootstrap>("bootstrap");
+        const data = isTauri()
+          ? await invoke<Bootstrap>("bootstrap")
+          : await browserBootstrap(signal);
         signal.throwIfAborted();
         const baseUrl = `http://${data.address}`;
         return {

@@ -21,6 +21,10 @@ enum Control {
         data_dir: PathBuf,
         token: String,
         origin: String,
+        #[serde(default)]
+        web_root: Option<PathBuf>,
+        #[serde(default)]
+        browser_ticket: Option<String>,
     },
     Shutdown,
 }
@@ -50,11 +54,18 @@ pub(super) async fn run() -> Result<(), Error> {
         data_dir,
         token,
         origin,
+        web_root,
+        browser_ticket,
     }) = initialization
     else {
         return Err(Error::InvalidControlMessage);
     };
     let config = ServerConfig::from_private_channel(catalog, data_dir, token.as_bytes(), origin)?;
+    let config = match (web_root, browser_ticket) {
+        (Some(root), Some(ticket)) => config.with_browser(root, ticket.as_bytes())?,
+        (None, None) => config,
+        _ => return Err(Error::InvalidControlMessage),
+    };
     let backend = Backend::prepare(with_tmdb_environment(config)?).await?;
     emit_ready(&backend)?;
     backend

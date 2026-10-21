@@ -20,6 +20,7 @@ export type Clients = {
 type BootstrapResult = { clients: Clients; catalogVersion: string };
 export type BootstrapServices = {
   readonly isDesktop: () => boolean;
+  readonly isBrowserServer?: () => boolean;
   readonly bootstrap: (signal: AbortSignal) => Promise<BootstrapResult>;
   readonly listenForShutdown: (onError: (message: string) => void) => Promise<() => void>;
 };
@@ -80,7 +81,8 @@ export const bootstrapMachine = setup({
   on: {
     CONNECT: [
       {
-        guard: ({ context }) => context.services.isDesktop(),
+        guard: ({ context }) =>
+          context.services.isDesktop() || context.services.isBrowserServer?.() === true,
         target: ".connecting",
         actions: assign({ clients: {}, error: "" }),
       },
@@ -118,8 +120,9 @@ export const bootstrapMachine = setup({
         onError: {
           target: "error",
           actions: assign({
-            error: ({ context }) =>
+            error: ({ context, event }) =>
               context.error ||
+              (event.error instanceof Error ? event.error.message : "") ||
               "Não foi possível iniciar o serviço local. Tente conectar novamente.",
           }),
         },

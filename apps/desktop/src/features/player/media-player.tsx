@@ -366,12 +366,17 @@ export function MediaPlayer(props: {
     element.addEventListener("timeupdate", tick);
     element.addEventListener("pause", save);
     element.addEventListener("seeked", save);
+    const visibility = () => {
+      if (document.visibilityState === "hidden") save();
+    };
+    document.addEventListener("visibilitychange", visibility);
     window.addEventListener("pagehide", save);
     onCleanup(() => {
       save();
       element.removeEventListener("timeupdate", tick);
       element.removeEventListener("pause", save);
       element.removeEventListener("seeked", save);
+      document.removeEventListener("visibilitychange", visibility);
       window.removeEventListener("pagehide", save);
     });
   });

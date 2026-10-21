@@ -16,9 +16,13 @@ pub(crate) fn router<H: HealthProbe>(
     rpc: connectrpc::Router,
     media: Router,
 ) -> Router {
+    let browser = access.browser.as_ref().map_or_else(Router::new, |browser| {
+        super::browser::router(browser.clone())
+    });
     Router::new()
         .route("/health", get(health::<H>))
         .with_state(state)
+        .merge(browser)
         .fallback_service(rpc.into_axum_service())
         .layer(middleware::from_fn_with_state(access, authorize))
         .merge(media)
