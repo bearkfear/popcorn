@@ -1,6 +1,6 @@
 import { PlaybackState } from "@popcorn/sdk";
 import { onCleanup, onMount, Show } from "solid-js";
-import { bytesLabel, rateLabel } from "../../shared/formatters";
+import { rateLabel } from "../../shared/formatters";
 import { Icon } from "../../shared/ui/icon";
 import { buttonStyles } from "../../shared/ui/styles";
 import { MediaPlayer } from "./media-player";
@@ -40,75 +40,82 @@ export function PlayerPage(props: {
       aria-label="Reprodução"
     >
       <Show when={!props.dedicated}>
-        <header class="player-toolbar flex flex-none flex-wrap min-h-[64px] items-center justify-between gap-4 p-[10px_clamp(16px,_4vw,_48px)] border-b border-slate-6 bg-canvas-deep [&_strong]:block [&_strong]:text-[15px] [&_span]:block [&_span]:text-muted [&_span]:text-[11px] [&_progress]:block [&_progress]:w-[min(320px,_55vw)] [&_progress]:h-[4px] [&_progress]:mt-[6px] [&_progress]:border-0 [&_progress]:accent-accent max-[560px]:items-start max-[600px]:gap-2 max-[600px]:p-[10px] max-[600px]:[&_strong]:overflow-hidden max-[600px]:[&_strong]:text-ellipsis max-[600px]:[&_strong]:whitespace-nowrap">
+        <header class="player-toolbar flex flex-none items-center gap-3 px-4 py-3 bg-black text-ink sm:px-6">
           <button
-            class={buttonStyles({ variant: "secondary" })}
+            class="grid size-9 shrink-0 place-items-center rounded-full border-0 bg-transparent text-muted transition-colors hover:bg-white-a2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             type="button"
+            aria-label="Voltar aos detalhes"
+            title="Voltar aos detalhes"
             onClick={props.onBack}
           >
-            <Icon name="arrow-left" /> Voltar aos detalhes
+            <Icon name="arrow-left" class="size-5" />
           </button>
-          <div class="player-download min-w-0 max-[600px]:[order:-1] max-[600px]:w-full">
-            <strong>{props.title}</strong>
-            <Show when={props.vm.playback()}>
-              {(playback) => (
-                <Show when={!props.vm.downloadComplete()}>
-                  <span>
-                    {bytesLabel(playback().sizeBytes)} · {props.vm.progress().toFixed(1)}% recebido
-                    · {rateLabel(playback().downloadBytesPerSecond)} · {playback().peers} peers
-                  </span>
-                  <progress
-                    max="100"
-                    value={props.vm.progress()}
-                    aria-label="Progresso do download"
-                  />
-                </Show>
-              )}
+          <div class="player-download min-w-0 flex-1">
+            <h1 class="m-0 truncate text-sm font-medium leading-5 text-ink" title={props.title}>
+              {props.title}
+            </h1>
+            <Show when={props.vm.playback() && !props.vm.downloadComplete()}>
+              <span class="block text-[11px] leading-4 text-muted tabular-nums">
+                {props.vm.progress().toFixed(0)}% ·{" "}
+                {rateLabel(props.vm.playback()?.downloadBytesPerSecond ?? 0n)}
+              </span>
             </Show>
           </div>
           <Show when={props.vm.playback() && !props.vm.downloadComplete()}>
             <button
-              class={buttonStyles({ variant: "secondary" })}
+              class="grid size-9 shrink-0 place-items-center rounded-full border-0 bg-transparent text-muted hover:bg-white-a2 hover:text-ink disabled:opacity-40"
               type="button"
+              aria-label={
+                props.vm.playback()?.state === PlaybackState.PAUSED
+                  ? "Retomar download"
+                  : "Pausar download"
+              }
+              title={
+                props.vm.playback()?.state === PlaybackState.PAUSED
+                  ? "Retomar download"
+                  : "Pausar download"
+              }
               disabled={props.vm.busy() || !props.vm.mediaReady()}
               onClick={() => void props.vm.toggleDownload()}
             >
-              {props.vm.playback()?.state === PlaybackState.PAUSED
-                ? "Retomar download"
-                : "Pausar download"}
+              <Icon
+                name={props.vm.playback()?.state === PlaybackState.PAUSED ? "play" : "pause"}
+                class="size-4"
+              />
             </button>
           </Show>
         </header>
       </Show>
-      <Show when={props.vm.displayError() || props.vm.monitorError() || !props.vm.mediaReady()}>
-        <div
-          class="player-status-area flex-none min-w-0 max-h-[40vh] overflow-y-auto p-[12px_16px] bg-surface text-[13px] wrap-anywhere [&_.error-text]:p-3 [&_.error-text]:rounded-control [&_.error-text]:bg-negative-bg"
-          aria-live="polite"
-        >
-          <Show when={!props.vm.mediaReady() && !props.vm.displayError()}>
-            <p>Preparando vídeo…</p>
-          </Show>
-          <Show when={props.vm.displayError()}>
-            <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
-              {props.vm.displayError()}
-            </p>
-          </Show>
-          <Show when={props.vm.monitorError()}>
-            <p role="status">{props.vm.monitorError()}</p>
-          </Show>
-          <Show when={props.vm.displayError()}>
-            <button
-              type="button"
-              class={buttonStyles({ variant: "secondary" })}
-              disabled={props.vm.busy()}
-              onClick={() => void props.vm.retry()}
-            >
-              Tentar novamente
-            </button>
-          </Show>
-        </div>
-      </Show>
       <div class="player-stage flex-1 relative min-w-0 min-h-0 bg-black-a12">
+        <Show when={!props.vm.mediaReady() && !props.vm.playbackFailure()}>
+          <div
+            class="absolute inset-0 grid place-items-center"
+            role="status"
+            aria-label="Carregando vídeo"
+          >
+            <Icon
+              name="loading"
+              class="size-6 animate-spin text-muted motion-reduce:animate-none"
+            />
+          </div>
+        </Show>
+        <Show when={props.vm.playbackFailure()}>
+          <div class="player-status-area absolute inset-0 z-10 flex items-center justify-center bg-black/80 p-6">
+            <div class="max-w-sm text-center">
+              <p class="m-0 text-sm leading-6 text-ink" role="alert">
+                {props.vm.playbackFailure()}
+              </p>
+              <button
+                type="button"
+                class={buttonStyles({ variant: "secondary", class: "mt-4" })}
+                disabled={props.vm.busy()}
+                onClick={() => void props.vm.retry()}
+              >
+                Recarregar vídeo
+              </button>
+            </div>
+          </div>
+        </Show>
         <Show when={props.vm.mediaReady() ? props.vm.playback() : undefined}>
           {(playback) => (
             <MediaPlayer

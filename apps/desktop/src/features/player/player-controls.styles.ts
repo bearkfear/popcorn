@@ -28,7 +28,7 @@ export const playerRangeStyles = tv({
     kind: {
       timeline: "relative bg-transparent",
       volume: [
-        "video-volume h-[5px] w-[72px] min-w-[30px] max-[540px]:w-10",
+        "video-volume h-[5px] w-[72px] min-w-[30px] max-[540px]:hidden",
         "bg-[linear-gradient(to_right,var(--slate-12)_var(--range-progress,0%),var(--white-a3)_var(--range-progress,0%))]",
       ],
     },
@@ -50,19 +50,23 @@ export const playerControlsStyles = tv({
     ],
     top: [
       "video-controls-top grid grid-cols-[1fr_auto_1fr] items-center gap-4 mb-[18px]",
-      "max-[540px]:grid-cols-[1fr_auto] max-[540px]:gap-[6px]",
+      "max-[540px]:grid-cols-[1fr_auto_1fr] max-[540px]:gap-x-1 max-[540px]:gap-y-3",
     ],
-    volumeGroup: ["video-volume-group flex items-center gap-3 min-w-0 max-[540px]:gap-1"],
+    volumeGroup: ["video-volume-group flex items-center gap-3 min-w-0 max-[540px]:hidden"],
     transportGroup: [
       "video-transport-group flex items-center gap-3 min-w-0 justify-center max-[540px]:gap-1",
+      "max-[540px]:col-start-2",
     ],
     presentationGroup: [
       "video-presentation-group flex items-center gap-2 min-w-0 justify-end max-[540px]:col-span-full",
       "max-[540px]:gap-1",
     ],
-    audioField: ["video-audio-field [flex:0_1_112px] min-w-0"],
+    audioField: [
+      "video-audio-field [flex:0_1_112px] min-w-0 max-[540px]:mr-auto max-[540px]:[flex-basis:160px]",
+    ],
     timeline: [
       "video-timeline flex items-center gap-[10px] text-[13px] font-semibold tabular-nums [&_span]:shrink-0",
+      "max-[540px]:gap-2 max-[540px]:text-[11px]",
     ],
     timelineLayers: [
       "video-timeline-layers absolute inset-x-2 top-1/2 -translate-y-1/2 h-[var(--timeline-height)]",

@@ -11,7 +11,10 @@ import {
   mp4Header,
   observeMedia,
 } from "./media-diagnostics";
+import { playbackMediaSource, waitForStreaming } from "./media-source";
+import { mp4Initialization } from "./mp4-initialization";
 import { type MseStreamEvent, mseSessionMachine } from "./mse-session.machine";
+import { playbackDeferred } from "./playback-deferred";
 import { createPlayerMachine } from "./player.machine";
 import { VideoSurface } from "./video-surface";
 
@@ -29,7 +32,12 @@ function mediaOperation(
   operation: () => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      clean();
+      reject(new MediaPlaybackError(`Tempo esgotado aguardando ${completed}`));
+    }, 15_000);
     const clean = () => {
+      window.clearTimeout(timeout);
       target.removeEventListener(completed, success);
       for (const event of failures) target.removeEventListener(event, failure);
       signal.removeEventListener("abort", cancelled);
@@ -123,6 +131,7 @@ type MediaConfig = {
 function attachMse(
   video: HTMLVideoElement,
   config: MediaConfig,
+  transport: NonNullable<ReturnType<typeof playbackMediaSource>>,
   fail: (message: string) => void,
 ): () => void {
   let activeBuffer: SourceBuffer | undefined;
@@ -133,7 +142,10 @@ function attachMse(
     video.autoplay = false;
     const controller = new AbortController();
     const requestGeneration = ++streamGeneration;
-    const source = new MediaSource();
+    const remotePlaybackDisabled = video.disableRemotePlayback;
+    // WebKit requires an AirPlay alternative or this flag before opening MMS.
+    if (transport.kind === "managed") video.disableRemotePlayback = true;
+    const source = new transport.constructor();
     const objectUrl = URL.createObjectURL(source);
     let reader: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>> | undefined;
     let buffer: SourceBuffer | undefined;
@@ -154,6 +166,8 @@ function attachMse(
         requested_start: time,
         resume,
         stream_type: config.streamType,
+        media_source_api: transport.kind,
+        streaming: source.streaming ?? null,
         timestamp_offset: config.timestampOffsetSeconds,
         media_source_state: source.readyState,
         source_duration: Number.isFinite(source.duration) ? source.duration : null,
@@ -203,6 +217,7 @@ function attachMse(
       video.removeAttribute("src");
       video.load();
       URL.revokeObjectURL(objectUrl);
+      video.disableRemotePlayback = remotePlaybackDisabled;
     };
 
     async function stream() {
@@ -221,6 +236,8 @@ function attachMse(
         activeBuffer = buffer;
         source.duration = config.durationSeconds;
         report("buffer_created");
+        await waitForStreaming(source, controller.signal);
+        if (!alive()) return;
         const url = new URL(config.mediaUrl, window.location.href);
         url.searchParams.set("start", String(time));
         url.searchParams.set("generation", String(requestGeneration));
@@ -237,9 +254,11 @@ function attachMse(
         }
         if (!response.body) throw new MediaPlaybackError("media response body missing");
         reader = response.body.getReader();
-        const chunks = mediaChunks(reader, controller.signal);
+        const incoming = mediaChunks(reader, controller.signal);
+        const chunks = transport.kind === "managed" ? mp4Initialization(incoming) : incoming;
         while (alive()) {
           if (restored) await waitForRoom(video, buffer, controller.signal);
+          await waitForStreaming(source, controller.signal);
           if (!alive()) return;
           const trimTo = video.currentTime - 30;
           if (
@@ -289,7 +308,8 @@ function attachMse(
             if (resume) {
               void video.play().catch((error: unknown) => {
                 report("play_rejected", { exception: errorDetails(error) });
-                if (alive()) fail("Pressione reproduzir nos controles do vídeo para continuar.");
+                if (alive() && !playbackDeferred(error))
+                  fail("Não foi possível reproduzir este vídeo.");
               });
             }
           }
@@ -421,12 +441,23 @@ export function MediaPlayer(props: {
       },
     );
     if (current.delivery === "mse") {
-      if (typeof MediaSource === "undefined" || !MediaSource.isTypeSupported(current.streamType)) {
+      const transport = playbackMediaSource(current.streamType);
+      diagnostic(
+        "media.source_support",
+        { playbackId: current.playbackId },
+        {
+          stream_type: current.streamType,
+          media_source_api: transport?.kind ?? null,
+          managed_media_source: "ManagedMediaSource" in globalThis,
+          media_source: typeof MediaSource !== "undefined",
+        },
+      );
+      if (!transport) {
         machine.send("fail");
         props.onError("Este sistema não oferece suporte ao formato de reprodução convertido.");
         return;
       }
-      onCleanup(attachMse(element, current, props.onError));
+      onCleanup(attachMse(element, current, transport, props.onError));
       return;
     }
     if (current.delivery !== "direct") {
@@ -443,7 +474,10 @@ export function MediaPlayer(props: {
     element.autoplay = false;
     const ready = () => {
       if (current.startSeconds > 0) element.currentTime = current.startSeconds;
-      void element.play().catch(() => props.onError("Pressione reproduzir para continuar."));
+      void element.play().catch((error: unknown) => {
+        diagnostic("media.play_rejected", { playbackId: current.playbackId }, errorDetails(error));
+        if (!playbackDeferred(error)) props.onError("Não foi possível reproduzir este vídeo.");
+      });
     };
     element.addEventListener("loadedmetadata", ready, { once: true });
     element.src = current.mediaUrl;
@@ -482,7 +516,10 @@ export function MediaPlayer(props: {
         }}
         onLoadStart={() => machine.send("prepare")}
         onWaiting={() => machine.send("buffer")}
-        onPlaying={() => machine.send("play")}
+        onPlaying={() => {
+          props.onError("");
+          machine.send("play");
+        }}
         onPause={() => machine.send("pause")}
         onSeeking={() => machine.send("seek")}
         onSeeked={(event) => machine.send(event.currentTarget.paused ? "pause" : "play")}

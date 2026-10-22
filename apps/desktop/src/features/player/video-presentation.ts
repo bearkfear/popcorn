@@ -1,5 +1,39 @@
 export type VideoPresentation = "inline" | "fullscreen" | "picture-in-picture";
 
+export function usesCanvasVideo(nativeDesktop: boolean, platform: string, userAgent: string) {
+  return (nativeDesktop && /Mac/.test(platform)) || /iPhone|iPad|iPod/.test(userAgent);
+}
+
+export function toggleVideoFullscreen(
+  video: {
+    readonly webkitDisplayingFullscreen?: boolean;
+    webkitEnterFullscreen?: () => void;
+    webkitExitFullscreen?: () => void;
+  },
+  surface: { requestFullscreen?: () => Promise<void> } | undefined,
+  presentationDocument: {
+    readonly fullscreenElement?: unknown;
+    readonly fullscreenEnabled?: boolean;
+    exitFullscreen: () => Promise<void>;
+  },
+  preferNative: boolean,
+): void | Promise<void> {
+  if (presentationDocument.fullscreenElement) return presentationDocument.exitFullscreen();
+  if (video.webkitDisplayingFullscreen && video.webkitExitFullscreen) {
+    return video.webkitExitFullscreen();
+  }
+  if (
+    !preferNative &&
+    presentationDocument.fullscreenEnabled !== false &&
+    surface?.requestFullscreen
+  )
+    return surface.requestFullscreen();
+  if (video.webkitEnterFullscreen) return video.webkitEnterFullscreen();
+  if (presentationDocument.fullscreenEnabled !== false && surface?.requestFullscreen)
+    return surface.requestFullscreen();
+  throw new Error("Fullscreen API unavailable");
+}
+
 type PresentationDocument = {
   readonly fullscreenElement?: unknown;
   readonly pictureInPictureElement?: unknown;

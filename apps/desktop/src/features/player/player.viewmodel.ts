@@ -46,6 +46,8 @@ export function createPlayerViewModel(getClient: () => PlaybackClient | undefine
       ? playback()?.error || "Não foi possível preparar este vídeo. Tente novamente."
       : "";
   const displayError = () => preparationError() || mediaError() || error();
+  const playbackFailure = () =>
+    preparationError() || mediaError() || (!mediaReady() ? error() : "");
   const conversionLabel = () => {
     switch (playback()?.conversion) {
       case "direct":
@@ -179,6 +181,7 @@ export function createPlayerViewModel(getClient: () => PlaybackClient | undefine
     mediaReady,
     preparationError,
     displayError,
+    playbackFailure,
     conversionLabel,
     playFile,
     retry,

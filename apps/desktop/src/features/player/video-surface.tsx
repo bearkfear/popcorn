@@ -6,11 +6,17 @@ import { diagnostic, errorDetails } from "./media-diagnostics";
 import { PlayerControls } from "./player-controls";
 import { useInlinePlayer } from "./player-tab";
 import { bufferSegments, downloadSegments, type TimelineRange } from "./timeline-ranges";
-import { supportsPictureInPicture, videoPresentation } from "./video-presentation";
+import {
+  supportsPictureInPicture,
+  toggleVideoFullscreen,
+  usesCanvasVideo,
+  videoPresentation,
+} from "./video-presentation";
 
 type NativeVideo = HTMLVideoElement & {
   requestPictureInPicture?: () => Promise<unknown>;
   webkitEnterFullscreen?: () => void;
+  webkitExitFullscreen?: () => void;
   webkitDisplayingFullscreen?: boolean;
   webkitPresentationMode?: string;
   webkitSetPresentationMode?: (mode: string) => void;
@@ -33,8 +39,10 @@ export function VideoSurface(props: {
   readonly audioIndex: number | undefined;
   readonly onAudioChange: (index: number) => void;
 }) {
-  // WKWebView needs a canvas to avoid its inline compositing issue. WebView2 can render directly.
-  const useCanvas = isTauri() && /Mac/.test(navigator.platform);
+  // WebKit can decode frames without displaying its inline native video layer.
+  const useCanvas = usesCanvasVideo(isTauri(), navigator.platform, navigator.userAgent);
+  const hideNativeVideo = useCanvas && isTauri();
+  const [presentationError, setPresentationError] = createSignal("");
   const [paused, setPaused] = createSignal(true);
   const [position, setPosition] = createSignal(0);
   const [duration, setDuration] = createSignal(0);
@@ -103,8 +111,8 @@ export function VideoSurface(props: {
           canvasSurface.height = video.videoHeight;
         }
         context.drawImage(video, 0, 0, canvasSurface.width, canvasSurface.height);
+        setReady(true);
         if (count++ === 0) {
-          setReady(true);
           diagnostic("media.surface_first_frame", identity(), {
             renderer: "canvas2d",
             width: canvasSurface.width,
@@ -121,6 +129,8 @@ export function VideoSurface(props: {
       }
     };
     const sync = () => {
+      if (video.readyState < 2) setReady(false);
+      else if (!useCanvas) setReady(video.videoWidth > 0 && video.videoHeight > 0);
       setPictureInPictureAvailable(
         supportsPictureInPicture(video as NativeVideo, document, useInlinePlayer()),
       );
@@ -235,20 +245,23 @@ export function VideoSurface(props: {
       const video = props.video() as NativeVideo | undefined;
       if (!video || (mode === "picture-in-picture" && !pictureInPictureAvailable())) return;
       try {
+        setPresentationError("");
+        if (mode === "fullscreen") {
+          if (useCanvas) setPresentation("fullscreen");
+          await toggleVideoFullscreen(video, surface, document, useCanvas);
+          // Native WebKit transitions announce their final state asynchronously.
+          if (!video.webkitEnterFullscreen || (!useCanvas && document.fullscreenEnabled)) {
+            setPresentation(videoPresentation(video, document));
+          }
+          return;
+        }
         if (useCanvas) {
           setPresentation(mode);
-          if (mode === "fullscreen") video.webkitEnterFullscreen?.();
-          else video.webkitSetPresentationMode?.(mode);
+          video.webkitSetPresentationMode?.(mode);
           return;
         }
         const presentationDocument = document as PresentationDocument;
-        if (mode === "fullscreen") {
-          if (document.fullscreenElement) await document.exitFullscreen();
-          else {
-            if (!surface?.requestFullscreen) throw new Error("Fullscreen API unavailable");
-            await surface.requestFullscreen();
-          }
-        } else if (mode === "picture-in-picture") {
+        if (mode === "picture-in-picture") {
           if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
             await video.requestPictureInPicture();
           } else video.webkitSetPresentationMode?.("picture-in-picture");
@@ -267,7 +280,7 @@ export function VideoSurface(props: {
           { playbackId: props.playbackId() },
           errorDetails(error),
         );
-        props.onError(
+        setPresentationError(
           mode === "picture-in-picture"
             ? "Picture-in-picture não está disponível neste sistema."
             : "Não foi possível alterar o modo de exibição do vídeo.",
@@ -279,14 +292,24 @@ export function VideoSurface(props: {
   return (
     <div
       ref={surface}
-      class={`video-surface absolute inset-0 bg-black-a12 ${useCanvas ? " canvas-video-surface [&_.video-player]:opacity-[0.001] [&_.video-player]:pointer-events-none [&_.video-player:fullscreen]:opacity-[1] [&_.video-player:fullscreen]:pointer-events-auto [&_.video-player:-webkit-full-screen]:opacity-[1] [&_.video-player:-webkit-full-screen]:pointer-events-auto" : ""}`}
+      class={`video-surface absolute inset-0 bg-black-a12 ${useCanvas ? "canvas-video-surface" : ""} ${hideNativeVideo ? " [&_.video-player]:opacity-[0.001] [&_.video-player]:pointer-events-none [&_.video-player:fullscreen]:opacity-[1] [&_.video-player:fullscreen]:pointer-events-auto [&_.video-player:-webkit-full-screen]:opacity-[1] [&_.video-player:-webkit-full-screen]:pointer-events-auto" : ""}`}
     >
       {props.children}
+      <Show when={presentationError()}>
+        <button
+          type="button"
+          class="absolute top-3 inset-x-3 z-10 rounded-control bg-surface p-3 text-ink text-sm"
+          aria-live="polite"
+          onClick={() => setPresentationError("")}
+        >
+          {presentationError()} Toque para fechar.
+        </button>
+      </Show>
       <Show when={useCanvas}>
         <canvas
           ref={canvas}
           class="video-canvas absolute inset-0 w-full h-full object-contain pointer-events-none"
-          hidden={fullscreen()}
+          hidden={!ready() || fullscreen()}
           aria-label="Imagem do vídeo"
         />
         <Show when={!ready() && !pictureInPicture() && !fullscreen()}>
@@ -322,6 +345,7 @@ export function VideoSurface(props: {
           play={() => void play()}
           present={present}
           pictureInPictureAvailable={pictureInPictureAvailable}
+          imageReady={ready}
           audioTracks={props.audioTracks}
           audioIndex={props.audioIndex}
           onAudioChange={props.onAudioChange}

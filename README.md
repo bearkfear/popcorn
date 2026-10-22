@@ -29,6 +29,29 @@ ao catálogo; no PC/Mac, esse botão fecha a aba do player. Ao retornar ao catá
 o histórico é consultado novamente; salvamentos do player também notificam as
 outras abas para atualizar o progresso.
 
+No Safari do iPhone (iOS 17.1 ou superior), vídeos convertidos usam
+`ManagedMediaSource` quando `MediaSource` não está disponível. O player respeita
+os pedidos de pausa/retomada de dados do navegador e desabilita reprodução remota
+(AirPlay) nesse transporte, requisito do WebKit sem uma fonte HLS alternativa.
+A conversão continua no servidor. Os diagnósticos registram a API selecionada e
+a disponibilidade das duas APIs para distinguir incompatibilidade do navegador
+de falhas do FFmpeg. O cabeçalho MP4 é reunido até o fim de `moov` antes do primeiro
+append no WebKit, independentemente dos limites dos chunks HTTP. Operações de
+MediaSource/SourceBuffer que não respondem falham após 15 segundos.
+No iPhone, a imagem inline é desenhada em canvas para evitar a tela preta da
+camada nativa do WebKit; tela cheia usa `webkitEnterFullscreen` e os controles
+nativos. Ao sair, o player volta ao canvas. Recusas de tela cheia/PiP exibem um
+aviso dispensável, sem transformar a reprodução em erro. Em telas estreitas, os
+controles de reprodução ficam centralizados e áudio/exibição ocupam outra linha.
+Tela cheia e PiP aparecem somente após carregar a primeira imagem, inclusive após
+uma troca de transmissão. No celular, o volume é controlado pelo aparelho.
+O vídeo nativo permanece visível durante a inicialização no iPhone e o canvas
+só aparece após desenhar a primeira imagem.
+O cabeçalho do player usa uma seta de voltar e título em uma linha. Bloqueios de
+autoplay deixam o botão de reproduzir disponível sem aviso ou ação de recarga;
+falhas reais de reprodução mostram **Recarregar vídeo** no centro do player.
+Atualizações temporariamente indisponíveis não acrescentam avisos ao cabeçalho.
+
 O ícone na bandeja do Windows ou na barra de menus do macOS permite **Abrir
 Popcorn**, **Acessar pela TV**, **Abrir pasta de vídeos** e **Encerrar Popcorn**. Fechar a aba mantém o
 servidor ativo. Abrir o aplicativo novamente reutiliza a instância em execução e

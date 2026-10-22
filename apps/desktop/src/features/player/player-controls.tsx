@@ -31,11 +31,15 @@ export function PlayerControls(props: {
   play: () => void;
   present: (mode: "fullscreen" | "picture-in-picture") => void;
   pictureInPictureAvailable: () => boolean;
+  imageReady: () => boolean;
   audioTracks: Playback["audioTracks"];
   audioIndex: number | undefined;
   onAudioChange: (index: number) => void;
 }) {
   const television = useInlinePlayer();
+  const mobile =
+    /iPhone|iPad|iPod|Android.*Mobile/i.test(navigator.userAgent) ||
+    (/Mac/.test(navigator.platform) && navigator.maxTouchPoints > 1);
   const [visible, setVisible] = createSignal(true);
   const [dragging, setDragging] = createSignal<number>();
   const [pendingSeek, setPendingSeek] = createSignal<number>();
@@ -94,10 +98,11 @@ export function PlayerControls(props: {
         video.muted = !video.muted;
         break;
       case "fullscreen":
-        props.present("fullscreen");
+        if (props.imageReady()) props.present("fullscreen");
         break;
       case "pip":
-        if (props.pictureInPictureAvailable()) props.present("picture-in-picture");
+        if (props.imageReady() && props.pictureInPictureAvailable())
+          props.present("picture-in-picture");
         break;
     }
   }
@@ -170,36 +175,38 @@ export function PlayerControls(props: {
     >
       <div class={styles.top()}>
         <div class={styles.volumeGroup()}>
-          <button
-            class={playerButtonStyles()}
-            type="button"
-            aria-label={props.volume() === 0 ? "Ativar som" : "Silenciar"}
-            title="Ativar/desativar som (M)"
-            aria-keyshortcuts="m"
-            onClick={() => act("mute")}
-          >
-            <Icon
-              name={props.volume() === 0 ? "speaker-slash" : "speaker-high"}
-              class={styles.icon()}
+          <Show when={!mobile}>
+            <button
+              class={playerButtonStyles()}
+              type="button"
+              aria-label={props.volume() === 0 ? "Ativar som" : "Silenciar"}
+              title="Ativar/desativar som (M)"
+              aria-keyshortcuts="m"
+              onClick={() => act("mute")}
+            >
+              <Icon
+                name={props.volume() === 0 ? "speaker-slash" : "speaker-high"}
+                class={styles.icon()}
+              />
+            </button>
+            <input
+              class={playerRangeStyles({ kind: "volume" })}
+              type="range"
+              aria-label="Volume"
+              min="0"
+              max="1"
+              step="0.05"
+              value={props.volume()}
+              style={{ "--range-progress": `${props.volume() * 100}%` }}
+              onInput={(event) => {
+                const video = props.video();
+                if (video) {
+                  video.muted = false;
+                  video.volume = Number(event.currentTarget.value);
+                }
+              }}
             />
-          </button>
-          <input
-            class={playerRangeStyles({ kind: "volume" })}
-            type="range"
-            aria-label="Volume"
-            min="0"
-            max="1"
-            step="0.05"
-            value={props.volume()}
-            style={{ "--range-progress": `${props.volume() * 100}%` }}
-            onInput={(event) => {
-              const video = props.video();
-              if (video) {
-                video.muted = false;
-                video.volume = Number(event.currentTarget.value);
-              }
-            }}
-          />
+          </Show>
         </div>
         <div class={styles.transportGroup()}>
           <button
@@ -263,7 +270,7 @@ export function PlayerControls(props: {
               onChange={(value) => props.onAudioChange(Number(value))}
             />
           </Show>
-          <Show when={props.pictureInPictureAvailable()}>
+          <Show when={props.imageReady() && props.pictureInPictureAvailable()}>
             <button
               class={playerButtonStyles()}
               type="button"
@@ -275,16 +282,18 @@ export function PlayerControls(props: {
               <Icon name="picture-in-picture" class={styles.icon()} />
             </button>
           </Show>
-          <button
-            class={playerButtonStyles()}
-            type="button"
-            aria-label="Tela cheia"
-            title="Tela cheia (F)"
-            aria-keyshortcuts="f"
-            onClick={() => act("fullscreen")}
-          >
-            <Icon name="corners-out" class={styles.icon()} />
-          </button>
+          <Show when={props.imageReady()}>
+            <button
+              class={playerButtonStyles()}
+              type="button"
+              aria-label="Tela cheia"
+              title="Tela cheia (F)"
+              aria-keyshortcuts="f"
+              onClick={() => act("fullscreen")}
+            >
+              <Icon name="corners-out" class={styles.icon()} />
+            </button>
+          </Show>
         </div>
       </div>
       <div class={styles.timeline()}>

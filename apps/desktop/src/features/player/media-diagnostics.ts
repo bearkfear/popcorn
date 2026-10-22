@@ -203,6 +203,7 @@ export function observeMedia(video: HTMLVideoElement, getPlayback: () => Playbac
     {
       user_agent: navigator.userAgent,
       media_source: typeof MediaSource !== "undefined",
+      managed_media_source: "ManagedMediaSource" in globalThis,
       video_frame_callback: typeof video.requestVideoFrameCallback === "function",
       device_pixel_ratio: devicePixelRatio,
     },
