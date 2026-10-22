@@ -93,6 +93,12 @@ pub(crate) trait Transfers: Send + Sync {
         start: f64,
         generation: u64,
     ) -> impl Future<Output = Result<ConvertedAccess, AccessError>> + Send;
+    fn hls_segment(
+        &self,
+        id: Uuid,
+        credential: &str,
+        index: u32,
+    ) -> impl Future<Output = Result<ConvertedAccess, AccessError>> + Send;
 }
 
 pub(crate) trait Cache: Send + Sync {
@@ -106,6 +112,7 @@ pub(crate) trait Cache: Send + Sync {
 pub(crate) trait MediaReader: AsyncRead + AsyncSeek + Unpin + Send {}
 impl<T: AsyncRead + AsyncSeek + Unpin + Send> MediaReader for T {}
 
+#[derive(Clone, Copy)]
 pub(crate) enum AccessError {
     Gone,
     Forbidden,

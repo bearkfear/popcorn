@@ -12,7 +12,7 @@ use crate::application::media::{AccessError, ConvertedAccess};
 use super::{
     TorrentEngine,
     conversion_reader::ConversionReader,
-    preparation::{Preparation, Processing},
+    preparation::{ConversionOutput, Preparation, Processing},
 };
 
 impl TorrentEngine {
@@ -49,15 +49,22 @@ impl TorrentEngine {
             stream.cancel.clone()
         };
         let url = format!("http://{}/media/{id}?token={credential}", self.address);
-        let (reader, error) =
-            super::conversion_start::start(&processing, &media, &url, start, &cancel, context)
-                .await?;
+        let (reader, error) = super::conversion_start::start(
+            &processing,
+            &media,
+            &url,
+            start,
+            &cancel,
+            context,
+            ConversionOutput::FragmentedMp4,
+        )
+        .await?;
         Ok(ConvertedAccess {
             reader: Box::new(ConversionReader::new(reader, cancel, error, context)),
         })
     }
 
-    async fn authorized_processing(
+    pub(super) async fn authorized_processing(
         &self,
         id: Uuid,
         credential: &str,

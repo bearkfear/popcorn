@@ -29,15 +29,20 @@ ao catálogo; no PC/Mac, esse botão fecha a aba do player. Ao retornar ao catá
 o histórico é consultado novamente; salvamentos do player também notificam as
 outras abas para atualizar o progresso.
 
-No Safari do iPhone (iOS 17.1 ou superior), vídeos convertidos usam
-`ManagedMediaSource` quando `MediaSource` não está disponível. O player respeita
-os pedidos de pausa/retomada de dados do navegador e desabilita reprodução remota
-(AirPlay) nesse transporte, requisito do WebKit sem uma fonte HLS alternativa.
-A conversão continua no servidor. Os diagnósticos registram a API selecionada e
-a disponibilidade das duas APIs para distinguir incompatibilidade do navegador
-de falhas do FFmpeg. O cabeçalho MP4 é reunido até o fim de `moov` antes do primeiro
-append no WebKit, independentemente dos limites dos chunks HTTP. Operações de
-MediaSource/SourceBuffer que não respondem falham após 15 segundos.
+No Safari do iPhone, vídeos convertidos usam HLS nativo quando `MediaSource`
+convencional não está disponível. Isso evita o bloqueio do primeiro append de
+`ManagedMediaSource` observado no aparelho. A playlist VOD mantém a duração completa
+e permite retomar ou avançar diretamente para qualquer trecho. Segmentos MPEG-TS
+de até seis segundos são convertidos sob demanda em H.264/AAC, com o áudio escolhido,
+um quadro-chave inicial e no máximo um conversor ativo por reprodução. Esse caminho
+também recodifica vídeos H.264 compatíveis para permitir cortes independentes, com
+maior uso de CPU no servidor. Não grava segmentos extras em disco.
+Playlists e segmentos exigem a credencial da reprodução e Host/Origin válidos;
+parar a reprodução cancela as conversões. Os diagnósticos distinguem HLS nativo,
+MSE e falhas do FFmpeg. Clientes sem HLS nativo ainda podem usar
+`ManagedMediaSource`; nesse transporte, o player respeita os pedidos de dados do
+navegador, desabilita AirPlay e reúne o cabeçalho MP4 completo antes do primeiro
+append. Operações de MediaSource/SourceBuffer que não respondem falham após 15 segundos.
 No iPhone, a imagem inline é desenhada em canvas para evitar a tela preta da
 camada nativa do WebKit; tela cheia usa `webkitEnterFullscreen` e os controles
 nativos. Ao sair, o player volta ao canvas. Recusas de tela cheia/PiP exibem um

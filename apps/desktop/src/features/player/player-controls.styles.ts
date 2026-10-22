@@ -2,13 +2,13 @@ import { tv } from "tailwind-variants";
 
 export const playerButtonStyles = tv({
   base: [
-    "grid place-items-center shrink-0 p-1 border-0 rounded-md text-ink bg-transparent [&:hover]:bg-white-a2",
-    "[&:active]:opacity-[0.65]",
+    "relative grid place-items-center shrink-0 p-1 border-0 rounded-md text-ink bg-transparent [&:hover]:bg-white-a2",
+    "[&:active]:opacity-[0.65] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
   ],
   variants: {
     size: {
-      default: "size-8",
-      play: "size-10 video-play-toggle [&[aria-label=Reproduzir]_.app-icon]:translate-x-px",
+      default: "size-11",
+      play: "size-12 rounded-full bg-white-a2 video-play-toggle [&[aria-label=Reproduzir]_.app-icon]:translate-x-px",
     },
   },
   defaultVariants: {
@@ -41,32 +41,25 @@ export const playerRangeStyles = tv({
 export const playerControlsStyles = tv({
   slots: {
     panel: [
-      "video-controls absolute bottom-[clamp(18px,_5vh,_44px)] left-[50%] w-[min(600px,_calc(100%_-_32px))] m-0",
-      "min-w-0 p-[18px_22px_16px] border border-white-a2 rounded-[22px] bg-slate-3",
+      "video-controls absolute bottom-[max(16px,env(safe-area-inset-bottom))] left-[50%] w-[min(680px,_calc(100%_-_32px))] m-0",
+      "min-w-0 p-[10px_16px_12px] border border-white-a2 rounded-[20px] bg-slate-3/95",
       "shadow-[0_8px_32px_var(--black-a6),_inset_0_1px_0_var(--white-a1)] backdrop-blur-[24px] text-ink",
       "[transform:translateX(-50%)] opacity-0 pointer-events-none [transition:opacity_180ms_ease]",
-      "max-[540px]:p-[14px_12px]",
+      "max-[540px]:w-[calc(100%_-_24px)] max-[540px]:px-2 max-[540px]:pb-2",
       "max-[540px]:rounded-[16px] motion-reduce:[transition:none]",
     ],
     top: [
-      "video-controls-top grid grid-cols-[1fr_auto_1fr] items-center gap-4 mb-[18px]",
-      "max-[540px]:grid-cols-[1fr_auto_1fr] max-[540px]:gap-x-1 max-[540px]:gap-y-3",
+      "video-controls-top grid grid-cols-[1fr_auto_1fr] items-center gap-3 mt-1",
+      "max-[540px]:grid-cols-[auto_1fr] max-[540px]:gap-1",
     ],
-    volumeGroup: ["video-volume-group flex items-center gap-3 min-w-0 max-[540px]:hidden"],
+    volumeGroup: ["video-volume-group flex items-center gap-1 min-w-0 max-[540px]:hidden"],
     transportGroup: [
-      "video-transport-group flex items-center gap-3 min-w-0 justify-center max-[540px]:gap-1",
-      "max-[540px]:col-start-2",
+      "video-transport-group flex items-center gap-2 min-w-0 justify-center max-[540px]:gap-3 max-[360px]:gap-[3px]",
     ],
-    presentationGroup: [
-      "video-presentation-group flex items-center gap-2 min-w-0 justify-end max-[540px]:col-span-full",
-      "max-[540px]:gap-1",
-    ],
-    audioField: [
-      "video-audio-field [flex:0_1_112px] min-w-0 max-[540px]:mr-auto max-[540px]:[flex-basis:160px]",
-    ],
+    presentationGroup: ["video-presentation-group flex items-center gap-0 min-w-0 justify-end"],
     timeline: [
       "video-timeline flex items-center gap-[10px] text-[13px] font-semibold tabular-nums [&_span]:shrink-0",
-      "max-[540px]:gap-2 max-[540px]:text-[11px]",
+      "max-[540px]:gap-1 max-[540px]:text-[11px]",
     ],
     timelineLayers: [
       "video-timeline-layers absolute inset-x-2 top-1/2 -translate-y-1/2 h-[var(--timeline-height)]",
@@ -81,7 +74,7 @@ export const playerControlsStyles = tv({
       "[&:hover]:[--timeline-height:8px] [&:focus-within]:[--timeline-scale:1.5]",
       "[&:focus-within]:[--timeline-height:8px] [&:has([aria-busy=true])]:[--timeline-scale:1.5]",
       "[&:has([aria-busy=true])]:[--timeline-height:8px] [&_input]:w-full [&_input]:min-w-0 [&_input]:m-0",
-      "[&_input]:h-[var(--timeline-height)] [&_input]:[transition:height_var(--timeline-transition)_ease]",
+      "[&_input]:h-8",
       "[&_input::-webkit-slider-thumb]:[transform:scale(var(--timeline-scale))]",
       "[&_input::-webkit-slider-thumb]:[transition:transform_var(--timeline-transition)_ease]",
       "[&_input::-moz-range-thumb]:[transform:scale(var(--timeline-scale))]",
@@ -95,7 +88,8 @@ export const playerControlsStyles = tv({
       "[transition:transform_var(--timeline-transition)_ease]",
     ],
     icon: ["size-6 text-2xl text-center"],
-    transportIcon: ["size-6 text-2xl text-center fill-current stroke-[1.5]"],
+    transportIcon: ["size-7 text-center stroke-[1.7]"],
+    skipLabel: ["absolute inset-0 grid place-items-center pt-0.5 text-[9px] font-bold"],
     playIcon: ["size-7 text-2xl text-center fill-current stroke-[1.5]"],
     loadingIcon: [
       "size-3 text-2xl text-center stroke-[2.5] animate-spin [animation-duration:800ms]",

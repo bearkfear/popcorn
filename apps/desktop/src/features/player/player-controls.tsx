@@ -2,12 +2,12 @@
 import type { Playback } from "@popcorn/sdk";
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { Icon } from "../../shared/ui/icon";
-import { SelectField } from "../../shared/ui/select-field";
 import {
   playerButtonStyles,
   playerControlsStyles,
   playerRangeStyles,
 } from "./player-controls.styles";
+import { PlayerLanguageMenu } from "./player-language-menu";
 import { type PlayerAction, playerShortcut } from "./player-shortcuts";
 import { useInlinePlayer } from "./player-tab";
 import type { TimelineRange } from "./timeline-ranges";
@@ -173,6 +173,62 @@ export function PlayerControls(props: {
       onFocusIn={reveal}
       onFocusOut={reveal}
     >
+      <div class={styles.timeline()}>
+        <span>{clock(position())}</span>
+        <div
+          class={styles.timelineTrack()}
+          style={{
+            "--range-progress": `${progress()}%`,
+          }}
+          title="Cinza: partes baixadas (posição aproximada). Cinza claro: trechos carregados. Branco: reprodução."
+        >
+          <div class={styles.timelineLayers()} aria-hidden="true">
+            <For each={props.downloadedRanges}>
+              {(range) => (
+                <div
+                  class={styles.downloadSegment()}
+                  style={{ left: `${range.start}%`, width: `${range.end - range.start}%` }}
+                />
+              )}
+            </For>
+            <For each={props.bufferedRanges}>
+              {(range) => (
+                <div
+                  class={styles.bufferSegment()}
+                  style={{ left: `${range.start}%`, width: `${range.end - range.start}%` }}
+                />
+              )}
+            </For>
+            <div class={styles.playedSegment()} style={{ width: `${progress()}%` }} />
+          </div>
+          <input
+            class={playerRangeStyles()}
+            type="range"
+            aria-label="Posição do vídeo"
+            aria-busy={pendingSeek() !== undefined}
+            aria-valuetext={`${clock(position())} de ${clock(props.duration())}`}
+            min="0"
+            max={props.duration() || 1}
+            step="0.1"
+            value={position()}
+            onInput={(event) => setDragging(Number(event.currentTarget.value))}
+            onChange={(event) => {
+              seek(Number(event.currentTarget.value));
+              setDragging(undefined);
+              reveal();
+            }}
+            onPointerCancel={() => setDragging(undefined)}
+          />
+          <Show when={pendingSeek() !== undefined && dragging() === undefined}>
+            <div class={styles.seekIndicators()}>
+              <span class={styles.seekLoading()} role="status" aria-label="Carregando trecho…">
+                <Icon name="loading" class={styles.loadingIcon()} />
+              </span>
+            </div>
+          </Show>
+        </div>
+        <span>{clock(props.duration())}</span>
+      </div>
       <div class={styles.top()}>
         <div class={styles.volumeGroup()}>
           <Show when={!mobile}>
@@ -217,7 +273,10 @@ export function PlayerControls(props: {
             aria-keyshortcuts="ArrowLeft j"
             onClick={() => act("back")}
           >
-            <Icon name="rewind" class={styles.transportIcon()} />
+            <Icon name="replay" class={styles.transportIcon()} />
+            <span class={styles.skipLabel()} aria-hidden="true">
+              10
+            </span>
           </button>
           <button
             class={playerButtonStyles({ size: "play" })}
@@ -237,45 +296,26 @@ export function PlayerControls(props: {
             aria-keyshortcuts="ArrowRight l"
             onClick={() => act("forward")}
           >
-            <Icon name="fast-forward" class={styles.transportIcon()} />
+            <Icon name="forward" class={styles.transportIcon()} />
+            <span class={styles.skipLabel()} aria-hidden="true">
+              10
+            </span>
           </button>
         </div>
         <div class={styles.presentationGroup()}>
-          <Show when={props.audioTracks.length > 1}>
-            <SelectField
-              class={styles.audioField()}
-              variant="player"
-              placement="top-end"
-              ariaLabel="Faixa de áudio"
-              value={String(props.audioIndex ?? props.audioTracks[0]?.streamIndex ?? "")}
-              options={props.audioTracks.map((track) => {
-                const languages: Record<string, string> = {
-                  por: "Português",
-                  pt: "Português",
-                  eng: "Inglês",
-                  en: "Inglês",
-                  spa: "Espanhol",
-                  es: "Espanhol",
-                };
-                const language =
-                  languages[track.language.toLowerCase()] ||
-                  track.language ||
-                  `Faixa ${track.streamIndex}`;
-                const title = track.title.trim();
-                return {
-                  value: String(track.streamIndex),
-                  label: `${language}${title && title.toLowerCase() !== language.toLowerCase() ? ` · ${title}` : ""}`,
-                };
-              })}
-              onChange={(value) => props.onAudioChange(Number(value))}
+          <Show when={props.audioTracks.length > 0}>
+            <PlayerLanguageMenu
+              tracks={props.audioTracks}
+              selected={props.audioIndex}
+              onChange={props.onAudioChange}
             />
           </Show>
           <Show when={props.imageReady() && props.pictureInPictureAvailable()}>
             <button
               class={playerButtonStyles()}
               type="button"
-              aria-label="Picture-in-picture"
-              title="Picture-in-picture (P)"
+              aria-label="Janela flutuante"
+              title="Janela flutuante (P)"
               aria-keyshortcuts="p"
               onClick={() => act("pip")}
             >
@@ -295,61 +335,6 @@ export function PlayerControls(props: {
             </button>
           </Show>
         </div>
-      </div>
-      <div class={styles.timeline()}>
-        <span>{clock(position())}</span>
-        <div
-          class={styles.timelineTrack()}
-          style={{
-            "--range-progress": `${progress()}%`,
-          }}
-          title="Cinza: partes baixadas (posição aproximada). Cinza claro: trechos carregados. Branco: reprodução."
-        >
-          <div class={styles.timelineLayers()} aria-hidden="true">
-            <For each={props.downloadedRanges}>
-              {(range) => (
-                <div
-                  class={styles.downloadSegment()}
-                  style={{ left: `${range.start}%`, width: `${range.end - range.start}%` }}
-                />
-              )}
-            </For>
-            <For each={props.bufferedRanges}>
-              {(range) => (
-                <div
-                  class={styles.bufferSegment()}
-                  style={{ left: `${range.start}%`, width: `${range.end - range.start}%` }}
-                />
-              )}
-            </For>
-            <div class={styles.playedSegment()} style={{ width: `${progress()}%` }} />
-          </div>
-          <input
-            class={playerRangeStyles()}
-            type="range"
-            aria-label="Posição do vídeo"
-            aria-busy={pendingSeek() !== undefined}
-            min="0"
-            max={props.duration() || 1}
-            step="0.1"
-            value={position()}
-            onInput={(event) => setDragging(Number(event.currentTarget.value))}
-            onChange={(event) => {
-              seek(Number(event.currentTarget.value));
-              setDragging(undefined);
-              reveal();
-            }}
-            onPointerCancel={() => setDragging(undefined)}
-          />
-          <Show when={pendingSeek() !== undefined && dragging() === undefined}>
-            <div class={styles.seekIndicators()}>
-              <span class={styles.seekLoading()} role="status" aria-label="Carregando trecho…">
-                <Icon name="loading" class={styles.loadingIcon()} />
-              </span>
-            </div>
-          </Show>
-        </div>
-        <span>{clock(props.duration())}</span>
       </div>
     </fieldset>
   );

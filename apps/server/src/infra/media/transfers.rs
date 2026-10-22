@@ -175,4 +175,13 @@ impl Transfers for TorrentEngine {
     ) -> Result<ConvertedAccess, AccessError> {
         self.open_converted(id, credential, start, generation).await
     }
+
+    async fn hls_segment(
+        &self,
+        id: Uuid,
+        credential: &str,
+        index: u32,
+    ) -> Result<ConvertedAccess, AccessError> {
+        self.open_hls_segment(id, credential, index).await
+    }
 }

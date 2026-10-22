@@ -2,6 +2,7 @@
 
 pub mod get_cache_settings;
 pub mod get_playback;
+pub mod hls_playlist;
 pub mod list_sources;
 pub mod open_media;
 

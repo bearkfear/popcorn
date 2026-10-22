@@ -27,6 +27,12 @@ pub(super) struct PreparedMedia {
     pub(super) plan: PlaybackPlan,
 }
 
+#[derive(Clone, Copy)]
+pub(super) enum ConversionOutput {
+    FragmentedMp4,
+    HlsSegment { end: f64 },
+}
+
 impl PreparedMedia {
     pub(super) const fn stream_type(&self) -> &'static str {
         match self.plan.audio {

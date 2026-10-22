@@ -14,6 +14,7 @@ import {
 import { playbackMediaSource, waitForStreaming } from "./media-source";
 import { mp4Initialization } from "./mp4-initialization";
 import { type MseStreamEvent, mseSessionMachine } from "./mse-session.machine";
+import { attachNativeMedia, nativeHlsUrl } from "./native-media";
 import { playbackDeferred } from "./playback-deferred";
 import { createPlayerMachine } from "./player.machine";
 import { VideoSurface } from "./video-surface";
@@ -442,6 +443,26 @@ export function MediaPlayer(props: {
     );
     if (current.delivery === "mse") {
       const transport = playbackMediaSource(current.streamType);
+      if (transport?.kind !== "standard" && element.canPlayType("application/vnd.apple.mpegurl")) {
+        diagnostic(
+          "media.native_hls_selected",
+          { playbackId: current.playbackId },
+          {
+            start_seconds: current.startSeconds,
+          },
+        );
+        onCleanup(
+          attachNativeMedia(
+            element,
+            {
+              ...current,
+              mediaUrl: nativeHlsUrl(current.mediaUrl, window.location.href),
+            },
+            props.onError,
+          ),
+        );
+        return;
+      }
       diagnostic(
         "media.source_support",
         { playbackId: current.playbackId },
@@ -465,30 +486,7 @@ export function MediaPlayer(props: {
       props.onError("O serviço não informou um modo de reprodução compatível.");
       return;
     }
-    const failed = () => {
-      diagnostic("media.direct_failed", { playbackId: current.playbackId }, mediaSnapshot(element));
-      machine.send("fail");
-      props.onError("Não foi possível carregar ou decodificar este vídeo. Tente novamente.");
-    };
-    element.addEventListener("error", failed);
-    element.autoplay = false;
-    const ready = () => {
-      if (current.startSeconds > 0) element.currentTime = current.startSeconds;
-      void element.play().catch((error: unknown) => {
-        diagnostic("media.play_rejected", { playbackId: current.playbackId }, errorDetails(error));
-        if (!playbackDeferred(error)) props.onError("Não foi possível reproduzir este vídeo.");
-      });
-    };
-    element.addEventListener("loadedmetadata", ready, { once: true });
-    element.src = current.mediaUrl;
-    element.load();
-    onCleanup(() => {
-      element.removeEventListener("error", failed);
-      element.removeEventListener("loadedmetadata", ready);
-      element.pause();
-      element.removeAttribute("src");
-      element.load();
-    });
+    onCleanup(attachNativeMedia(element, current, props.onError));
   });
   return (
     <VideoSurface

@@ -17,6 +17,7 @@ pub mod sources;
 mod tools;
 pub mod transfer_control;
 mod transfer_conversion;
+mod transfer_hls;
 pub mod transfer_playback;
 pub mod transfer_source;
 pub mod transfer_stream;

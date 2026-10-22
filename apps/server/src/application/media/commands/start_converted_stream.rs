@@ -15,6 +15,15 @@ pub(crate) struct ConvertedAccess {
     pub(crate) reader: Box<dyn AsyncRead + Unpin + Send>,
 }
 
+pub(crate) async fn segment<R: Sources, T: Transfers, C: Cache>(
+    context: &MediaContext<R, T, C>,
+    id: Uuid,
+    credential: &str,
+    index: u32,
+) -> Result<ConvertedAccess, AccessError> {
+    context.transfers.hls_segment(id, credential, index).await
+}
+
 pub(crate) async fn handle<R: Sources, T: Transfers, C: Cache>(
     context: &MediaContext<R, T, C>,
     request: StartConvertedStream<'_>,

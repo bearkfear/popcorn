@@ -4,10 +4,30 @@ use tokio::process::Command;
 
 use crate::core::media::value_objects::playback_profile::{AudioConversion, VideoConversion};
 
-use super::{preparation::PreparedMedia, tools::MediaTools};
+use super::{
+    preparation::{ConversionOutput, PreparedMedia},
+    tools::MediaTools,
+};
 
 impl MediaTools {
-    pub(super) fn conversion(&self, media: &PreparedMedia, url: &str, start: f64) -> Command {
+    pub(super) fn conversion(
+        &self,
+        media: &PreparedMedia,
+        url: &str,
+        start: f64,
+        output: ConversionOutput,
+    ) -> Command {
+        let video = match (output, media.plan.video) {
+            // Every independently requested segment must begin with a keyframe.
+            (ConversionOutput::HlsSegment { .. }, VideoConversion::Copy) => {
+                VideoConversion::Encode {
+                    width: 1920,
+                    height: 1080,
+                    hdr: false,
+                }
+            }
+            (_, video) => video,
+        };
         let mut command = self.command(false);
         command
             .args([
@@ -20,7 +40,7 @@ impl MediaTools {
                 "-ss",
             ])
             .arg(start.to_string());
-        if media.plan.video == VideoConversion::Copy {
+        if video == VideoConversion::Copy {
             command.arg("-noaccurate_seek");
         }
         command
@@ -48,27 +68,49 @@ impl MediaTools {
             command.arg("-map").arg(format!("0:{index}"));
         }
         command.args(["-sn", "-dn", "-map_metadata", "-1", "-map_chapters", "-1"]);
-        video_options(&mut command, media.plan.video);
-        audio_options(&mut command, media.plan.audio, media.plan.video, start);
-        command.args([
-            "-avoid_negative_ts",
-            "disabled",
-            "-output_ts_offset",
-            "3600",
-            "-use_editlist",
-            "0",
-            "-movflags",
-            "+empty_moov+default_base_moof+frag_keyframe+frag_discont",
-            "-frag_duration",
-            "1000000",
-            "-flush_packets",
-            "1",
-            "-f",
-            "mp4",
-            "pipe:1",
-        ]);
+        video_options(&mut command, video);
+        audio_options(&mut command, media.plan.audio, video, start);
+        output_options(&mut command, output);
         command
     }
+}
+
+fn output_options(command: &mut Command, output: ConversionOutput) {
+    if let ConversionOutput::HlsSegment { end } = output {
+        command.args([
+            "-to",
+            &end.to_string(),
+            "-output_ts_offset",
+            "3600",
+            "-mpegts_flags",
+            "+resend_headers",
+            "-muxdelay",
+            "0",
+            "-muxpreload",
+            "0",
+            "-f",
+            "mpegts",
+            "pipe:1",
+        ]);
+        return;
+    }
+    command.args([
+        "-avoid_negative_ts",
+        "disabled",
+        "-output_ts_offset",
+        "3600",
+        "-use_editlist",
+        "0",
+        "-movflags",
+        "+empty_moov+default_base_moof+frag_keyframe+frag_discont",
+        "-frag_duration",
+        "1000000",
+        "-flush_packets",
+        "1",
+        "-f",
+        "mp4",
+        "pipe:1",
+    ]);
 }
 
 fn video_options(command: &mut Command, conversion: VideoConversion) {

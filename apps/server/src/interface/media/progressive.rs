@@ -1,6 +1,6 @@
 //! HTTP byte-range delivery through the application media reader contract.
 
-use super::converted;
+use super::{converted, hls};
 use crate::application::media::queries::OpenMedia;
 use crate::application::media::queries::open_media;
 use std::sync::Arc;
@@ -37,6 +37,14 @@ pub(crate) fn router<R: Sources + 'static, T: Transfers + 'static, C: Cache + 's
         .route(
             "/media/{playback_id}/stream",
             get(converted::media::<R, T, C>),
+        )
+        .route(
+            "/media/{playback_id}/hls.m3u8",
+            get(hls::playlist::<R, T, C>),
+        )
+        .route(
+            "/media/{playback_id}/hls/{index}",
+            get(hls::media::<R, T, C>),
         )
         .with_state(Arc::new(MediaState { context, access }))
 }

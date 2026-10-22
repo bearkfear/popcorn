@@ -2,7 +2,7 @@
 
 use super::{
     conversion_reader::ConversionJob,
-    preparation::{PreparedMedia, Processing},
+    preparation::{ConversionOutput, PreparedMedia, Processing},
     tools::MediaTools,
 };
 use crate::application::media::AccessError;
@@ -24,6 +24,7 @@ pub(super) async fn start(
     start: f64,
     cancel: &CancellationToken,
     context: ProcessContext,
+    output: ConversionOutput,
 ) -> Result<Output, AccessError> {
     let requested = Instant::now();
     let permit = tokio::select! {
@@ -36,7 +37,7 @@ pub(super) async fn start(
     }
     let command = MediaTools::discover()
         .map_err(|_| AccessError::Unavailable)?
-        .conversion(media, url, start);
+        .conversion(media, url, start, output);
     let (child, process_log) = spawn(command, context).map_err(|_| AccessError::Unavailable)?;
     context.record(
         "media.stream.started",

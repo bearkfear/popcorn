@@ -60,7 +60,11 @@ fn classify(uri: &Uri) -> (&'static str, Option<Uuid>) {
             .next()
             .and_then(|value| Uuid::parse_str(value).ok());
         return (
-            if path.ends_with("/stream") {
+            if path.ends_with("/hls.m3u8") {
+                "media.hls_playlist"
+            } else if path.contains("/hls/") {
+                "media.hls_segment"
+            } else if path.ends_with("/stream") {
                 "media.stream"
             } else {
                 "media.source"

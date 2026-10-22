@@ -4,5 +4,6 @@ pub mod audio;
 pub mod cache;
 pub mod download;
 pub mod format;
+pub mod hls;
 pub mod range;
 pub mod selection;
