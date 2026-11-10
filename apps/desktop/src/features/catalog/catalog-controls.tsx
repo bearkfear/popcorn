@@ -1,166 +1,99 @@
-import { selectFieldStyles } from "../../shared/ui/select-field.styles";
-import { buttonStyles } from "../../shared/ui/styles";
-// UI component for catalog filtering, search input, and genre selection.
-
-import { createListCollection, Select } from "@ark-ui/solid/select";
-import { ToggleGroup } from "@ark-ui/solid/toggle-group";
+import { Button } from "@egcs/newui/actions";
+import { Callout } from "@egcs/newui/feedback";
+import { Field, Input } from "@egcs/newui/forms";
 import { CatalogCategory, MediaType } from "@popcorn/sdk";
-import { createMemo, For, Show } from "solid-js";
-import { Portal } from "solid-js/web";
+import { For, Show } from "solid-js";
+import { AppSelect } from "../../shared/ui/app-select";
 import { Icon } from "../../shared/ui/icon";
-import { createSelectScrollDismiss } from "../../shared/ui/select-scroll";
 import type { CatalogViewModel } from "./catalog.viewmodel";
 
-interface GenreOption {
-  id: string;
-  name: string;
-}
-
-interface CatalogControlsProps {
-  vm: CatalogViewModel;
-}
-
-export function CatalogControls(props: CatalogControlsProps) {
+export function CatalogControls(props: { vm: CatalogViewModel }) {
   const { vm } = props;
-  const genreOptions = (): GenreOption[] => [
-    {
-      id: "0",
-      name: vm.genresBusy() ? "Carregando gêneros..." : "Todos os gêneros",
-    },
-    ...vm.genres().map((genre) => ({ id: String(genre.id), name: genre.name })),
-  ];
-  const collection = createMemo(() =>
-    createListCollection({
-      items: genreOptions(),
-      itemToValue: (genre) => genre.id,
-      itemToString: (genre) => genre.name,
-    }),
-  );
-
-  const handleSearch = (event: Event) => {
-    event.preventDefault();
-    vm.performSearch(vm.searchInput().trim());
-  };
-
-  const genreStyles = selectFieldStyles({ variant: "genre" });
-  let genreContent: HTMLDivElement | undefined;
-  const genreMenu = createSelectScrollDismiss(() => genreContent);
-
   return (
-    <section
-      class="catalog-controls flex flex-wrap items-center gap-3"
-      aria-label="Buscar e filtrar títulos"
-    >
-      <form
-        class="search-form flex h-10 min-w-0 basis-full items-stretch overflow-hidden rounded-lg border border-tomato-8 bg-slate-3 transition-colors hover:border-accent focus-within:border-accent min-[1120px]:basis-[320px] min-[1120px]:flex-1"
-        onSubmit={handleSearch}
-      >
-        <label class="sr-only" for="catalog-search">
-          Buscar {vm.mediaType() === MediaType.MOVIE ? "filmes" : "séries"}
-        </label>
-        <div class="search-fields flex min-w-0 flex-1 items-center gap-3 px-3">
-          <Icon name="search" class="size-[18px] text-muted" />
-          <input
-            id="catalog-search"
-            type="search"
-            class="h-full min-w-0 flex-1 bg-transparent text-sm text-ink focus-visible:outline-none"
-            value={vm.searchInput()}
-            onInput={(e) => vm.setSearchInput(e.currentTarget.value)}
-            placeholder={
-              vm.mediaType() === MediaType.MOVIE ? "Buscar um filme..." : "Buscar uma série..."
-            }
-          />
-        </div>
-        <button
-          class="shrink-0 border-l border-transparent bg-accent px-4 text-[13px] font-medium text-accent-contrast transition-colors hover:bg-accent-hover focus-visible:-outline-offset-2"
-          type="submit"
+    <section class="catalog-controls" aria-label="Buscar e filtrar títulos">
+      <div class="catalog-search-row">
+        <form
+          class="search-form flex min-w-0 flex-1 items-end gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            vm.performSearch(vm.searchInput().trim());
+          }}
         >
-          Buscar
-        </button>
-      </form>
-
-      <ToggleGroup.Root
-        class="category-tabs flex min-w-0 items-center gap-2 overflow-x-auto max-[560px]:basis-full"
-        aria-label="Categoria do catálogo"
-        value={vm.query() ? [] : [String(vm.category())]}
-        onValueChange={({ value }) =>
-          value[0] && vm.changeCategory(Number(value[0]) as CatalogCategory)
-        }
-      >
-        <ToggleGroup.Item
-          class="min-h-10 shrink-0 rounded-md px-3 text-[13px] font-medium text-muted transition-colors hover:text-ink data-[state=on]:bg-slate-4 data-[state=on]:text-ink"
-          value={String(CatalogCategory.POPULAR)}
-        >
-          Populares
-        </ToggleGroup.Item>
-        <ToggleGroup.Item
-          class="min-h-10 shrink-0 rounded-md px-3 text-[13px] font-medium text-muted transition-colors hover:text-ink data-[state=on]:bg-slate-4 data-[state=on]:text-ink"
-          value={String(CatalogCategory.UPCOMING)}
-        >
-          {vm.mediaType() === MediaType.MOVIE ? "Em breve" : "Em exibição"}
-        </ToggleGroup.Item>
-        <ToggleGroup.Item
-          class="min-h-10 shrink-0 rounded-md px-3 text-[13px] font-medium text-muted transition-colors hover:text-ink data-[state=on]:bg-slate-4 data-[state=on]:text-ink"
-          value={String(CatalogCategory.TOP_RATED)}
-        >
-          Mais bem avaliados
-        </ToggleGroup.Item>
-      </ToggleGroup.Root>
-
-      <div class="genre-filter ml-auto flex flex-wrap items-center justify-end gap-3 max-[560px]:ml-0 max-[560px]:w-full">
-        <Select.Root
-          class={genreStyles.root()}
-          collection={collection()}
-          open={genreMenu.open()}
-          onOpenChange={({ open }) => genreMenu.setOpen(open)}
-          value={[String(vm.genreId())]}
+          <Field.Root class="min-w-0 flex-1">
+            <Field.Label>Encontre sua próxima história</Field.Label>
+            <Input
+              name="catalog-search"
+              type="search"
+              value={vm.searchInput()}
+              onInput={(event) => vm.setSearchInput(event.currentTarget.value)}
+              placeholder={vm.mediaType() === MediaType.MOVIE ? "Buscar filmes" : "Buscar séries"}
+            />
+          </Field.Root>
+          <Button type="submit" startIcon={<Icon name="search" />}>
+            Buscar
+          </Button>
+        </form>
+        <AppSelect
+          class="catalog-genre"
+          label="Gênero"
+          value={String(vm.genreId())}
+          options={[
+            { value: "0", label: vm.genresBusy() ? "Carregando gêneros…" : "Todos os gêneros" },
+            ...vm.genres().map((genre) => ({ value: String(genre.id), label: genre.name })),
+          ]}
           disabled={vm.genresBusy()}
-          positioning={{ placement: "bottom-start" }}
-          onValueChange={({ value }) => vm.changeCategory(vm.category(), Number(value[0] ?? 0))}
-        >
-          <Select.Label class={genreStyles.label()}>Filtrar por gênero</Select.Label>
-          <Select.Trigger class={genreStyles.trigger()}>
-            <Select.ValueText class={genreStyles.valueText()} placeholder="Todos os gêneros" />
-            <Select.Indicator class={genreStyles.indicator()} aria-hidden="true">
-              <Icon name="caret-down" class={genreStyles.caretIcon()} />
-            </Select.Indicator>
-          </Select.Trigger>
-          <Portal>
-            <Select.Positioner>
-              <Select.Content ref={genreContent} class={genreStyles.content()}>
-                <For each={collection().items}>
-                  {(item) => (
-                    <Select.Item class={genreStyles.item()} item={item}>
-                      <Select.ItemText class={genreStyles.itemText()}>{item.name}</Select.ItemText>
-                      <Select.ItemIndicator class={genreStyles.itemIndicator()} aria-hidden="true">
-                        <Icon name="check" class={genreStyles.checkIcon()} />
-                      </Select.ItemIndicator>
-                    </Select.Item>
-                  )}
-                </For>
-              </Select.Content>
-            </Select.Positioner>
-          </Portal>
-          <Select.HiddenSelect />
-        </Select.Root>
-        <Show when={vm.genresStale()}>
-          <span class="cache-label text-amber-11 text-[12px] font-[650]">
-            Gêneros: cache / offline
-          </span>
-        </Show>
-        <Show when={vm.genresError()}>
-          <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
-            {vm.genresError()}
-          </p>
-          <button
-            type="button"
-            class={buttonStyles({ variant: "secondary" })}
-            onClick={() => void vm.loadGenres()}
-          >
-            Tentar gêneros novamente
-          </button>
-        </Show>
+          onChange={(value) => vm.changeCategory(vm.category(), Number(value))}
+        />
       </div>
+      <fieldset
+        class="mt-3 flex min-w-0 flex-wrap gap-1 border-t border-line pt-3"
+        aria-label="Categoria do catálogo"
+      >
+        <For
+          each={[
+            { value: CatalogCategory.POPULAR, label: "Populares" },
+            {
+              value: CatalogCategory.UPCOMING,
+              label: vm.mediaType() === MediaType.MOVIE ? "Em breve" : "Em exibição",
+            },
+            { value: CatalogCategory.TOP_RATED, label: "Mais bem avaliados" },
+          ]}
+        >
+          {(item) => (
+            <Button
+              size="sm"
+              variant={!vm.query() && vm.category() === item.value ? "soft" : "ghost"}
+              tone={!vm.query() && vm.category() === item.value ? "primary" : "neutral"}
+              aria-pressed={!vm.query() && vm.category() === item.value}
+              onClick={() => vm.changeCategory(item.value)}
+            >
+              {item.label}
+            </Button>
+          )}
+        </For>
+      </fieldset>
+      <Show when={vm.genresStale()}>
+        <p role="status" class="mt-2 text-xs text-amber-11">
+          Gêneros salvos · modo offline
+        </p>
+      </Show>
+      <Show when={vm.genresError()}>
+        <Callout.Root tone="danger" class="mt-3" role="alert">
+          <Callout.Content>
+            <Callout.Description>{vm.genresError()}</Callout.Description>
+            <Callout.Actions>
+              <Button
+                variant="outline"
+                tone="neutral"
+                size="sm"
+                onClick={() => void vm.loadGenres()}
+              >
+                Tentar novamente
+              </Button>
+            </Callout.Actions>
+          </Callout.Content>
+        </Callout.Root>
+      </Show>
     </section>
   );
 }

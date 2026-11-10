@@ -1,9 +1,9 @@
 import { ToggleGroup } from "@ark-ui/solid/toggle-group";
+import { Button } from "@egcs/newui/actions";
 import { MediaType } from "@popcorn/sdk";
 import { createSignal, For, Show } from "solid-js";
 import { Artwork } from "../../shared/ui/artwork";
 import { Icon } from "../../shared/ui/icon";
-import { buttonStyles } from "../../shared/ui/styles";
 import { type WatchEntry, type WatchStatus, watchProgress } from "./history.model";
 import type { HistoryViewModel } from "./history.viewmodel";
 
@@ -21,7 +21,7 @@ export function HistoryShelf(props: {
   return (
     <section class="history-section" aria-label="Minha biblioteca" aria-busy={!props.vm.loaded()}>
       <ToggleGroup.Root
-        class="history-tabs mb-7 flex items-center gap-2 max-[560px]:grid max-[560px]:grid-cols-3"
+        class="history-tabs mb-4 flex items-center gap-2 max-[560px]:grid max-[560px]:grid-cols-3"
         aria-label="Filtro da biblioteca"
         value={[filter()]}
         onValueChange={({ value }) => value[0] && setFilter(value[0] as WatchStatus)}
@@ -70,7 +70,7 @@ export function HistoryShelf(props: {
         <Show
           when={entries().length}
           fallback={
-            <div class="history-empty flex min-h-[300px] flex-col items-center justify-center px-5 py-12 text-center">
+            <div class="history-empty flex min-h-[220px] flex-col items-center justify-center px-5 py-12 text-center">
               <span class="mb-5 grid size-14 place-items-center rounded-2xl border border-slate-6 bg-slate-3 text-muted">
                 <Icon name={filterIcon()} class="size-6" />
               </span>
@@ -142,17 +142,11 @@ export function HistoryShelf(props: {
                           : "Reprodução iniciada"}
                       </span>
                     </Show>
-                    <button
-                      type="button"
-                      class={
-                        entry.status === "watching"
-                          ? buttonStyles({
-                              variant: "secondary",
-                              size: "compact",
-                              class: "mt-1 inline-flex w-full items-center justify-center gap-2",
-                            })
-                          : "mt-2 inline-flex min-h-9 items-center gap-1.5 text-xs text-muted hover:text-ink"
-                      }
+                    <Button
+                      size="sm"
+                      tone="neutral"
+                      variant={entry.status === "watching" ? "outline" : "ghost"}
+                      class={entry.status === "watching" ? "mt-1 w-full" : "mt-2"}
                       disabled={props.disabled}
                       onClick={() =>
                         entry.status === "watching" &&
@@ -172,7 +166,7 @@ export function HistoryShelf(props: {
                       >
                         <Icon name="play" /> Continuar
                       </Show>
-                    </button>
+                    </Button>
                   </div>
                 </li>
               )}

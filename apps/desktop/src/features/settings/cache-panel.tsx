@@ -1,8 +1,11 @@
+import { Button } from "@egcs/newui/actions";
+import { Card } from "@egcs/newui/content";
+import { Callout, Progress } from "@egcs/newui/feedback";
+import { Field, InputGroup, NumberInput } from "@egcs/newui/forms";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { createSignal, Show } from "solid-js";
 import { bytesLabel } from "../../shared/formatters";
 import { Icon } from "../../shared/ui/icon";
-import { buttonStyles } from "../../shared/ui/styles";
 import type { SettingsViewModel } from "./settings.viewmodel";
 
 export function CachePanel(props: {
@@ -33,177 +36,188 @@ export function CachePanel(props: {
   const available = () => Boolean(props.vm.cacheSettings());
 
   return (
-    <section class="cache-panel min-w-0" aria-labelledby="cache-heading">
-      <h2 id="cache-heading" class="text-2xl font-medium tracking-tight">
-        Armazenamento
-      </h2>
-      <p class="mt-2 text-[14px] text-muted">Mais espaço para as histórias que vêm por aí.</p>
-      <div
-        class="mt-6 rounded-panel border border-line bg-slate-2 p-6 max-[560px]:p-4"
-        aria-busy={props.vm.cacheBusy()}
-      >
-        <div class="flex items-center gap-3">
-          <Icon name="storage" class="text-xl text-muted" />
-          <h3 class="text-[15px]">Espaço para reprodução</h3>
-        </div>
-        <div class="mt-6 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <strong class="text-[32px] font-medium leading-tight tracking-tight">
-            {available() ? (usedBytes() === 0n ? "0 B" : bytesLabel(usedBytes())) : "—"}
-          </strong>
-          <span class="text-[13px] text-muted">
-            em uso de {available() ? bytesLabel(limitBytes()) : "—"}
-          </span>
-        </div>
-        <progress
-          class="my-4 block h-2 w-full overflow-hidden rounded-full"
-          value={percent()}
-          max="100"
-          aria-label="Uso do espaço reservado"
-        />
-        <p class="text-[12px] text-muted">
-          Os vídeos ficam aqui temporariamente. O Popcorn libera os arquivos antigos conforme
-          precisa de espaço.
-        </p>
-        <div class="mt-5 border-t border-slate-6 pt-4">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <p class="text-[11px] font-medium text-muted">PASTA DE ARQUIVOS TEMPORÁRIOS</p>
-            <Show when={isTauri()}>
-              <button
-                class={buttonStyles({
-                  variant: "secondary",
-                  size: "compact",
-                  class: "inline-flex items-center gap-2",
-                })}
-                type="button"
-                disabled={!available() || openingFolder()}
-                onClick={() => void openFolder()}
-              >
-                <Icon name="folder" /> {openingFolder() ? "Abrindo…" : "Abrir pasta"}
-              </button>
+    <section class="cache-panel grid min-w-0 gap-4" aria-labelledby="cache-heading">
+      <div>
+        <h2 id="cache-heading" class="text-xl font-medium">
+          Armazenamento
+        </h2>
+        <p class="mt-1 text-sm text-muted">Espaço para assistir, sem acumular o que já passou.</p>
+      </div>
+      <Card.Root variant="soft" aria-busy={props.vm.cacheBusy()}>
+        <Card.Header>
+          <Card.Title as="h3">Arquivos temporários</Card.Title>
+          <Card.Description class="app-card-description">
+            O Popcorn libera os vídeos antigos conforme precisa de espaço.
+          </Card.Description>
+        </Card.Header>
+        <Card.Content>
+          <div class="mb-4 flex flex-wrap items-baseline gap-2">
+            <strong class="text-[28px] font-medium leading-tight tracking-tight">
+              {available() ? (usedBytes() === 0n ? "0 B" : bytesLabel(usedBytes())) : "—"}
+            </strong>
+            <span class="text-sm text-muted">
+              de {available() ? bytesLabel(limitBytes()) : "—"} disponíveis para cache
+            </span>
+          </div>
+          <Progress value={percent()} min={0} max={100} label="Uso do espaço reservado" />
+          <div class="mt-4 border-t border-line pt-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-xs text-muted">Pasta de arquivos temporários</span>
+              <Show when={isTauri()}>
+                <Button
+                  variant="ghost"
+                  tone="neutral"
+                  size="sm"
+                  startIcon={<Icon name="folder" />}
+                  disabled={!available()}
+                  loading={openingFolder()}
+                  onClick={() => void openFolder()}
+                >
+                  Abrir pasta
+                </Button>
+              </Show>
+            </div>
+            <p class="mt-1 break-all font-mono text-xs text-muted">
+              {props.vm.cacheSettings()?.directory ??
+                (props.vm.cacheBusy() ? "Carregando…" : "Indisponível")}
+            </p>
+            <Show when={folderError()}>
+              <p class="mt-2 text-xs text-negative" role="alert">
+                {folderError()}
+              </p>
             </Show>
           </div>
-          <Show when={folderError()}>
-            <p class="mt-2 text-[12px] text-negative" role="alert">
-              {folderError()}
-            </p>
-          </Show>
-          <p class="mt-2 break-all font-mono text-[11px] text-muted">
-            {props.vm.cacheSettings()?.directory ??
-              (props.vm.cacheBusy() ? "Carregando…" : "Indisponível")}
-          </p>
-        </div>
-      </div>
-      <form
-        class="mt-5 rounded-panel border border-line bg-slate-2 p-6 max-[560px]:p-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void props.vm.saveCacheLimit();
-        }}
-      >
-        <label for="cache-limit-input" class="block text-[15px] font-medium">
-          Limite de armazenamento
-        </label>
-        <p id="cache-limit-help" class="mb-4 mt-2 text-[13px] text-muted">
-          Escolha quanto espaço o Popcorn pode usar. De{" "}
-          {Number(props.vm.cacheSettings()?.minLimitBytes ?? 0n) / 1024 ** 3} a{" "}
-          {Number(props.vm.cacheSettings()?.maxLimitBytes ?? 0n) / 1024 ** 3} GB. Ao reduzir o
-          limite, os itens temporários mais antigos serão removidos para liberar espaço.
-        </p>
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-center gap-3 rounded-control border border-line bg-canvas-deep pr-3">
-            <input
-              class="min-h-11 w-24 min-w-0 bg-transparent px-3 text-[15px]"
-              id="cache-limit-input"
-              aria-describedby="cache-limit-help"
-              type="number"
-              min={Number(props.vm.cacheSettings()?.minLimitBytes ?? 0n) / 1024 ** 3}
-              max={Number(props.vm.cacheSettings()?.maxLimitBytes ?? 0n) / 1024 ** 3}
-              step="any"
-              required
-              value={props.vm.cacheLimitGb()}
-              onInput={(event) => props.vm.setCacheLimitGb(event.currentTarget.value)}
-              disabled={props.vm.cacheBusy() || !available()}
-            />
-            <span class="text-[12px] text-muted">GB</span>
-          </div>
-          <button
-            class={buttonStyles()}
-            type="submit"
-            disabled={props.vm.cacheBusy() || !available()}
+        </Card.Content>
+      </Card.Root>
+      <Card.Root variant="soft">
+        <Card.Header>
+          <Card.Title as="h3">Quanto espaço reservar?</Card.Title>
+          <Card.Description class="app-card-description">
+            Ao reduzir o limite, os vídeos temporários mais antigos poderão ser removidos.
+          </Card.Description>
+        </Card.Header>
+        <Card.Content>
+          <form
+            class="flex flex-wrap items-end gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void props.vm.saveCacheLimit();
+            }}
           >
-            Salvar limite
-          </button>
-        </div>
-      </form>
+            <Field.Root
+              class="min-w-0 flex-1"
+              required
+              disabled={props.vm.cacheBusy() || !available()}
+            >
+              <Field.Label>Limite de armazenamento</Field.Label>
+              <div class="flex min-w-0 items-start gap-3">
+                <InputGroup.Root class="min-w-0 flex-1">
+                  <NumberInput
+                    name="cache-limit"
+                    locale="pt-BR"
+                    useGrouping={false}
+                    allowNegative={false}
+                    maximumFractionDigits={6}
+                    min={String(Number(props.vm.cacheSettings()?.minLimitBytes ?? 0n) / 1024 ** 3)}
+                    max={String(Number(props.vm.cacheSettings()?.maxLimitBytes ?? 0n) / 1024 ** 3)}
+                    value={props.vm.cacheLimitGb()}
+                    onValueChange={({ rawValue }) => props.vm.setCacheLimitGb(rawValue)}
+                  />
+                  <InputGroup.Addon>GB</InputGroup.Addon>
+                </InputGroup.Root>
+                <Button type="submit" disabled={props.vm.cacheBusy() || !available()}>
+                  Salvar limite
+                </Button>
+              </div>
+              <Field.Description>
+                De {Number(props.vm.cacheSettings()?.minLimitBytes ?? 0n) / 1024 ** 3} a{" "}
+                {Number(props.vm.cacheSettings()?.maxLimitBytes ?? 0n) / 1024 ** 3} GB.
+              </Field.Description>
+            </Field.Root>
+          </form>
+        </Card.Content>
+      </Card.Root>
       <Show when={props.vm.cacheMessage()}>
-        <p role="status" class="mt-4 text-[13px] text-positive">
-          <Icon name="check" /> {props.vm.cacheMessage()}
-        </p>
+        <Callout.Root tone="success" role="status">
+          <Callout.Content>
+            <Callout.Description>{props.vm.cacheMessage()}</Callout.Description>
+          </Callout.Content>
+        </Callout.Root>
       </Show>
       <Show when={props.vm.cacheError()}>
-        <div class="mt-4 text-[13px] text-negative" role="alert">
-          <p>{props.vm.cacheError()}</p>
-          <Show when={!available()}>
-            <button
-              class={buttonStyles({ variant: "secondary", class: "mt-3" })}
-              type="button"
-              disabled={props.vm.cacheBusy()}
-              onClick={() => props.vm.loadCacheSettings()}
-            >
-              Tentar novamente
-            </button>
-          </Show>
-        </div>
+        <Callout.Root tone="danger" role="alert">
+          <Callout.Content>
+            <Callout.Description>{props.vm.cacheError()}</Callout.Description>
+            <Show when={!available()}>
+              <Callout.Actions>
+                <Button
+                  variant="outline"
+                  tone="neutral"
+                  disabled={props.vm.cacheBusy()}
+                  onClick={() => props.vm.loadCacheSettings()}
+                >
+                  Tentar novamente
+                </Button>
+              </Callout.Actions>
+            </Show>
+          </Callout.Content>
+        </Callout.Root>
       </Show>
-      <div class="mt-8 border-t border-slate-6 pt-5">
-        <h3 class="text-[14px]">Liberar espaço agora</h3>
-        <p class="mt-1 text-[12px] text-muted">
-          Apaga os arquivos temporários de vídeo. Seu histórico e sua lista de títulos continuam
-          salvos.
-        </p>
-        <Show when={props.playbackActive}>
-          <p class="mt-3 text-[12px] text-amber-11">
-            Feche a reprodução para liberar o espaço com segurança.
-          </p>
-        </Show>
-        <Show
-          when={confirmClear()}
-          fallback={
-            <button
-              class={buttonStyles({ variant: "secondary", tone: "danger", class: "mt-4" })}
-              type="button"
-              disabled={props.vm.cacheBusy() || props.playbackActive || !available()}
-              onClick={() => setConfirmClear(true)}
-            >
-              Limpar cache
-            </button>
-          }
-        >
-          <p class="mt-4 text-[13px]">
-            Os vídeos precisarão ser baixados novamente. Deseja continuar?
-          </p>
-          <div class="mt-3 flex flex-wrap gap-3">
-            <button
-              class={buttonStyles({ variant: "secondary", tone: "danger" })}
-              type="button"
-              disabled={props.vm.cacheBusy() || props.playbackActive}
-              onClick={() => {
-                void props.vm.clearCache().then(() => setConfirmClear(false));
-              }}
-            >
-              {props.vm.cacheBusy() ? "Limpando…" : "Confirmar limpeza"}
-            </button>
-            <button
-              class={buttonStyles({ variant: "secondary" })}
-              type="button"
-              disabled={props.vm.cacheBusy()}
-              onClick={() => setConfirmClear(false)}
-            >
-              Cancelar
-            </button>
-          </div>
-        </Show>
-      </div>
+      <Card.Root>
+        <Card.Header>
+          <Card.Title as="h3">Liberar espaço agora</Card.Title>
+          <Card.Description class="app-card-description">
+            Remove apenas vídeos temporários. Histórico e catálogo permanecem salvos.
+          </Card.Description>
+        </Card.Header>
+        <Card.Content>
+          <Show when={props.playbackActive}>
+            <p role="status" class="mb-3 text-sm text-amber-11">
+              Feche a reprodução antes de limpar o cache.
+            </p>
+          </Show>
+          <Show
+            when={confirmClear()}
+            fallback={
+              <Button
+                variant="outline"
+                tone="danger"
+                disabled={props.vm.cacheBusy() || props.playbackActive || !available()}
+                onClick={() => setConfirmClear(true)}
+              >
+                Limpar cache
+              </Button>
+            }
+          >
+            <Callout.Root tone="warning">
+              <Callout.Content>
+                <Callout.Title>Apagar os arquivos temporários?</Callout.Title>
+                <Callout.Description>
+                  Os vídeos precisarão ser baixados novamente para assistir.
+                </Callout.Description>
+                <Callout.Actions>
+                  <Button
+                    tone="danger"
+                    loading={props.vm.cacheBusy()}
+                    disabled={props.playbackActive}
+                    onClick={() => void props.vm.clearCache().then(() => setConfirmClear(false))}
+                  >
+                    Confirmar limpeza
+                  </Button>
+                  <Button
+                    variant="outline"
+                    tone="neutral"
+                    disabled={props.vm.cacheBusy()}
+                    onClick={() => setConfirmClear(false)}
+                  >
+                    Cancelar
+                  </Button>
+                </Callout.Actions>
+              </Callout.Content>
+            </Callout.Root>
+          </Show>
+        </Card.Content>
+      </Card.Root>
     </section>
   );
 }

@@ -17,11 +17,13 @@
   },
   "dependencies": {
     "@ark-ui/solid": "^5.39.3",
+    "@egcs/newui": "0.2.0",
     "@popcorn/sdk": "workspace:*",
     "@radix-ui/colors": "^3.0.0",
     "@tauri-apps/api": "2.12.4",
     "@xstate/solid": "^2.0.0",
     "lucide-solid": "^1.58.0",
+    "solid-forms": "0.5.2",
     "solid-js": "1.9.17",
     "tailwind-variants": "^3.3.1",
     "xstate": "^5.33.2"

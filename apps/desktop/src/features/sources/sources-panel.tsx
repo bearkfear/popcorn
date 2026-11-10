@@ -1,7 +1,8 @@
-import { For, Show } from "solid-js";
+import { Button } from "@egcs/newui/actions";
+import { Field, FileInput, Input } from "@egcs/newui/forms";
+import { createSignal, For, Show } from "solid-js";
 import { bytesLabel } from "../../shared/formatters";
 import { Icon } from "../../shared/ui/icon";
-import { buttonStyles } from "../../shared/ui/styles";
 import { PlaybackSetup } from "../player/playback-setup";
 import type { PlayerViewModel } from "../player/player.viewmodel";
 import type { SourcesViewModel } from "./sources.viewmodel";
@@ -20,12 +21,7 @@ export function SourcesPanel(props: SourcesPanelProps) {
     void props.sources.addMagnet();
   }
 
-  function importTorrent(event: Event) {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = "";
-    if (file) void props.sources.importTorrent(file);
-  }
+  const [fileError, setFileError] = createSignal("");
 
   return (
     <section
@@ -39,48 +35,48 @@ export function SourcesPanel(props: SourcesPanelProps) {
           Adicione um link magnet ou importe um arquivo .torrent para este título.
         </p>
         <form class="magnet-form" onSubmit={submitMagnet}>
-          <label for="magnet-link" class="mb-2 block text-xs text-muted">
-            Link magnet
-          </label>
-          <div class="magnet-fields flex items-start gap-2 max-[560px]:flex-col max-[560px]:items-stretch">
-            <input
-              class="h-11 min-h-11 min-w-0 flex-1 rounded-control border border-line bg-canvas-deep px-3 py-0 text-sm text-ink max-[560px]:flex-none"
-              id="magnet-link"
-              type="text"
-              inputmode="url"
-              value={props.sources.magnet()}
-              onInput={(event) => props.sources.setMagnet(event.currentTarget.value)}
-              placeholder="magnet:?xt=urn:btih:…"
-              spellcheck={false}
-              disabled={props.sources.busy()}
-            />
-            <button
-              class={buttonStyles({ class: "h-11 shrink-0 py-0" })}
-              type="submit"
-              disabled={props.sources.busy() || !props.sources.magnet().trim()}
-            >
-              {props.sources.busy() ? "Consultando…" : "Adicionar"}
-            </button>
-          </div>
+          <Field.Root disabled={props.sources.busy()}>
+            <Field.Label>Link magnet</Field.Label>
+            <div class="flex min-w-0 gap-2 max-[560px]:flex-col">
+              <Input
+                class="min-w-0 flex-1"
+                name="magnet-link"
+                inputmode="url"
+                value={props.sources.magnet()}
+                onInput={(event) => props.sources.setMagnet(event.currentTarget.value)}
+                placeholder="magnet:?xt=urn:btih:…"
+                spellcheck={false}
+              />
+              <Button
+                type="submit"
+                disabled={props.sources.busy() || !props.sources.magnet().trim()}
+              >
+                {props.sources.busy() ? "Consultando…" : "Adicionar"}
+              </Button>
+            </div>
+          </Field.Root>
         </form>
-        <div class="mt-4 flex flex-wrap items-center gap-3">
-          <span class="text-xs text-muted">ou</span>
-          <label
-            class={buttonStyles({
-              variant: "secondary",
-              class:
-                "relative inline-flex items-center justify-center gap-2 cursor-pointer focus-within:outline-2 focus-within:outline-accent",
-            })}
+        <div class="mt-3">
+          <FileInput.Root
+            variant="button"
+            acceptedFiles={[]}
+            disabled={props.sources.busy()}
+            accept={{ "application/x-bittorrent": [".torrent"] }}
+            onFileAccept={({ files }) => {
+              setFileError("");
+              if (files[0]) void props.sources.importTorrent(files[0]);
+            }}
+            onFileReject={() => setFileError("Escolha um arquivo .torrent.")}
           >
-            <Icon name="plus" /> Importar .torrent
-            <input
-              class="sr-only"
-              type="file"
-              accept=".torrent,application/x-bittorrent"
-              disabled={props.sources.busy()}
-              onChange={importTorrent}
-            />
-          </label>
+            <FileInput.Control>
+              <FileInput.Trigger>Importar .torrent</FileInput.Trigger>
+            </FileInput.Control>
+          </FileInput.Root>
+          <Show when={fileError()}>
+            <p class="mt-2 text-sm text-negative" role="alert">
+              {fileError()}
+            </p>
+          </Show>
         </div>
       </div>
       <Show when={props.sources.error()}>
@@ -109,8 +105,10 @@ export function SourcesPanel(props: SourcesPanelProps) {
               <li class="min-w-0 rounded-xl border border-line p-4">
                 <div class="flex items-center justify-between gap-3">
                   <h3 class="m-0 text-sm font-semibold">Fonte {sourceIndex() + 1}</h3>
-                  <button
-                    class="border-0 bg-transparent p-1 text-xs text-negative disabled:opacity-50"
+                  <Button
+                    variant="ghost"
+                    tone="danger"
+                    size="sm"
                     type="button"
                     disabled={
                       props.sources.busy() ||
@@ -119,7 +117,7 @@ export function SourcesPanel(props: SourcesPanelProps) {
                     onClick={() => void props.sources.removeSource(source.sourceId)}
                   >
                     Remover
-                  </button>
+                  </Button>
                 </div>
                 <p class="my-2 text-xs text-muted">
                   {videos().length > 1
@@ -144,11 +142,10 @@ export function SourcesPanel(props: SourcesPanelProps) {
                               {bytesLabel(file.sizeBytes)}
                             </span>
                           </div>
-                          <button
-                            class={buttonStyles({
-                              variant: selected() ? "secondary" : "primary",
-                              class: "inline-flex shrink-0 items-center justify-center gap-2",
-                            })}
+                          <Button
+                            variant={selected() ? "outline" : "solid"}
+                            tone={selected() ? "neutral" : "primary"}
+                            class="inline-flex shrink-0 items-center justify-center gap-2"
                             type="button"
                             aria-pressed={selected()}
                             disabled={props.player.busy() || selected() || props.sources.busy()}
@@ -158,7 +155,7 @@ export function SourcesPanel(props: SourcesPanelProps) {
                               <Icon name="check" class="size-4" />
                             </Show>
                             {selected() ? "Selecionado" : "Baixar este vídeo"}
-                          </button>
+                          </Button>
                         </li>
                       );
                     }}

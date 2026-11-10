@@ -1,11 +1,11 @@
-import { Collapsible } from "@ark-ui/solid/collapsible";
+import { Button } from "@egcs/newui/actions";
+import { Badge, Collapsible } from "@egcs/newui/content";
 import { MediaType } from "@popcorn/sdk";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { artworkUrl } from "../../catalog-ui";
+import { AppSelect } from "../../shared/ui/app-select";
 import { Artwork } from "../../shared/ui/artwork";
 import { Icon } from "../../shared/ui/icon";
-import { SelectField } from "../../shared/ui/select-field";
-import { buttonStyles } from "../../shared/ui/styles";
 import type { PlayerViewModel } from "../player/player.viewmodel";
 import type { SourcesViewModel } from "../sources/sources.viewmodel";
 import { SourcesDialog } from "../sources/sources-dialog";
@@ -38,13 +38,13 @@ export function DetailsPanel(props: {
 
   return (
     <section
-      class="detail-panel min-w-0 border border-line rounded-panel bg-slate-2 wrap-anywhere p-[clamp(18px,3vw,40px)] shadow-[0_18px_50px_var(--black-a4)] [&_.artwork-wide]:mb-4 [&_>_.artwork-wide]:aspect-[21/9] [&_>_.artwork-wide]:max-h-[390px] [&_>_.artwork-wide]:rounded-xl"
+      class="detail-panel min-w-0 border border-line rounded-panel bg-slate-2 wrap-anywhere p-[clamp(16px,2vw,24px)] shadow-[0_18px_50px_var(--black-a4)] [&_.artwork-wide]:mb-4 [&_>_.artwork-wide]:aspect-[21/9] [&_>_.artwork-wide]:max-h-[390px] [&_>_.artwork-wide]:rounded-xl"
       aria-label="Detalhes do título"
       aria-busy={props.vm.detailBusy()}
     >
       <h2
         ref={heading}
-        class="detail-heading mt-2 mb-4 text-[clamp(32px,5vw,62px)] font-semibold leading-[1.1] tracking-[-0.03em] scroll-mt-[100px] focus:outline-none"
+        class="detail-heading mt-2 mb-4 text-[clamp(28px,4vw,44px)] font-semibold leading-[1.1] tracking-[-0.03em] scroll-mt-[100px] focus:outline-none"
         tabindex="-1"
       >
         {props.vm.selected()?.title || "Detalhes"}
@@ -56,8 +56,9 @@ export function DetailsPanel(props: {
         <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
           {props.vm.detailError()}
         </p>
-        <button
-          class={buttonStyles({ variant: "secondary" })}
+        <Button
+          variant="outline"
+          tone="neutral"
           type="button"
           onClick={() => {
             const selected = props.vm.selected();
@@ -66,7 +67,7 @@ export function DetailsPanel(props: {
           }}
         >
           Tentar detalhes novamente
-        </button>
+        </Button>
       </Show>
       <Show when={props.vm.detail()}>
         {(title) => (
@@ -88,8 +89,16 @@ export function DetailsPanel(props: {
                 : "Sem avaliação"}
             </p>
             <Show when={title().genres.length}>
-              <ul class="genre-tags flex flex-wrap gap-[6px] m-[0_0_20px] p-0 list-none [&_li]:p-[3px_8px] [&_li]:border [&_li]:border-line [&_li]:rounded-[14px] [&_li]:text-ink [&_li]:text-[11px]">
-                <For each={title().genres}>{(genre) => <li>{genre.name}</li>}</For>
+              <ul class="genre-tags mb-4 flex flex-wrap gap-1.5 p-0 list-none">
+                <For each={title().genres}>
+                  {(genre) => (
+                    <li>
+                      <Badge tone="neutral" variant="outline" rounded>
+                        {genre.name}
+                      </Badge>
+                    </li>
+                  )}
+                </For>
               </ul>
             </Show>
             <SourcesDialog
@@ -122,8 +131,8 @@ export function DetailsPanel(props: {
                 lazyMount
                 unmountOnExit
               >
-                <section class="trailer-section m-[24px_0]" aria-label="Trailer">
-                  <Collapsible.Trigger class={buttonStyles({ variant: "secondary" })}>
+                <section class="trailer-section my-4" aria-label="Trailer">
+                  <Collapsible.Trigger>
                     {trailerOpen() ? (
                       <>Fechar trailer</>
                     ) : (
@@ -196,7 +205,7 @@ export function DetailsPanel(props: {
                   <p class="muted text-muted">Temporadas não disponíveis.</p>
                 </Show>
                 <Show when={props.vm.seasons().length}>
-                  <SelectField
+                  <AppSelect
                     label="Temporada"
                     value={String(
                       props.vm.seasonNumber() ?? props.vm.seasons()[0]?.seasonNumber ?? "",
@@ -226,8 +235,9 @@ export function DetailsPanel(props: {
                     <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
                       {props.vm.episodesError()}
                     </p>
-                    <button
-                      class={buttonStyles({ variant: "secondary" })}
+                    <Button
+                      variant="outline"
+                      tone="neutral"
                       type="button"
                       onClick={() => {
                         const number = props.vm.seasonNumber();
@@ -235,7 +245,7 @@ export function DetailsPanel(props: {
                       }}
                     >
                       Tentar episódios novamente
-                    </button>
+                    </Button>
                   </Show>
                   <Show
                     when={
@@ -272,13 +282,11 @@ export function DetailsPanel(props: {
                           <p>{episode.overview || "Sinopse não disponível."}</p>
                           <Show when={episode.content}>
                             {(content) => (
-                              <button
-                                class={buttonStyles({
-                                  variant: "secondary",
-                                  size: "compact",
-                                  class:
-                                    "episode-source-button mt-3 [&[aria-pressed=true]]:border-accent [&[aria-pressed=true]]:text-ink",
-                                })}
+                              <Button
+                                variant="outline"
+                                tone="neutral"
+                                size="sm"
+                                class="episode-source-button mt-3 [&[aria-pressed=true]]:border-accent [&[aria-pressed=true]]:text-ink"
                                 type="button"
                                 aria-pressed={
                                   props.sources.content()?.seasonNumber ===
@@ -291,7 +299,7 @@ export function DetailsPanel(props: {
                                 }}
                               >
                                 Usar fontes deste episódio
-                              </button>
+                              </Button>
                             )}
                           </Show>
                         </li>
