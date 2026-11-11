@@ -23,6 +23,8 @@ Estado salvo para retomada em 10/11/2026. Implementação em andamento; não con
 - Configurações de armazenamento com Card, Progress, NumberInput e confirmação de limpeza.
 - Importação/exportação com Card, Field, Textarea, FileInput, RadioGroup e Checkbox.
 - TMDB redesenhado: guia, formulário solid-forms, estado conectado, atualização e desconexão progressivas.
+- Navegação migrada para `@solidjs/router` 1.0.1 com URLs normais: catálogo e filtros em query params, configurações em `/settings` e títulos em `/title/:media/:id`, incluindo temporada e episódio na URL.
+- O backend serve o documento da SPA nas rotas navegáveis sem liberar RPCs; tickets efêmeros de bootstrap e player continuam isolados no fragmento.
 - Ações comuns e pareamento migrados para componentes New UI. Posters, artwork e regras de domínio continuam específicos do aplicativo.
 
 A correção de baseline do checkbox já vem da New UI 0.2.0. O contorno de grid foi retirado; descrição fixa e validação após envio permanecem como decisões de UX do Popcorn.
@@ -30,7 +32,9 @@ A correção de baseline do checkbox já vem da New UI 0.2.0. O contorno de grid
 ## Verificações realizadas
 
 - Build do desktop com typecheck e Biome aprovado após a integração de Sidebar.
-- `bun test apps/desktop/tests`: 60 testes, 238 asserções, zero falhas.
+- `bun test apps/desktop/tests`: 65 testes, 248 asserções, zero falhas.
+- Build, typecheck, Biome, `cargo fmt --check`, `cargo check -p popcorn-server` e o teste de rotas públicas do servidor passaram após a migração do router.
+- Acesso direto, refresh e navegação por URLs normais foram validados em Portals desktop e mobile; o backend real apresenta corretamente o pareamento em `/` e `/settings`.
 - Smoke de sessões/HTTP do backend passou durante a migração; repetir na revisão final.
 - QA em Chrome sobre o aplicativo compilado, com RPCs simuladas somente na sessão de teste: busca, gênero, paginação, diálogo de fontes/Escape/retorno de foco, temporadas/episódios, biblioteca e viewport de 390 px passaram.
 - Navbar/Sidebar móveis e salvamento de 21,5 GB passaram na sessão de QA.
@@ -47,7 +51,8 @@ A correção de baseline do checkbox já vem da New UI 0.2.0. O contorno de grid
 4. O launcher abre a aplicação servida pelo backend no navegador. O Vite isolado em localhost:1420 não substitui esse bootstrap.
 5. Após alterações no frontend servido pelo backend, executar `bun run --filter @popcorn/desktop build` e atualizar a aba, conforme README.
 6. Concluir o QA de importação, navegação móvel/teclado e revisão visual no fluxo normal, usando dados reais apropriados ou fixtures claramente separadas.
-7. Revisar e remover composições/estilos próprios que ainda dupliquem componentes da New UI, preservando as exceções do player.
-8. Repetir checks pertinentes antes de marcar o PR pronto para revisão.
+7. Parear os Portals com o backend real e concluir o smoke de catálogo, detalhes e restauração de estado por URL.
+8. Revisar e remover composições/estilos próprios que ainda dupliquem componentes da New UI, preservando as exceções do player.
+9. Repetir checks pertinentes antes de marcar o PR pronto para revisão.
 
 Scripts exploratórios, caches, processos locais e notas do Maestri não fazem parte desta entrega. A branch deve poder ser retomada pelos arquivos do projeto e por este documento.

@@ -4,7 +4,12 @@ import { resourceValue } from "../../shared/resource-value";
 import { CatalogCategory, MediaType, type Title } from "@popcorn/sdk";
 import { createResource, createSignal } from "solid-js";
 import { catalogErrorText } from "../../catalog-ui";
+import type { CatalogNavigationState } from "../../navigation";
 import type { CatalogClient } from "../../shared/types";
+
+export type CatalogFilterState = Omit<CatalogNavigationState, "tab"> & {
+  readonly mediaType: MediaType;
+};
 
 type CatalogPage = {
   readonly titles: readonly Title[];
@@ -35,12 +40,23 @@ export function createCatalogViewModel(
   getClient: () => CatalogClient | undefined,
   onResetDetail: () => void,
   onRequireSetup: (err: unknown) => void,
+  initial: CatalogFilterState = {
+    mediaType: MediaType.MOVIE,
+    category: CatalogCategory.POPULAR,
+    genreId: 0,
+    query: "",
+    page: 1,
+  },
+  onNavigationChange?: (state: CatalogFilterState) => void,
 ) {
-  const [mediaType, setMediaType] = createSignal(MediaType.MOVIE);
-  const [category, setCategory] = createSignal(CatalogCategory.POPULAR);
-  const [genreId, setGenreId] = createSignal(0);
-  const [searchInput, setSearchInput] = createSignal("");
-  const [query, setQuery] = createSignal("");
+  const [mediaType, setMediaType] = createSignal(
+    initial.mediaType === MediaType.TV ? MediaType.TV : MediaType.MOVIE,
+  );
+  const [category, setCategory] = createSignal(initial.category);
+  const [genreId, setGenreId] = createSignal(initial.genreId);
+  const [searchInput, setSearchInput] = createSignal(initial.query);
+  const [query, setQuery] = createSignal(initial.query);
+  const [desiredPage, setDesiredPage] = createSignal(initial.page);
   const [catalogRequest, setCatalogRequest] = createSignal<CatalogRequest>();
   const [genreRequest, setGenreRequest] = createSignal<GenreRequest>();
   const [catalog, catalogActions] = createResource(catalogRequest, async (request) => {
@@ -98,15 +114,27 @@ export function createCatalogViewModel(
   const genresStale = () => genreResponseValue()?.stale ?? false;
   const page = () => catalogValue()?.page ?? 0;
   const totalPages = () => catalogValue()?.totalPages ?? 0;
-  const requestedPage = () => catalogRequest()?.page ?? 1;
+  const requestedPage = () => catalogRequest()?.page ?? desiredPage();
+  const navigationState = (page = desiredPage()): CatalogFilterState => ({
+    mediaType: mediaType(),
+    category: category(),
+    genreId: genreId(),
+    query: query(),
+    page,
+  });
 
-  function resetCatalog() {
+  function notifyNavigation(page = 1) {
+    onNavigationChange?.(navigationState(page));
+  }
+
+  function resetCatalog(resetDetail = true) {
     setCatalogRequest(undefined);
     catalogActions.mutate(undefined);
-    onResetDetail();
+    if (resetDetail) onResetDetail();
   }
 
   function requestPage(nextPage: number) {
+    setDesiredPage(nextPage);
     const client = getClient();
     if (!client) return;
     setCatalogRequest({
@@ -119,9 +147,9 @@ export function createCatalogViewModel(
     });
   }
 
-  function loadCatalog() {
-    resetCatalog();
-    requestPage(1);
+  function loadCatalog(page = 1, resetDetail = true) {
+    resetCatalog(resetDetail);
+    requestPage(page);
   }
 
   function changePage(nextPage: number) {
@@ -135,6 +163,7 @@ export function createCatalogViewModel(
       return;
     onResetDetail();
     requestPage(nextPage);
+    notifyNavigation(nextPage);
   }
 
   function retryCatalog() {
@@ -155,6 +184,7 @@ export function createCatalogViewModel(
     setSearchInput("");
     loadCatalog();
     loadGenres();
+    notifyNavigation();
   }
 
   function changeCategory(next: CatalogCategory, genre = genreId()) {
@@ -163,6 +193,7 @@ export function createCatalogViewModel(
     setQuery("");
     setSearchInput("");
     loadCatalog();
+    notifyNavigation();
   }
 
   function performSearch(text: string) {
@@ -170,6 +201,26 @@ export function createCatalogViewModel(
     setSearchInput(text);
     setGenreId(0);
     loadCatalog();
+    notifyNavigation();
+  }
+
+  function applyNavigation(next: CatalogFilterState) {
+    const mediaChanged = next.mediaType !== mediaType();
+    const changed =
+      mediaChanged ||
+      next.category !== category() ||
+      next.genreId !== genreId() ||
+      next.query !== query() ||
+      next.page !== desiredPage();
+    if (!changed) return;
+    setMediaType(next.mediaType);
+    setCategory(next.category);
+    setGenreId(next.genreId);
+    setQuery(next.query);
+    setSearchInput(next.query);
+    setDesiredPage(next.page);
+    loadCatalog(next.page);
+    if (mediaChanged) loadGenres();
   }
 
   return {
@@ -191,6 +242,7 @@ export function createCatalogViewModel(
     genresError,
     genresStale,
     requestedPage,
+    navigationState,
     loadGenres,
     loadCatalog,
     changePage,
@@ -199,6 +251,7 @@ export function createCatalogViewModel(
     changeMediaType,
     changeCategory,
     performSearch,
+    applyNavigation,
   };
 }
 

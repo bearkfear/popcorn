@@ -14,7 +14,7 @@ type DetailResult = {
 
 type DetailRequest = {
   readonly client: CatalogClient;
-  readonly title: Title;
+  readonly content: ContentRef;
   readonly online: boolean;
 };
 
@@ -41,7 +41,7 @@ export function createDetailsViewModel(getClient: () => CatalogClient | undefine
   const [detailResponse, detailActions] = createResource(detailRequest, async (request) => {
     try {
       const response = await request.client.getTitle(
-        { content: request.title.content, useTmdb: request.online },
+        { content: request.content, useTmdb: request.online },
         { timeoutMs: 10_000 },
       );
       if (!response.title) throw new Error("O serviço não retornou os detalhes deste título.");
@@ -130,12 +130,25 @@ export function createDetailsViewModel(getClient: () => CatalogClient | undefine
     resetDetail();
     setSelected(title);
     onContentSelect?.(title.content);
-    setDetailRequest({ client, title, online });
+    setDetailRequest({ client, content: title.content, online });
+  }
+
+  function openContent(
+    content: ContentRef,
+    online: boolean,
+    onContentSelect?: (content: ContentRef) => void,
+  ) {
+    const client = getClient();
+    if (!client) return;
+    resetDetail();
+    onContentSelect?.(content);
+    setDetailRequest({ client, content, online });
   }
 
   createEffect(() => {
     const result = detailResponseValue();
     const client = getClient();
+    if (result) setSelected(result.title);
     const seriesId = result?.title.content?.tmdbId;
     if (client && result?.online && result.title.content?.mediaType === MediaType.TV && seriesId) {
       setSeasonRequest({ client, seriesId });
@@ -164,6 +177,7 @@ export function createDetailsViewModel(getClient: () => CatalogClient | undefine
     episodesStale,
     resetDetail,
     openTitle,
+    openContent,
     loadEpisodes,
   };
 }

@@ -67,6 +67,9 @@ impl Browser {
 pub(crate) fn router(state: Arc<Browser>) -> Router {
     Router::new()
         .route("/", get(super::browser_assets::index))
+        .route("/settings", get(super::browser_assets::index))
+        .route("/player", get(super::browser_assets::index))
+        .route("/title/{media}/{id}", get(super::browser_assets::index))
         .route("/assets/{*path}", get(super::browser_assets::asset))
         .merge(super::browser_player::router())
         .route("/browser/session", post(session))
@@ -147,6 +150,11 @@ pub(crate) fn access(
     if browser.is_none() {
         network.clear();
     }
+    let mut lan_hosts = network.clone();
+    if browser.is_some() {
+        lan_hosts.push(format!("localhost:{}", address.port()));
+        lan_hosts.push(format!("127.0.0.1:{}", address.port()));
+    }
     let browser =
         browser.map(|(root, ticket)| Arc::new(Browser::new(root, ticket, network.clone())));
     let origin = if browser.is_some() {
@@ -157,7 +165,7 @@ pub(crate) fn access(
     Arc::new(super::AccessPolicy {
         token,
         host: address.to_string(),
-        lan_hosts: network,
+        lan_hosts,
         origin,
         browser,
     })

@@ -15,7 +15,13 @@ export function isBrowserServer(): boolean {
 export function captureBrowserTicket() {
   const parameters = new URLSearchParams(window.location.hash.slice(1));
   ticket = parameters.get("launch") ?? "";
-  if (ticket) window.history.replaceState(null, "", window.location.pathname);
+  if (ticket) {
+    window.history.replaceState(null, "", window.location.pathname);
+  } else if (window.location.hash === "#search") {
+    window.history.replaceState(null, "", "/");
+  } else if (window.location.hash === "#settings") {
+    window.history.replaceState(null, "", "/settings");
+  }
 }
 
 export async function browserBootstrap(signal: AbortSignal): Promise<Bootstrap> {

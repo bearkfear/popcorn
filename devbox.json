@@ -36,6 +36,7 @@
   },
   "shell": {
     "init_hook": [
+      "export LD_LIBRARY_PATH=\"$DEVBOX_PACKAGES_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}\"",
       "export GST_PLUGIN_SYSTEM_PATH_1_0=\"$DEVBOX_PACKAGES_DIR/lib/gstreamer-1.0${GST_PLUGIN_SYSTEM_PATH_1_0:+:$GST_PLUGIN_SYSTEM_PATH_1_0}\"",
       "bash scripts/devbox-init.sh"
     ],

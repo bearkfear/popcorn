@@ -2,7 +2,8 @@ import "./app-ui.css";
 import { Button } from "@egcs/newui/actions";
 import { Container } from "@egcs/newui/layout";
 import { Navbar } from "@egcs/newui/navigation";
-import type { ContentRef, Title, TmdbStatus } from "@popcorn/sdk";
+import { type ContentRef, MediaType, type Title, type TmdbStatus } from "@popcorn/sdk";
+import { useLocation, useNavigate } from "@solidjs/router";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createEffect, createSignal, on, onCleanup, onMount, Show } from "solid-js";
@@ -12,7 +13,6 @@ import { createBootstrapViewModel } from "./features/bootstrap/bootstrap.viewmod
 import { PairingPanel } from "./features/bootstrap/pairing-panel";
 import { createCatalogViewModel } from "./features/catalog/catalog.viewmodel";
 import { CatalogControls } from "./features/catalog/catalog-controls";
-import { CatalogMediaTabs } from "./features/catalog/catalog-media-tabs";
 import { CatalogSpotlight } from "./features/catalog/catalog-spotlight";
 import { PosterGrid } from "./features/catalog/poster-grid";
 import { createDetailsViewModel } from "./features/details/details.viewmodel";
@@ -26,12 +26,24 @@ import { openPlayerTab, useInlinePlayer } from "./features/player/player-tab";
 import { createSettingsViewModel } from "./features/settings/settings.viewmodel";
 import { SettingsPage } from "./features/settings/settings-page";
 import { createSourcesViewModel } from "./features/sources/sources.viewmodel";
+import {
+  type AppPage,
+  catalogNavigationFromUrl,
+  catalogUrl,
+  contentFromTitleUrl,
+  pageFromPath,
+  sameContent,
+  titleUrl,
+} from "./navigation";
 import { Icon } from "./shared/ui/icon";
 
 type WatchContext = Omit<WatchEntry, "key" | "status" | "position" | "duration" | "updatedAt">;
-type Page = "search" | "details" | "settings";
 
 export function App() {
+  const location = useLocation();
+  const routerNavigate = useNavigate();
+  const initialNavigation = catalogNavigationFromUrl(location.search);
+  const page = () => pageFromPath(location.pathname);
   const bootstrap = createBootstrapViewModel();
   const catalogClient = () => bootstrap.getClients().catalog;
   const settings = createSettingsViewModel(
@@ -43,11 +55,10 @@ export function App() {
   const sources = createSourcesViewModel(() => bootstrap.getClients().source);
   const player = createPlayerViewModel(() => bootstrap.getClients().playback);
   const history = createHistoryViewModel(() => bootstrap.getClients().history);
-  const [page, setPage] = createSignal<Page>("search");
-  const [librarySelected, setLibrarySelected] = createSignal(false);
+  const [librarySelected, setLibrarySelected] = createSignal(initialNavigation.tab === "library");
   const [navigationOpen, setNavigationOpen] = createSignal(false);
   const [session, setSession] = createSignal<WatchContext>();
-  let settingsReturnPage: Page = "search";
+  let settingsReturnPage: AppPage = "search";
   let openingWindow = false;
   let videoTab: Window | null = null;
   const [videoWindowOpen, setVideoWindowOpen] = createSignal(false);
@@ -79,13 +90,79 @@ export function App() {
     player.close();
     details.resetDetail();
     sources.reset();
-    if (page() !== "settings") setPage("search");
   }
   const catalog = createCatalogViewModel(
     catalogClient,
     resetSelection,
     settings.handleCatalogError,
+    {
+      mediaType: initialNavigation.tab === "shows" ? MediaType.TV : MediaType.MOVIE,
+      category: initialNavigation.category,
+      genreId: initialNavigation.genreId,
+      query: initialNavigation.query,
+      page: initialNavigation.page,
+    },
+    (filters) => {
+      if (page() !== "search") return;
+      routerNavigate(
+        catalogUrl({
+          ...filters,
+          tab: librarySelected()
+            ? "library"
+            : filters.mediaType === MediaType.TV
+              ? "shows"
+              : "movies",
+        }),
+        { scroll: false },
+      );
+    },
   );
+
+  function currentCatalogUrl(): string {
+    const filters = catalog.navigationState();
+    return catalogUrl({
+      ...filters,
+      tab: librarySelected() ? "library" : filters.mediaType === MediaType.TV ? "shows" : "movies",
+    });
+  }
+
+  function navigate(path: string, replace = false) {
+    routerNavigate(path, { replace, scroll: true });
+  }
+
+  function changeLibrary(selected: boolean) {
+    setLibrarySelected(selected);
+    const filters = catalog.navigationState();
+    navigate(
+      catalogUrl({
+        ...filters,
+        tab: selected ? "library" : filters.mediaType === MediaType.TV ? "shows" : "movies",
+      }),
+    );
+  }
+
+  function changeMediaType(mediaType: MediaType) {
+    setNavigationOpen(false);
+    setLibrarySelected(false);
+    if (catalog.mediaType() !== mediaType) {
+      catalog.changeMediaType(mediaType);
+      return;
+    }
+    navigate(
+      catalogUrl({
+        ...catalog.navigationState(),
+        tab: mediaType === MediaType.TV ? "shows" : "movies",
+      }),
+    );
+  }
+
+  function mediaNavigationCurrent(mediaType: MediaType): boolean {
+    if (page() === "settings" || librarySelected()) return false;
+    if (page() === "details") {
+      return contentFromTitleUrl(location.pathname, location.search)?.mediaType === mediaType;
+    }
+    return page() === "search" && catalog.mediaType() === mediaType;
+  }
   createEffect(
     on(
       () => settings.settingsOpen() || settings.status()?.configured === false,
@@ -97,7 +174,7 @@ export function App() {
 
   function loadCatalog(current: TmdbStatus | undefined = settings.status()) {
     if (current?.configured) {
-      void catalog.loadCatalog();
+      void catalog.loadCatalog(catalog.navigationState().page, page() === "search");
       void catalog.loadGenres();
     }
   }
@@ -115,33 +192,31 @@ export function App() {
   function openSettings() {
     if (page() === "settings") return;
     settingsReturnPage = page();
-    navigate("settings");
+    navigate("/settings");
   }
   function closeSettings() {
     settings.setSettingsOpen(false);
-    navigate(settingsReturnPage === "details" && details.selected() ? "details" : "search");
-  }
-  function navigate(next: Page | "player") {
-    window.history.pushState({ page: next }, "", `#${next}`);
-    if (next !== "player") setPage(next);
-    window.scrollTo({ top: 0 });
+    const content = sources.content() ?? details.selected()?.content;
+    navigate(settingsReturnPage === "details" && content ? titleUrl(content) : currentCatalogUrl());
   }
   function openTitle(title: Title, content = title.content) {
+    if (!title.content) return;
     player.close();
     setSession(undefined);
     settings.setSettingsOpen(false);
-    navigate("details");
     details.openTitle(title, true, () => {
       if (content) sources.selectContent(content);
     });
+    navigate(titleUrl(content ?? title.content));
   }
   function backToSearch() {
     player.close();
-    navigate("search");
+    navigate(currentCatalogUrl());
   }
   function backFromPlayer() {
     player.close();
-    navigate("details");
+    const content = sources.content() ?? details.selected()?.content;
+    navigate(content ? titleUrl(content) : currentCatalogUrl());
   }
   function selectContent(content: ContentRef) {
     player.close();
@@ -172,7 +247,7 @@ export function App() {
     };
     setSession(selected);
     if (!isTauri() && useInlinePlayer()) {
-      navigate("player");
+      navigate("/player");
       await player.launch(position);
       return;
     }
@@ -188,7 +263,7 @@ export function App() {
       player.setQuality(entry.quality);
       player.setAudioStreamIndex(entry.audioStreamIndex);
       setSession(entry);
-      navigate("player");
+      navigate("/player");
       await player.playFile(entry.sourceId, entry.fileIndex, true, resumePosition(entry));
       return;
     }
@@ -210,6 +285,62 @@ export function App() {
       setSession(undefined);
     }
   });
+  createEffect(
+    on(
+      () => [location.pathname, location.search, bootstrap.connection()] as const,
+      () => {
+        const currentPage = page();
+        if (currentPage === "search") {
+          const next = catalogNavigationFromUrl(location.search);
+          setLibrarySelected(next.tab === "library");
+          catalog.applyNavigation({
+            mediaType:
+              next.tab === "shows"
+                ? MediaType.TV
+                : next.tab === "movies"
+                  ? MediaType.MOVIE
+                  : catalog.mediaType(),
+            category: next.category,
+            genreId: next.genreId,
+            query: next.query,
+            page: next.page,
+          });
+          return;
+        }
+        if (currentPage !== "details" || bootstrap.connection() !== "ready") return;
+        const content = contentFromTitleUrl(location.pathname, location.search);
+        if (!content) {
+          navigate(currentCatalogUrl(), true);
+          return;
+        }
+        const titleContent: ContentRef = {
+          $typeName: "popcorn.v1.ContentRef",
+          mediaType: content.mediaType,
+          tmdbId: content.tmdbId,
+        };
+        if (!sameContent(details.selected()?.content, titleContent)) {
+          details.openContent(titleContent, true, () => sources.selectContent(content));
+        } else if (!sameContent(sources.content(), content)) {
+          sources.selectContent(content);
+        }
+      },
+    ),
+  );
+  createEffect(() => {
+    if (page() !== "details") return;
+    const content = sources.content() ?? details.selected()?.content;
+    const routeContent = contentFromTitleUrl(location.pathname, location.search);
+    if (content && !sameContent(content, routeContent)) {
+      routerNavigate(titleUrl(content), { scroll: false });
+    }
+  });
+  createEffect(
+    on(page, (currentPage) => {
+      if (currentPage !== "player") player.close();
+      if (currentPage !== "settings") settings.setSettingsOpen(false);
+      if (currentPage === "player" && !session()) navigate(currentCatalogUrl(), true);
+    }),
+  );
   createEffect(() => {
     document.title = player.viewing()
       ? `${session()?.title.title || "Reprodução"} · Popcorn`
@@ -260,20 +391,6 @@ export function App() {
       window.removeEventListener("storage", syncHistory);
       window.removeEventListener("focus", syncHistory);
     });
-    window.history.replaceState({ page: "search" }, "", "#search");
-    const pop = (event: PopStateEvent) => {
-      player.close();
-      settings.setSettingsOpen(false);
-      setPage(
-        event.state?.page === "settings"
-          ? "settings"
-          : event.state?.page === "details" && details.selected()
-            ? "details"
-            : "search",
-      );
-    };
-    window.addEventListener("popstate", pop);
-    onCleanup(() => window.removeEventListener("popstate", pop));
     void connect();
   });
 
@@ -311,7 +428,7 @@ export function App() {
             onOpenChange={({ open }) => setNavigationOpen(open)}
           >
             <Navbar.Brand
-              href="#search"
+              href="/"
               aria-label="Ir para pesquisa"
               onClick={(event) => {
                 event.preventDefault();
@@ -324,22 +441,46 @@ export function App() {
             <Navbar.Toggle aria-label="Abrir navegação" />
             <Navbar.Content class="app-navbar-content">
               <Navbar.List>
-                <Navbar.Item value="explore">
+                <Navbar.Item value="movies">
                   <Navbar.Link
-                    href="#search"
-                    aria-current={page() !== "settings" ? "page" : undefined}
+                    href="/"
+                    aria-current={mediaNavigationCurrent(MediaType.MOVIE) ? "page" : undefined}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      changeMediaType(MediaType.MOVIE);
+                    }}
+                  >
+                    Filmes
+                  </Navbar.Link>
+                </Navbar.Item>
+                <Navbar.Item value="shows">
+                  <Navbar.Link
+                    href="/?tab=shows"
+                    aria-current={mediaNavigationCurrent(MediaType.TV) ? "page" : undefined}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      changeMediaType(MediaType.TV);
+                    }}
+                  >
+                    Séries
+                  </Navbar.Link>
+                </Navbar.Item>
+                <Navbar.Item value="library">
+                  <Navbar.Link
+                    href="/?tab=library"
+                    aria-current={page() === "search" && librarySelected() ? "page" : undefined}
                     onClick={(event) => {
                       event.preventDefault();
                       setNavigationOpen(false);
-                      backToSearch();
+                      changeLibrary(true);
                     }}
                   >
-                    Explorar
+                    Minha biblioteca
                   </Navbar.Link>
                 </Navbar.Item>
                 <Navbar.Item value="settings">
                   <Navbar.Link
-                    href="#settings"
+                    href="/settings"
                     aria-current={page() === "settings" ? "page" : undefined}
                     onClick={(event) => {
                       event.preventDefault();
@@ -488,33 +629,27 @@ export function App() {
                     <h1 class="sr-only">
                       {librarySelected() ? "Minha biblioteca" : "Explorar filmes e séries"}
                     </h1>
-                    <CatalogMediaTabs
-                      vm={catalog}
-                      librarySelected={librarySelected()}
-                      onLibraryChange={setLibrarySelected}
-                    >
-                      <Show when={!librarySelected()}>
-                        <CatalogSpotlight
-                          vm={catalog}
-                          history={history}
-                          onSelectTitle={(title) => openTitle(title)}
-                        />
-                        <CatalogControls vm={catalog} />
-                        <PosterGrid
-                          vm={catalog}
-                          selectedTitle={details.selected}
-                          onSelectTitle={(title) => openTitle(title)}
-                        />
-                      </Show>
-                      <Show when={librarySelected()}>
-                        <HistoryShelf
-                          vm={history}
-                          disabled={player.busy()}
-                          onOpen={(entry) => openTitle(entry.title, entry.content)}
-                          onResume={(entry) => void resume(entry)}
-                        />
-                      </Show>
-                    </CatalogMediaTabs>
+                    <Show when={!librarySelected()}>
+                      <CatalogSpotlight
+                        vm={catalog}
+                        history={history}
+                        onSelectTitle={(title) => openTitle(title)}
+                      />
+                      <CatalogControls vm={catalog} />
+                      <PosterGrid
+                        vm={catalog}
+                        selectedTitle={details.selected}
+                        onSelectTitle={(title) => openTitle(title)}
+                      />
+                    </Show>
+                    <Show when={librarySelected()}>
+                      <HistoryShelf
+                        vm={history}
+                        disabled={player.busy()}
+                        onOpen={(entry) => openTitle(entry.title, entry.content)}
+                        onResume={(entry) => void resume(entry)}
+                      />
+                    </Show>
                   </Show>
                 </Show>
               </Show>

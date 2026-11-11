@@ -47,7 +47,7 @@ pub(super) async fn authorize(
     }
     let public = access.browser.is_some()
         && (matches!(*request.method(), Method::GET | Method::HEAD)
-            && (request.uri().path() == "/" || request.uri().path().starts_with("/assets/"))
+            && public_browser_document(request.uri().path())
             || request.method() == Method::POST
                 && matches!(request.uri().path(), "/browser/session" | "/browser/pair"));
     let authorization = if public {
@@ -61,6 +61,21 @@ pub(super) async fn authorize(
     };
     add_cors(&mut response, origin);
     Ok(response)
+}
+
+fn public_browser_document(path: &str) -> bool {
+    if matches!(path, "/" | "/settings" | "/player") || path.starts_with("/assets/") {
+        return true;
+    }
+    let Some(route) = path.strip_prefix("/title/") else {
+        return false;
+    };
+    let Some((media, id)) = route.split_once('/') else {
+        return false;
+    };
+    matches!(media, "movie" | "tv")
+        && !id.is_empty()
+        && id.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 fn authorize_token(access: &AccessPolicy, headers: &HeaderMap) -> Result<(), StatusCode> {
@@ -174,5 +189,34 @@ impl AccessPolicy {
             .get(header::HOST)
             .and_then(|h| h.to_str().ok())
             .is_some_and(|host| origin.as_bytes() == format!("http://{host}").as_bytes())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::public_browser_document;
+
+    #[test]
+    fn only_browser_documents_and_assets_are_public() {
+        for path in [
+            "/",
+            "/settings",
+            "/player",
+            "/title/movie/550",
+            "/title/tv/1399",
+            "/assets/app.js",
+        ] {
+            assert!(public_browser_document(path), "{path}");
+        }
+        for path in [
+            "/health",
+            "/browser/network",
+            "/title/person/1",
+            "/title/movie/",
+            "/title/movie/1/more",
+            "/title/movie/not-a-number",
+        ] {
+            assert!(!public_browser_document(path), "{path}");
+        }
     }
 }
