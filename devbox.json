@@ -13,7 +13,8 @@
     "gst_all_1.gstreamer": "latest",
     "libayatana-appindicator": {
       "version": "latest",
-      "outputs": ["out", "dev"]
+      "outputs": ["out", "dev"],
+      "excluded_platforms": ["aarch64-darwin"]
     },
     "librsvg": {
       "version": "latest",
@@ -28,7 +29,8 @@
     "rustfmt": "1.94.0",
     "webkitgtk_4_1": {
       "version": "latest",
-      "outputs": ["out", "dev"]
+      "outputs": ["out", "dev"],
+      "excluded_platforms": ["aarch64-darwin"]
     }
   },
   "env": {
@@ -42,10 +44,8 @@
     ],
     "scripts": {
       "setup": [
-        "bun install --frozen-lockfile",
-        "bash scripts/devbox-doctor.sh"
+        "bun install --frozen-lockfile"
       ],
-      "doctor": "bash scripts/devbox-doctor.sh",
       "web": "bun run --filter @popcorn/desktop dev",
       "desktop": "bun run dev",
       "check": "bun run check"
