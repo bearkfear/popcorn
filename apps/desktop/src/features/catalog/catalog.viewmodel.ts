@@ -40,23 +40,9 @@ export function createCatalogViewModel(
   getClient: () => CatalogClient | undefined,
   onResetDetail: () => void,
   onRequireSetup: (err: unknown) => void,
-  initial: CatalogFilterState = {
-    mediaType: MediaType.MOVIE,
-    category: CatalogCategory.POPULAR,
-    genreId: 0,
-    query: "",
-    page: 1,
-  },
+  getNavigation: () => CatalogFilterState,
   onNavigationChange?: (state: CatalogFilterState) => void,
 ) {
-  const [mediaType, setMediaType] = createSignal(
-    initial.mediaType === MediaType.TV ? MediaType.TV : MediaType.MOVIE,
-  );
-  const [category, setCategory] = createSignal(initial.category);
-  const [genreId, setGenreId] = createSignal(initial.genreId);
-  const [searchInput, setSearchInput] = createSignal(initial.query);
-  const [query, setQuery] = createSignal(initial.query);
-  const [desiredPage, setDesiredPage] = createSignal(initial.page);
   const [catalogRequest, setCatalogRequest] = createSignal<CatalogRequest>();
   const [genreRequest, setGenreRequest] = createSignal<GenreRequest>();
   const [catalog, catalogActions] = createResource(catalogRequest, async (request) => {
@@ -103,6 +89,10 @@ export function createCatalogViewModel(
 
   const catalogValue = resourceValue(catalog);
   const genreResponseValue = resourceValue(genreResponse);
+  const mediaType = () => getNavigation().mediaType;
+  const category = () => getNavigation().category;
+  const genreId = () => getNavigation().genreId;
+  const query = () => getNavigation().query;
   const titles = () => catalogValue()?.titles ?? [];
   const genres = () => genreResponseValue()?.genres ?? [];
   const catalogBusy = () => catalog.loading;
@@ -114,18 +104,8 @@ export function createCatalogViewModel(
   const genresStale = () => genreResponseValue()?.stale ?? false;
   const page = () => catalogValue()?.page ?? 0;
   const totalPages = () => catalogValue()?.totalPages ?? 0;
-  const requestedPage = () => catalogRequest()?.page ?? desiredPage();
-  const navigationState = (page = desiredPage()): CatalogFilterState => ({
-    mediaType: mediaType(),
-    category: category(),
-    genreId: genreId(),
-    query: query(),
-    page,
-  });
-
-  function notifyNavigation(page = 1) {
-    onNavigationChange?.(navigationState(page));
-  }
+  const requestedPage = () => catalogRequest()?.page ?? getNavigation().page;
+  const navigationState = () => getNavigation();
 
   function resetCatalog(resetDetail = true) {
     setCatalogRequest(undefined);
@@ -133,23 +113,22 @@ export function createCatalogViewModel(
     if (resetDetail) onResetDetail();
   }
 
-  function requestPage(nextPage: number) {
-    setDesiredPage(nextPage);
+  function requestPage(nextPage: number, navigation = getNavigation()) {
     const client = getClient();
     if (!client) return;
     setCatalogRequest({
       client,
-      mediaType: mediaType(),
-      category: category(),
-      genreId: genreId(),
-      query: query(),
+      mediaType: navigation.mediaType,
+      category: navigation.category,
+      genreId: navigation.genreId,
+      query: navigation.query,
       page: nextPage,
     });
   }
 
-  function loadCatalog(page = 1, resetDetail = true) {
+  function loadCatalog(navigation = getNavigation(), resetDetail = true) {
     resetCatalog(resetDetail);
-    requestPage(page);
+    requestPage(navigation.page, navigation);
   }
 
   function changePage(nextPage: number) {
@@ -162,73 +141,68 @@ export function createCatalogViewModel(
     )
       return;
     onResetDetail();
-    requestPage(nextPage);
-    notifyNavigation(nextPage);
+    onNavigationChange?.({ ...getNavigation(), page: nextPage });
   }
 
   function retryCatalog() {
     if (!catalogBusy()) requestPage(requestedPage());
   }
 
-  function loadGenres() {
+  function loadGenres(nextMediaType = mediaType()) {
     const client = getClient();
     if (!client) return;
     genreActions.mutate(undefined);
-    setGenreRequest({ client, mediaType: mediaType() });
+    setGenreRequest({ client, mediaType: nextMediaType });
   }
 
   function changeMediaType(next: MediaType) {
-    setMediaType(next);
-    setGenreId(0);
-    setQuery("");
-    setSearchInput("");
-    loadCatalog();
-    loadGenres();
-    notifyNavigation();
+    onNavigationChange?.({
+      mediaType: next,
+      category: CatalogCategory.POPULAR,
+      genreId: 0,
+      query: "",
+      page: 1,
+    });
   }
 
   function changeCategory(next: CatalogCategory, genre = genreId()) {
-    setCategory(next);
-    setGenreId(genre);
-    setQuery("");
-    setSearchInput("");
-    loadCatalog();
-    notifyNavigation();
+    onNavigationChange?.({
+      ...getNavigation(),
+      category: next,
+      genreId: genre,
+      query: "",
+      page: 1,
+    });
   }
 
   function performSearch(text: string) {
-    setQuery(text);
-    setSearchInput(text);
-    setGenreId(0);
-    loadCatalog();
-    notifyNavigation();
+    onNavigationChange?.({
+      ...getNavigation(),
+      genreId: 0,
+      query: text,
+      page: 1,
+    });
   }
 
   function applyNavigation(next: CatalogFilterState) {
-    const mediaChanged = next.mediaType !== mediaType();
+    const current = catalogRequest();
+    const mediaChanged = next.mediaType !== (genreRequest()?.mediaType ?? current?.mediaType);
     const changed =
-      mediaChanged ||
-      next.category !== category() ||
-      next.genreId !== genreId() ||
-      next.query !== query() ||
-      next.page !== desiredPage();
+      !current ||
+      next.mediaType !== current.mediaType ||
+      next.category !== current.category ||
+      next.genreId !== current.genreId ||
+      next.query !== current.query ||
+      next.page !== current.page;
     if (!changed) return;
-    setMediaType(next.mediaType);
-    setCategory(next.category);
-    setGenreId(next.genreId);
-    setQuery(next.query);
-    setSearchInput(next.query);
-    setDesiredPage(next.page);
-    loadCatalog(next.page);
-    if (mediaChanged) loadGenres();
+    loadCatalog(next);
+    if (mediaChanged) loadGenres(next.mediaType);
   }
 
   return {
     mediaType,
     category,
     genreId,
-    searchInput,
-    setSearchInput,
     query,
     titles,
     genres,

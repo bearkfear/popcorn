@@ -67,6 +67,9 @@ impl Browser {
 pub(crate) fn router(state: Arc<Browser>) -> Router {
     Router::new()
         .route("/", get(super::browser_assets::index))
+        .route("/movies", get(super::browser_assets::index))
+        .route("/shows", get(super::browser_assets::index))
+        .route("/library", get(super::browser_assets::index))
         .route("/settings", get(super::browser_assets::index))
         .route("/player", get(super::browser_assets::index))
         .route("/title/{media}/{id}", get(super::browser_assets::index))
@@ -157,11 +160,6 @@ pub(crate) fn access(
     }
     let browser =
         browser.map(|(root, ticket)| Arc::new(Browser::new(root, ticket, network.clone())));
-    let origin = if browser.is_some() {
-        Some(format!("http://{address}"))
-    } else {
-        origin
-    };
     Arc::new(super::AccessPolicy {
         token,
         host: address.to_string(),

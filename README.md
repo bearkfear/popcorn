@@ -92,11 +92,11 @@ pedir autorização do firewall para a rede local, permita o acesso do Popcorn; 
 de convidados com isolamento entre aparelhos podem impedir a conexão.
 
 Para desenvolver o aplicativo completo, use `bun run dev`. Ele prepara o
-backend e as ferramentas, compila a interface web e inicia o launcher. Alterações
-na interface servida pelo backend exigem `bun run --filter @popcorn/desktop build`
-e atualização da aba. O Vite em `localhost:1420` continua disponível para prévia
-visual, sem iniciar outro backend. Para encerrar o launcher, use seu menu ou pare
-o comando de desenvolvimento.
+backend e as ferramentas, compila a interface web e inicia o launcher. Em
+desenvolvimento, o launcher abre a interface pelo Vite em `localhost:1420`, com
+hot reload e acesso ao backend real. A interface empacotada servida pelo backend
+continua usando o build de `dist`. Para encerrar o launcher, use seu menu ou pare o
+comando de desenvolvimento.
 
 Para verificar sessões web, acesso LAN, pareamento, assets, autenticação RPC e rejeição de origens externas,
 diagnósticos, reabertura e encerramento com um diretório de dados temporário:
@@ -212,11 +212,13 @@ backend. Para executar o cliente gráfico completo no WSL com WSLg, use
 FFmpeg/ffprobe para Linux x64, Windows x64 e macOS ARM64; os executáveis não são
 substituídos por cópias encontradas no `PATH`.
 
-O WSLg não integra AppIndicator/KStatusNotifierItem à bandeja do Windows. Por isso,
-o fallback do GTK 3 pode registrar `gtk_widget_get_scale_factor: GTK_IS_WIDGET`
-ao iniciar o launcher. O aviso não interrompe o backend nem a interface e é uma
-[limitação conhecida do WSLg](https://github.com/microsoft/wslg/issues/532); nesse
-ambiente, encerre o processo de desenvolvimento com Ctrl+C.
+O WSLg não integra AppIndicator/KStatusNotifierItem à bandeja do Windows. O launcher
+detecta esse ambiente e abre uma janela de controle no lugar do ícone, com as ações
+**Abrir Popcorn**, **Acessar pela TV**, **Abrir pasta de vídeos** e **Encerrar
+Popcorn**. O botão nativo de minimizar mantém o serviço rodando; fechar a janela ou
+usar **Encerrar Popcorn** para o launcher e o backend de forma limpa.
+Essa substituição evita o fallback incompatível do GTK 3, uma
+[limitação conhecida do WSLg](https://github.com/microsoft/wslg/issues/532).
 
 ```sh
 bun install --frozen-lockfile
@@ -226,7 +228,8 @@ bun run dev
 O comando prepara o `popcorn-server` para o target Rust, compila a interface e
 inicia o Vite em `http://localhost:1420` e o launcher nativo. O launcher inicia o
 backend, resolve o snapshot e os dados persistentes sem depender do diretório de
-trabalho e abre o navegador no endereço servido pelo backend. Uma segunda chamada de bootstrap reutiliza
+trabalho e, em desenvolvimento, abre no Vite uma sessão conectada ao backend real.
+Uma segunda chamada de bootstrap reutiliza
 a instância viva. Uma tentativa falha é encerrada e aguardada antes de permitir outra.
 
 Para compilar o desktop:

@@ -1,0 +1,104 @@
+@font-face {
+  font-family: "Google Sans";
+  src: url("./assets/fonts/google-sans-variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  font-family: "Google Sans", "Segoe UI", sans-serif;
+  background: #111113;
+  color: #eeeef0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: radial-gradient(circle at 50% -20%, #34343a 0, #1a1a1e 45%, #111113 100%);
+}
+
+main {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 18px 14px;
+  padding: 26px;
+}
+
+.brand {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 14px;
+  background: #e54d2e;
+  color: white;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.heading h1 {
+  margin: 1px 0 5px;
+  font-size: 21px;
+  line-height: 1.25;
+}
+
+.heading p {
+  margin: 0;
+  color: #b4b4bd;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.actions {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 9px;
+}
+
+button {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid #494950;
+  border-radius: 9px;
+  background: #2a2a2f;
+  color: #eeeef0;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: #606067;
+  background: #34343a;
+}
+
+button:focus-visible {
+  outline: 2px solid #e54d2e;
+  outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+button.danger {
+  border-color: #5c271f;
+  color: #ff977d;
+}
+
+.status {
+  min-height: 18px;
+  grid-column: 1 / -1;
+  margin: -7px 0 0;
+  color: #ff977d;
+  font-size: 12px;
+}

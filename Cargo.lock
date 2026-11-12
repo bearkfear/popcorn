@@ -3959,6 +3959,7 @@ dependencies = [
 name = "popcorn-desktop"
 version = "2026.10.2101"
 dependencies = [
+ "gtk",
  "popcorn-diagnostics",
  "reqwest",
  "serde",

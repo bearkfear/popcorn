@@ -2,8 +2,14 @@ import "./app-ui.css";
 import { Button } from "@egcs/newui/actions";
 import { Container } from "@egcs/newui/layout";
 import { Navbar } from "@egcs/newui/navigation";
-import { type ContentRef, MediaType, type Title, type TmdbStatus } from "@popcorn/sdk";
-import { useLocation, useNavigate } from "@solidjs/router";
+import {
+  CatalogCategory,
+  type ContentRef,
+  MediaType,
+  type Title,
+  type TmdbStatus,
+} from "@popcorn/sdk";
+import { useLocation, useNavigate, useSearchParams } from "@solidjs/router";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createEffect, createSignal, on, onCleanup, onMount, Show } from "solid-js";
@@ -28,7 +34,11 @@ import { SettingsPage } from "./features/settings/settings-page";
 import { createSourcesViewModel } from "./features/sources/sources.viewmodel";
 import {
   type AppPage,
-  catalogNavigationFromUrl,
+  type CatalogNavigationState,
+  type CatalogQueryState,
+  catalogNavigationFromQuery,
+  catalogQueryFromNavigation,
+  catalogTabFromPath,
   catalogUrl,
   contentFromTitleUrl,
   pageFromPath,
@@ -42,8 +52,29 @@ type WatchContext = Omit<WatchEntry, "key" | "status" | "position" | "duration" 
 export function App() {
   const location = useLocation();
   const routerNavigate = useNavigate();
-  const initialNavigation = catalogNavigationFromUrl(location.search);
+  const [catalogQuery, setCatalogQuery] = useSearchParams<CatalogQueryState>();
+  const initialNavigation = catalogNavigationFromQuery(
+    catalogQuery,
+    catalogTabFromPath(location.pathname),
+  );
+  let catalogReturnNavigation: CatalogNavigationState = initialNavigation;
   const page = () => pageFromPath(location.pathname);
+  const queryNavigation = () =>
+    catalogNavigationFromQuery(catalogQuery, catalogTabFromPath(location.pathname));
+  const activeCatalogNavigation = () =>
+    page() === "search" ? queryNavigation() : catalogReturnNavigation;
+  const catalogFilters = () => {
+    const navigation = activeCatalogNavigation();
+    const mediaTab =
+      navigation.tab === "library" ? catalogReturnNavigation.tab : navigation.tab;
+    return {
+      mediaType: mediaTab === "shows" ? MediaType.TV : MediaType.MOVIE,
+      category: navigation.category,
+      genreId: navigation.genreId,
+      query: navigation.query,
+      page: navigation.page,
+    };
+  };
   const bootstrap = createBootstrapViewModel();
   const catalogClient = () => bootstrap.getClients().catalog;
   const settings = createSettingsViewModel(
@@ -55,7 +86,8 @@ export function App() {
   const sources = createSourcesViewModel(() => bootstrap.getClients().source);
   const player = createPlayerViewModel(() => bootstrap.getClients().playback);
   const history = createHistoryViewModel(() => bootstrap.getClients().history);
-  const [librarySelected, setLibrarySelected] = createSignal(initialNavigation.tab === "library");
+  const librarySelected = () =>
+    page() === "search" && activeCatalogNavigation().tab === "library";
   const [navigationOpen, setNavigationOpen] = createSignal(false);
   const [session, setSession] = createSignal<WatchContext>();
   let settingsReturnPage: AppPage = "search";
@@ -95,35 +127,21 @@ export function App() {
     catalogClient,
     resetSelection,
     settings.handleCatalogError,
-    {
-      mediaType: initialNavigation.tab === "shows" ? MediaType.TV : MediaType.MOVIE,
-      category: initialNavigation.category,
-      genreId: initialNavigation.genreId,
-      query: initialNavigation.query,
-      page: initialNavigation.page,
-    },
+    catalogFilters,
     (filters) => {
       if (page() !== "search") return;
-      routerNavigate(
-        catalogUrl({
-          ...filters,
-          tab: librarySelected()
-            ? "library"
-            : filters.mediaType === MediaType.TV
-              ? "shows"
-              : "movies",
-        }),
-        { scroll: false },
-      );
+      const tab = filters.mediaType === MediaType.TV ? "shows" : "movies";
+      const navigation = { ...filters, tab } as const;
+      if (catalogTabFromPath(location.pathname) !== tab) {
+        routerNavigate(catalogUrl(navigation), { scroll: false });
+        return;
+      }
+      setCatalogQuery(catalogQueryFromNavigation(navigation), { scroll: false });
     },
   );
 
   function currentCatalogUrl(): string {
-    const filters = catalog.navigationState();
-    return catalogUrl({
-      ...filters,
-      tab: librarySelected() ? "library" : filters.mediaType === MediaType.TV ? "shows" : "movies",
-    });
+    return catalogUrl(activeCatalogNavigation());
   }
 
   function navigate(path: string, replace = false) {
@@ -131,26 +149,31 @@ export function App() {
   }
 
   function changeLibrary(selected: boolean) {
-    setLibrarySelected(selected);
-    const filters = catalog.navigationState();
-    navigate(
-      catalogUrl({
-        ...filters,
-        tab: selected ? "library" : filters.mediaType === MediaType.TV ? "shows" : "movies",
-      }),
-    );
+    const navigation = activeCatalogNavigation();
+    navigate(catalogUrl({ ...navigation, tab: selected ? "library" : "movies" }));
   }
 
   function changeMediaType(mediaType: MediaType) {
     setNavigationOpen(false);
-    setLibrarySelected(false);
     if (catalog.mediaType() !== mediaType) {
-      catalog.changeMediaType(mediaType);
+      if (page() === "search" && !librarySelected()) {
+        catalog.changeMediaType(mediaType);
+        return;
+      }
+      navigate(
+        catalogUrl({
+          tab: mediaType === MediaType.TV ? "shows" : "movies",
+          category: CatalogCategory.POPULAR,
+          genreId: 0,
+          query: "",
+          page: 1,
+        }),
+      );
       return;
     }
     navigate(
       catalogUrl({
-        ...catalog.navigationState(),
+        ...activeCatalogNavigation(),
         tab: mediaType === MediaType.TV ? "shows" : "movies",
       }),
     );
@@ -174,7 +197,7 @@ export function App() {
 
   function loadCatalog(current: TmdbStatus | undefined = settings.status()) {
     if (current?.configured) {
-      void catalog.loadCatalog(catalog.navigationState().page, page() === "search");
+      void catalog.loadCatalog(catalog.navigationState(), page() === "search");
       void catalog.loadGenres();
     }
   }
@@ -291,15 +314,11 @@ export function App() {
       () => {
         const currentPage = page();
         if (currentPage === "search") {
-          const next = catalogNavigationFromUrl(location.search);
-          setLibrarySelected(next.tab === "library");
+          const next = queryNavigation();
+          if (next.tab === "library") return;
+          catalogReturnNavigation = next;
           catalog.applyNavigation({
-            mediaType:
-              next.tab === "shows"
-                ? MediaType.TV
-                : next.tab === "movies"
-                  ? MediaType.MOVIE
-                  : catalog.mediaType(),
+            mediaType: next.tab === "shows" ? MediaType.TV : MediaType.MOVIE,
             category: next.category,
             genreId: next.genreId,
             query: next.query,
@@ -428,7 +447,7 @@ export function App() {
             onOpenChange={({ open }) => setNavigationOpen(open)}
           >
             <Navbar.Brand
-              href="/"
+              href="/movies"
               aria-label="Ir para pesquisa"
               onClick={(event) => {
                 event.preventDefault();
@@ -443,7 +462,7 @@ export function App() {
               <Navbar.List>
                 <Navbar.Item value="movies">
                   <Navbar.Link
-                    href="/"
+                    href="/movies"
                     aria-current={mediaNavigationCurrent(MediaType.MOVIE) ? "page" : undefined}
                     onClick={(event) => {
                       event.preventDefault();
@@ -455,7 +474,7 @@ export function App() {
                 </Navbar.Item>
                 <Navbar.Item value="shows">
                   <Navbar.Link
-                    href="/?tab=shows"
+                    href="/shows"
                     aria-current={mediaNavigationCurrent(MediaType.TV) ? "page" : undefined}
                     onClick={(event) => {
                       event.preventDefault();
@@ -467,7 +486,7 @@ export function App() {
                 </Navbar.Item>
                 <Navbar.Item value="library">
                   <Navbar.Link
-                    href="/?tab=library"
+                    href="/library"
                     aria-current={page() === "search" && librarySelected() ? "page" : undefined}
                     onClick={(event) => {
                       event.preventDefault();

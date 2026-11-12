@@ -2,13 +2,18 @@ import { Button } from "@egcs/newui/actions";
 import { Callout } from "@egcs/newui/feedback";
 import { Field, Input } from "@egcs/newui/forms";
 import { CatalogCategory, MediaType } from "@popcorn/sdk";
-import { For, Show } from "solid-js";
+import { createFormControl } from "solid-forms";
+import { createEffect, For, on, Show } from "solid-js";
 import { AppSelect } from "../../shared/ui/app-select";
 import { Icon } from "../../shared/ui/icon";
 import type { CatalogViewModel } from "./catalog.viewmodel";
 
 export function CatalogControls(props: { vm: CatalogViewModel }) {
   const { vm } = props;
+  const search = createFormControl(vm.query());
+
+  createEffect(on(vm.query, (query) => search.setValue(query)));
+
   return (
     <section class="catalog-controls" aria-label="Buscar e filtrar títulos">
       <div class="catalog-search-row">
@@ -16,7 +21,8 @@ export function CatalogControls(props: { vm: CatalogViewModel }) {
           class="search-form flex min-w-0 flex-1 items-end gap-2"
           onSubmit={(event) => {
             event.preventDefault();
-            vm.performSearch(vm.searchInput().trim());
+            search.markSubmitted(true);
+            vm.performSearch(search.value.trim());
           }}
         >
           <Field.Root class="min-w-0 flex-1">
@@ -24,8 +30,8 @@ export function CatalogControls(props: { vm: CatalogViewModel }) {
             <Input
               name="catalog-search"
               type="search"
-              value={vm.searchInput()}
-              onInput={(event) => vm.setSearchInput(event.currentTarget.value)}
+              value={search.value}
+              onInput={(event) => search.setValue(event.currentTarget.value)}
               placeholder={vm.mediaType() === MediaType.MOVIE ? "Buscar filmes" : "Buscar séries"}
             />
           </Field.Root>

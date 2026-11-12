@@ -11,6 +11,14 @@ export type CatalogNavigationState = {
   readonly page: number;
 };
 
+export type CatalogQueryState = {
+  readonly [key: string]: string | string[] | undefined;
+  readonly category?: string | string[] | undefined;
+  readonly genre?: string | string[] | undefined;
+  readonly q?: string | string[] | undefined;
+  readonly page?: string | string[] | undefined;
+};
+
 export const defaultCatalogNavigation: CatalogNavigationState = {
   tab: "movies",
   category: CatalogCategory.POPULAR,
@@ -36,28 +44,62 @@ function categoryToUrl(value: CatalogCategory): string | undefined {
   return undefined;
 }
 
-export function catalogNavigationFromUrl(search: string): CatalogNavigationState {
-  const parameters = new URLSearchParams(search);
-  const tab = parameters.get("tab");
+function queryValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export function catalogTabFromPath(pathname: string): CatalogTab {
+  if (pathname === "/shows") return "shows";
+  if (pathname === "/library") return "library";
+  return "movies";
+}
+
+export function catalogNavigationFromQuery(
+  query: CatalogQueryState,
+  tab: CatalogTab = "movies",
+): CatalogNavigationState {
   return {
-    tab: tab === "shows" || tab === "library" ? tab : "movies",
-    category: categoryFromUrl(parameters.get("category")),
-    genreId: positiveInteger(parameters.get("genre"), 0),
-    query: parameters.get("q")?.trim() ?? "",
-    page: positiveInteger(parameters.get("page"), 1),
+    tab,
+    category: categoryFromUrl(queryValue(query.category) ?? null),
+    genreId: positiveInteger(queryValue(query.genre) ?? null, 0),
+    query: queryValue(query.q)?.trim() ?? "",
+    page: positiveInteger(queryValue(query.page) ?? null, 1),
+  };
+}
+
+export function catalogNavigationFromUrl(
+  search: string,
+  tab: CatalogTab = "movies",
+): CatalogNavigationState {
+  const parameters = new URLSearchParams(search);
+  return catalogNavigationFromQuery(
+    {
+      category: parameters.get("category") ?? undefined,
+      genre: parameters.get("genre") ?? undefined,
+      q: parameters.get("q") ?? undefined,
+      page: parameters.get("page") ?? undefined,
+    },
+    tab,
+  );
+}
+
+export function catalogQueryFromNavigation(state: CatalogNavigationState) {
+  return {
+    category: !state.query ? categoryToUrl(state.category) : undefined,
+    genre: !state.query && state.genreId > 0 ? String(state.genreId) : undefined,
+    q: state.query || undefined,
+    page: state.page > 1 ? String(state.page) : undefined,
   };
 }
 
 export function catalogUrl(state: CatalogNavigationState): string {
   const parameters = new URLSearchParams();
-  if (state.tab !== "movies") parameters.set("tab", state.tab);
-  const category = categoryToUrl(state.category);
-  if (!state.query && category) parameters.set("category", category);
-  if (!state.query && state.genreId > 0) parameters.set("genre", String(state.genreId));
-  if (state.query) parameters.set("q", state.query);
-  if (state.page > 1) parameters.set("page", String(state.page));
+  for (const [key, value] of Object.entries(catalogQueryFromNavigation(state))) {
+    if (value) parameters.set(key, value);
+  }
   const search = parameters.toString();
-  return search ? `/?${search}` : "/";
+  const pathname = `/${state.tab}`;
+  return search ? `${pathname}?${search}` : pathname;
 }
 
 export function pageFromPath(pathname: string): AppPage {

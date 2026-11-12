@@ -1,4 +1,5 @@
 import { Button } from "@egcs/newui/actions";
+import { Empty, PageLoading } from "@egcs/newui/feedback";
 import { Pagination } from "@egcs/newui/navigation";
 // UI component for displaying the catalog poster grid, status states, and pagination.
 
@@ -47,7 +48,7 @@ export function PosterGrid(props: PosterGridProps) {
         >
           {heading()}
         </h2>
-        <Show when={vm.totalPages() > 0}>
+        <Show when={vm.totalPages() > 0 && vm.titles().length > 0}>
           <span
             class="flex shrink-0 items-center gap-2 text-xs text-muted"
             role="status"
@@ -91,27 +92,52 @@ export function PosterGrid(props: PosterGridProps) {
           </div>
         </Show>
 
-        <Show when={vm.catalogBusy() && !vm.catalogLoaded()}>
-          <p class="loading-message p-[12px_16px] text-muted text-[13px]" role="status">
-            Consultando títulos...
-          </p>
+        <Show when={vm.catalogBusy() && vm.titles().length === 0}>
+          <PageLoading
+            layout="section"
+            label={vm.mediaType() === MediaType.MOVIE ? "Carregando filmes" : "Carregando séries"}
+            description="Consultando os títulos disponíveis no catálogo."
+          />
         </Show>
 
-        <Show when={vm.catalogLoaded() && vm.titles().length === 0 && !vm.catalogError()}>
-          <div class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.nui-button]:mt-5">
-            <h3>
-              {vm.query() ? "Nenhum resultado para esta busca" : "Nenhum título nesta coleção"}
-            </h3>
-            <p>A consulta terminou sem títulos. Experimente outra busca, gênero ou coleção.</p>
-            <Button
-              type="button"
-              variant="outline"
-              tone="neutral"
-              onClick={() => vm.changeCategory(CatalogCategory.POPULAR, 0)}
-            >
-              Voltar aos populares
-            </Button>
-          </div>
+        <Show
+          when={
+            vm.catalogLoaded() &&
+            !vm.catalogBusy() &&
+            vm.titles().length === 0 &&
+            !vm.catalogError()
+          }
+        >
+          <Empty.Root
+            layout="section"
+            class="min-h-[320px] rounded-panel border border-dashed border-line bg-slate-2"
+          >
+            <Empty.Icon>
+              <Icon name="search" />
+            </Empty.Icon>
+            <Empty.Content>
+              <Empty.Title>
+                {vm.query()
+                  ? vm.mediaType() === MediaType.MOVIE
+                    ? "Nenhum filme encontrado"
+                    : "Nenhuma série encontrada"
+                  : "Nenhum título nesta coleção"}
+              </Empty.Title>
+              <Empty.Description>
+                {vm.query()
+                  ? "Tente buscar por outro título ou confira a escrita."
+                  : "Experimente outro gênero ou uma coleção diferente."}
+              </Empty.Description>
+            </Empty.Content>
+            <Empty.Actions>
+              <Button
+                type="button"
+                onClick={() => vm.changeCategory(CatalogCategory.POPULAR, 0)}
+              >
+                Voltar aos populares
+              </Button>
+            </Empty.Actions>
+          </Empty.Root>
         </Show>
 
         <Show when={!vm.catalogLoaded() && !vm.catalogBusy() && !vm.catalogError()}>
@@ -151,7 +177,7 @@ export function PosterGrid(props: PosterGridProps) {
           </For>
         </ul>
 
-        <Show when={vm.totalPages() > 1}>
+        <Show when={vm.totalPages() > 1 && vm.titles().length > 0}>
           {/* The API returns a page count, so each item represents one API page. */}
           <fieldset disabled={vm.catalogBusy()}>
             <Pagination.Root

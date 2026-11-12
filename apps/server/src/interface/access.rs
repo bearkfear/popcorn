@@ -64,7 +64,11 @@ pub(super) async fn authorize(
 }
 
 fn public_browser_document(path: &str) -> bool {
-    if matches!(path, "/" | "/settings" | "/player") || path.starts_with("/assets/") {
+    if matches!(
+        path,
+        "/" | "/movies" | "/shows" | "/library" | "/settings" | "/player"
+    ) || path.starts_with("/assets/")
+    {
         return true;
     }
     let Some(route) = path.strip_prefix("/title/") else {
@@ -143,6 +147,10 @@ fn add_cors(response: &mut Response, origin: Option<HeaderValue>) {
             .headers_mut()
             .insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, origin);
         response.headers_mut().insert(
+            header::ACCESS_CONTROL_ALLOW_CREDENTIALS,
+            HeaderValue::from_static("true"),
+        );
+        response.headers_mut().insert(
             header::ACCESS_CONTROL_EXPOSE_HEADERS,
             HeaderValue::from_static(
                 "connect-protocol-version,connect-content-encoding,connect-accept-encoding,grpc-status,grpc-message,grpc-status-details-bin",
@@ -181,8 +189,11 @@ impl AccessPolicy {
     }
 
     fn accepts_origin(&self, headers: &HeaderMap, origin: &HeaderValue) -> bool {
+        if self.origin.as_deref().map(str::as_bytes) == Some(origin.as_bytes()) {
+            return true;
+        }
         if self.browser.is_none() {
-            return self.origin.as_deref().map(str::as_bytes) == Some(origin.as_bytes());
+            return false;
         }
         headers
             .get(header::HOST)
