@@ -47,14 +47,8 @@
       ],
       "doctor": "bash scripts/devbox-doctor.sh",
       "web": "bun run --filter @popcorn/desktop dev",
-      "desktop": "bun run desktop:dev",
-      "check": [
-        "bun run generate:check",
-        "bun run check:sdk",
-        "bun run check:desktop",
-        "bun run lint:server",
-        "cargo test -p popcorn-server --lib core::"
-      ]
+      "desktop": "bun run dev",
+      "check": "bun run check"
     }
   }
 }

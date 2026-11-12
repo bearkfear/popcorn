@@ -15,10 +15,27 @@ export function parseVersion(value: string): { date: string; revision: number; p
 }
 
 export function assertNewer(next: string, current: string): void {
-  const a = parseVersion(next).parts;
-  const b = parseVersion(current).parts;
-  const difference = a.map((part, index) => part - (b[index] ?? 0)).find((part) => part !== 0) ?? 0;
+  const difference = compareVersions(next, current);
   if (difference <= 0) throw new Error(`A versão ${next} precisa ser maior que ${current}.`);
+}
+
+function compareVersions(left: string, right: string): number {
+  const a = parseVersion(left).parts;
+  const b = parseVersion(right).parts;
+  return a.map((part, index) => part - (b[index] ?? 0)).find((part) => part !== 0) ?? 0;
+}
+
+export function nextVersionFromTags(current: string, tags: readonly string[], now = new Date()): string {
+  let latest = current;
+  for (const tag of tags) {
+    const candidate = tag.startsWith("v") ? tag.slice(1) : tag;
+    try {
+      if (compareVersions(candidate, latest) > 0) latest = candidate;
+    } catch {
+      // Other v-prefixed tags are unrelated to desktop CalVer releases.
+    }
+  }
+  return nextVersion(latest, now);
 }
 
 export function nextVersion(current: string, now = new Date()): string {

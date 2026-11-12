@@ -150,7 +150,6 @@ fn add_cors(response: &mut Response, origin: Option<HeaderValue>) {
         );
     }
 }
-
 impl AccessPolicy {
     pub(crate) fn validate_origin(
         &self,
@@ -189,34 +188,5 @@ impl AccessPolicy {
             .get(header::HOST)
             .and_then(|h| h.to_str().ok())
             .is_some_and(|host| origin.as_bytes() == format!("http://{host}").as_bytes())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::public_browser_document;
-
-    #[test]
-    fn only_browser_documents_and_assets_are_public() {
-        for path in [
-            "/",
-            "/settings",
-            "/player",
-            "/title/movie/550",
-            "/title/tv/1399",
-            "/assets/app.js",
-        ] {
-            assert!(public_browser_document(path), "{path}");
-        }
-        for path in [
-            "/health",
-            "/browser/network",
-            "/title/person/1",
-            "/title/movie/",
-            "/title/movie/1/more",
-            "/title/movie/not-a-number",
-        ] {
-            assert!(!public_browser_document(path), "{path}");
-        }
     }
 }

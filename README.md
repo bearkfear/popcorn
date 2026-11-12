@@ -91,7 +91,7 @@ fMP4. A compatibilidade final depende do navegador e do modelo da TV. Se o siste
 pedir autorização do firewall para a rede local, permita o acesso do Popcorn; redes
 de convidados com isolamento entre aparelhos podem impedir a conexão.
 
-Para desenvolver o aplicativo completo, use `bun run desktop:dev`. Ele prepara o
+Para desenvolver o aplicativo completo, use `bun run dev`. Ele prepara o
 backend e as ferramentas, compila a interface web e inicia o launcher. Alterações
 na interface servida pelo backend exigem `bun run --filter @popcorn/desktop build`
 e atualização da aba. O Vite em `localhost:1420` continua disponível para prévia
@@ -184,7 +184,7 @@ bun test apps/desktop/tests
 cargo test -p popcorn-server --lib core::history::
 ```
 
-Requer Rust 1.94 ou posterior, compilador C, Bun 1.3.14 e os pré-requisitos nativos
+Requer Rust 1.94 ou posterior, compilador C, Bun 1.3.13 e os pré-requisitos nativos
 do Tauri 2 para o sistema em uso. Windows precisa das ferramentas C++ e WebView2;
 macOS precisa das ferramentas de desenvolvimento da Apple.
 
@@ -212,9 +212,15 @@ backend. Para executar o cliente gráfico completo no WSL com WSLg, use
 FFmpeg/ffprobe para Linux x64, Windows x64 e macOS ARM64; os executáveis não são
 substituídos por cópias encontradas no `PATH`.
 
+O WSLg não integra AppIndicator/KStatusNotifierItem à bandeja do Windows. Por isso,
+o fallback do GTK 3 pode registrar `gtk_widget_get_scale_factor: GTK_IS_WIDGET`
+ao iniciar o launcher. O aviso não interrompe o backend nem a interface e é uma
+[limitação conhecida do WSLg](https://github.com/microsoft/wslg/issues/532); nesse
+ambiente, encerre o processo de desenvolvimento com Ctrl+C.
+
 ```sh
 bun install --frozen-lockfile
-bun run desktop:dev
+bun run dev
 ```
 
 O comando prepara o `popcorn-server` para o target Rust, compila a interface e
@@ -226,7 +232,7 @@ a instância viva. Uma tentativa falha é encerrada e aguardada antes de permiti
 Para compilar o desktop:
 
 ```sh
-bun run desktop:build
+bun run build
 ```
 
 ### Release desktop pelo GitHub Actions
@@ -240,44 +246,32 @@ nativos e publica uma única GitHub Release com:
 - `Popcorn_<versão>_macos_arm64.dmg`, imagem para Apple Silicon;
 - checksums SHA-256 separados para cada plataforma.
 
-Ambos os pacotes incluem o backend, FFmpeg, ffprobe, catálogo e licenças. A tag
-precisa coincidir com a versão de `apps/desktop/src-tauri/tauri.conf.json`.
-Para preparar uma nova versão, execute:
+Ambos os pacotes incluem o backend, FFmpeg, ffprobe, catálogo e licenças. Todo
+`push` que chega à branch `main` inicia automaticamente esse workflow; não é
+necessário preparar versão, criar tag ou publicar release na máquina local.
 
-```sh
-bun run release --dry-run # mostra a próxima versão sem alterar arquivos
-bun run release           # atualiza os quatro manifests e os dois lockfiles
-# Ou escolha explicitamente:
-bun run release 2026.10.1702
-```
+A versão usa Calendar Versioning (CalVer) no formato SemVer `AAAA.M.DDNN`:
 
-Use apenas uma das formas de preparação. O comando usa a data local e o formato
-`AAAA.MM.DDNN`: `NN` começa em `01` e aumenta até `99` no mesmo dia.
-Depois da versão antiga `2026.10.17`, a próxima no mesmo dia será
-`2026.10.1702`; no dia seguinte, `2026.10.1801`. O terceiro componente numérico
-mantém a ordenação das versões para os instaladores. O formato antigo
-`AAAA.MM.DD` continua aceito para compatibilidade.
-Os componentes numéricos não têm zeros à esquerda, conforme o SemVer exigido
-pelo Cargo/Tauri: no primeiro dia de janeiro, por exemplo, `2027.1.101`.
+- `AAAA` é o ano;
+- `M` é o mês, sem zero à esquerda;
+- `DD` é o dia dentro do terceiro componente;
+- `NN` é a sequência da release naquele dia, de `01` a `99`.
 
-O script recusa versões menores ou iguais à atual, datas inválidas, tags locais
-existentes e arquivos dessincronizados. Não instala dependências nem altera Git;
-ao terminar, mostra os comandos para registrar e publicar a versão preparada:
+Assim, a primeira release de 11 de novembro de 2026 é `2026.11.1101`; a segunda
+é `2026.11.1102`. O CI calcula a data em `America/Sao_Paulo` e consulta as tags
+existentes para encontrar a próxima sequência. Esse arranjo mantém a data visível
+e continua válido para Cargo, Tauri e ferramentas que esperam três componentes
+numéricos de SemVer.
 
-```sh
-git add Cargo.toml Cargo.lock bun.lock apps/desktop/package.json packages/sdk/package.json apps/desktop/src-tauri/tauri.conf.json
-git commit -m "chore: release 2026.10.1702"
-git push
-git tag v2026.10.1702
-git push origin v2026.10.1702
-```
+O pipeline executa os checks, compila Windows e macOS com a versão aplicada
+somente nos runners temporários e, apenas quando ambos os pacotes terminam com
+sucesso, cria a tag e a GitHub Release no commit de `main`. Uma falha não deixa
+tag nem release parcial. As execuções são serializadas para que duas alterações
+próximas não escolham a mesma sequência.
 
-Também é possível iniciar o workflow manualmente em **Actions → Release Desktop
-→ Run workflow**, informando a tag da versão já preparada e enviada, como
-`v2026.10.1702`. Uma execução manual reserva a tag no
-commit selecionado antes dos testes e builds e publica a GitHub Release nessa tag.
-Isso mantém os instaladores ligados ao commit exato que foi compilado, mesmo que a
-branch receba novos commits enquanto o workflow estiver em execução.
+O script de apoio aceita `bun run release --next` e `bun run release --check`
+como consultas locais somente leitura. A operação `--apply` é recusada fora do
+GitHub Actions, evitando que a versão de publicação seja preparada localmente.
 
 Sem credenciais, o Windows é empacotado sem assinatura e o macOS usa assinatura
 ad-hoc; isso permite testar os instaladores, mas ainda pode produzir alertas do
@@ -503,7 +497,7 @@ removidos dos textos de erro e dos demais dados antes da escrita. Nenhum
 diagnóstico é enviado a serviços externos; os bytes do vídeo não são registrados.
 
 Depois de atualizar essa instrumentação, encerre o processo de desenvolvimento
-com Ctrl+C e execute `bun run desktop:dev` novamente para atualizar também os
+com Ctrl+C e execute `bun run dev` novamente para atualizar também os
 comandos nativos e o servidor. Reproduza o problema e preserve os arquivos atuais
 e rotacionados para investigação. O antigo log temporário de desenvolvimento
 `popcorn-media-diagnostics.log` não é mais utilizado.
