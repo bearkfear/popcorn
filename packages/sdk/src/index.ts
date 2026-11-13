@@ -51,6 +51,7 @@ function authenticatedTransport(baseUrl: string, token: string) {
       // Preserve fetch's platform-specific helpers while keeping final progress alive.
       fetch: Object.assign((...args: Parameters<typeof globalThis.fetch>) => globalThis.fetch(args[0], {
         ...args[1],
+        credentials: "include",
         ...(/\/popcorn\.v1\.(HistoryService\/UpdateHistory|PlaybackService\/StopPlayback)$/.test(String(args[0]))
           ? { keepalive: true }
           : {}),

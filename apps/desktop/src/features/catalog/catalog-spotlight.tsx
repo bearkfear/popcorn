@@ -1,8 +1,8 @@
+import { Button } from "@egcs/newui/actions";
 import { CatalogCategory, MediaType, type Title } from "@popcorn/sdk";
 import { createSignal, Show } from "solid-js";
 import { artworkUrl } from "../../catalog-ui";
 import { Icon } from "../../shared/ui/icon";
-import { buttonStyles } from "../../shared/ui/styles";
 import type { HistoryViewModel } from "../history/history.viewmodel";
 import type { CatalogViewModel } from "./catalog.viewmodel";
 import { findUnwatchedTitle } from "./catalog-spotlight.model";
@@ -28,7 +28,7 @@ export function CatalogSpotlight(props: {
     <Show when={title()} keyed>
       {(featured) => (
         <section
-          class="catalog-spotlight relative isolate mb-8 flex min-h-[440px] items-end overflow-hidden rounded-2xl border border-slate-6 bg-slate-1 max-[560px]:min-h-[380px]"
+          class="catalog-spotlight relative isolate mb-5 flex min-h-[320px] items-end overflow-hidden rounded-2xl border border-slate-6 bg-slate-1 max-[560px]:min-h-[280px]"
           aria-labelledby="spotlight-title"
         >
           <Show when={artworkUrl(featured.backdropUrl) && failedImage() !== featured.backdropUrl}>
@@ -42,7 +42,7 @@ export function CatalogSpotlight(props: {
           </Show>
           <div class="absolute inset-0 -z-10 bg-[linear-gradient(90deg,var(--slate-1)_0%,var(--black-a9)_48%,var(--black-a2)_100%)] max-[560px]:bg-[linear-gradient(0deg,var(--slate-1)_0%,var(--black-a9)_65%,var(--black-a4)_100%)]" />
           <div class="absolute inset-0 -z-10 bg-[linear-gradient(0deg,var(--slate-1),transparent_65%)]" />
-          <div class="w-full max-w-[660px] p-[clamp(24px,4vw,52px)]">
+          <div class="w-full max-w-[660px] p-[clamp(20px,3vw,32px)]">
             <p class="mb-4 flex items-center gap-2 text-[11px] font-semibold tracking-[0.16em] text-slate-12 uppercase">
               <span class="size-1.5 rounded-full bg-accent" /> Em destaque
               <span class="text-slate-11">/</span>
@@ -50,7 +50,7 @@ export function CatalogSpotlight(props: {
             </p>
             <h2
               id="spotlight-title"
-              class="text-[clamp(32px,4.5vw,60px)] font-semibold leading-[1.04] tracking-[-0.045em] text-slate-12 wrap-anywhere"
+              class="text-[clamp(28px,3.5vw,44px)] font-semibold leading-[1.04] tracking-[-0.045em] text-slate-12 wrap-anywhere"
             >
               {featured.title}
             </h2>
@@ -69,13 +69,13 @@ export function CatalogSpotlight(props: {
                 {featured.overview}
               </p>
             </Show>
-            <button
+            <Button
               type="button"
-              class={buttonStyles({ class: "mt-6 inline-flex items-center gap-3 px-5" })}
+              class="mt-4 inline-flex items-center gap-3 px-5"
               onClick={() => props.onSelectTitle(featured)}
             >
               Ver detalhes <Icon name="external" />
-            </button>
+            </Button>
           </div>
         </section>
       )}

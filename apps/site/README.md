@@ -1,14 +1,11 @@
-# Site do Popcorn
+# Site
 
-Landing de download construída com SolidStart v2, Ark UI e Tailwind CSS. A rota principal,
-o `robots.txt` e o sitemap são prerenderizados em `.output/public`.
+Página de downloads feita com SolidStart, Ark UI e Tailwind. A rota principal, `robots.txt` e sitemap são pré-renderizados.
 
-Antes de um build público, defina `VITE_SITE_URL` com a origem canônica do site:
+Defina a origem pública antes de gerar o site:
 
 ```sh
 VITE_SITE_URL=https://popcorn.example bun run build
 ```
 
-Os dados da release são consultados diretamente no navegador pela API pública do GitHub. A
-consulta ocorre ao carregar a seção de downloads e é repetida quando o visitante clica em um
-instalador. Nenhum token deve ser adicionado ao frontend.
+A lista de releases vem da API pública do GitHub no navegador. Não inclua tokens no frontend.

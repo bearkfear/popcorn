@@ -1,206 +1,379 @@
-// View presenting first-use TMDB API setup and token configuration form.
-
-import { Checkbox } from "@ark-ui/solid/checkbox";
+// TMDB connection, credential updates and disconnect flow.
+import { Button } from "@egcs/newui/actions";
+import { Badge, Card } from "@egcs/newui/content";
+import { Callout } from "@egcs/newui/feedback";
+import { Checkbox, Field, Input } from "@egcs/newui/forms";
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { createFormControl } from "solid-forms";
 import { createSignal, Show } from "solid-js";
 import { Icon } from "../../shared/ui/icon";
-import { buttonStyles } from "../../shared/ui/styles";
 import type { SettingsViewModel } from "./settings.viewmodel";
+import "./setup-panel.css";
 
 export function SetupPanel(props: {
   readonly vm: SettingsViewModel;
   readonly onConfigured: () => void;
   readonly onRemoved: () => void;
 }) {
-  const [saved, setSaved] = createSignal(false);
+  const token = createFormControl("", {
+    required: true,
+    validators: (value) => (value.trim() ? null : { required: true }),
+  });
+  const [editing, setEditing] = createSignal(false);
   const [confirmRemoval, setConfirmRemoval] = createSignal(false);
+  const [feedback, setFeedback] = createSignal<"saved" | "removed">();
+  const configured = () => Boolean(props.vm.status()?.configured);
+  const showForm = () => !configured() || editing();
+  const invalid = () => token.isSubmitted && !token.isValid;
   let tokenInput: HTMLInputElement | undefined;
+  let connectedHeading: HTMLHeadingElement | undefined;
+  let updateButton: HTMLButtonElement | undefined;
+
+  function resetToken() {
+    token.setValue("");
+    token.markTouched(false);
+    token.markSubmitted(false);
+  }
 
   async function openTmdbSettings() {
     try {
       await invoke("open_tmdb_settings");
     } catch {
-      window.open("https://www.themoviedb.org/settings/api", "_blank");
+      window.open("https://www.themoviedb.org/settings/api", "_blank", "noopener,noreferrer");
     }
   }
 
-  function handleSubmit(e: SubmitEvent) {
-    e.preventDefault();
-    const token = tokenInput?.value.trim() ?? "";
-    if (token) {
-      void props.vm.saveToken(token).then((saved) => {
-        if (saved) {
-          if (tokenInput) tokenInput.value = "";
-          setSaved(true);
-          props.onConfigured();
-        }
-      });
+  async function handleSubmit(event: SubmitEvent) {
+    event.preventDefault();
+    if (props.vm.configurationBusy()) return;
+    token.markTouched(true);
+    token.markSubmitted(true);
+    if (!token.isValid) {
+      tokenInput?.focus();
+      return;
     }
+    setFeedback(undefined);
+    const saved = await props.vm.saveToken(token.value.trim());
+    if (saved) {
+      resetToken();
+      setEditing(false);
+      setFeedback("saved");
+      props.onConfigured();
+      queueMicrotask(() => connectedHeading?.focus());
+    }
+  }
+
+  async function disconnect() {
+    if (props.vm.configurationBusy()) return;
+    setFeedback(undefined);
+    const removed = await props.vm.clearConfiguration();
+    if (!removed) return;
+    setConfirmRemoval(false);
+    if (!configured()) {
+      resetToken();
+      setEditing(false);
+      setFeedback("removed");
+      props.onRemoved();
+      queueMicrotask(() => tokenInput?.focus());
+    }
+  }
+
+  function editToken() {
+    setConfirmRemoval(false);
+    setFeedback(undefined);
+    setEditing(true);
+    queueMicrotask(() => tokenInput?.focus());
   }
 
   return (
-    <section class="setup-panel min-w-0" aria-labelledby="setup-heading">
-      <div>
-        <h2 id="setup-heading" class="text-2xl font-medium tracking-tight">
-          Catálogo
+    <section class="setup-panel tmdb-panel min-w-0" aria-labelledby="setup-heading">
+      <header class="mb-5">
+        <p class="mb-1 text-[11px] font-semibold tracking-[0.16em] text-accent-strong">
+          SEU CATÁLOGO
+        </p>
+        <h2 id="setup-heading" class="text-[30px] font-medium leading-tight tracking-[-0.04em]">
+          Cada história, em detalhes.
         </h2>
-        <p class="mt-2 text-[14px] text-muted">Conecte suas próximas histórias ao Popcorn.</p>
-      </div>
-      <div class="mt-6 flex flex-wrap items-center gap-4 rounded-panel border border-line bg-slate-2 p-5">
-        <span class="grid size-11 shrink-0 place-items-center rounded-panel bg-slate-4 text-xl text-muted">
-          <Icon name="database" />
-        </span>
-        <div class="min-w-[140px] flex-1">
-          <h3>The Movie Database</h3>
-          <p class="mt-1 text-[12px] text-muted">
-            Pôsteres, sinopses e detalhes de filmes e séries.
-          </p>
-        </div>
-        <span
-          class={`text-[12px] ${props.vm.status()?.configured ? "text-positive" : "text-muted"}`}
-        >
-          {props.vm.status()?.configured ? "Conectado" : "Não configurado"}
-        </span>
-      </div>
+        <p class="mt-1.5 max-w-[52ch] text-sm leading-relaxed text-muted">
+          Pôsteres, sinopses e descobertas para a sua próxima sessão.
+        </p>
+      </header>
 
-      <form
-        class="setup-form mt-5 rounded-panel border border-line bg-slate-2 p-6 max-[560px]:p-4"
-        onSubmit={handleSubmit}
-      >
-        <h3>{props.vm.status()?.configured ? "Atualizar acesso" : "Conectar ao TMDB"}</h3>
-        <p class="mb-5 mt-2 text-[13px] text-muted">
-          Use o token de leitura da sua conta TMDB. O acesso é validado antes de salvar.
-        </p>
-        <label class="mb-2 block text-[12px] font-medium" for="tmdb-token-input">
-          API Read Access Token
-        </label>
-        <input
-          ref={tokenInput}
-          id="tmdb-token-input"
-          class="min-h-12 w-full min-w-0 rounded-control border border-line bg-canvas-deep px-3 text-[14px]"
-          type="password"
-          placeholder="Cole seu token aqui"
-          required
-          disabled={props.vm.configurationBusy()}
-          onInput={() => setSaved(false)}
-          autocomplete="off"
-        />
-        <p class="mb-5 mt-2 text-[12px] text-muted">
-          {props.vm.remember()
-            ? "O acesso será lembrado neste dispositivo."
-            : "O acesso ficará disponível somente nesta sessão."}
-        </p>
-        <Checkbox.Root
-          class="checkbox-label flex items-center gap-2 text-[14px] [&_input]:absolute [&_input]:w-[1px] [&_input]:h-[1px] [&_input]:overflow-hidden [&_input]:[clip:rect(0_0_0_0)] [&_input]:[clip-path:inset(50%)] [&_input]:whitespace-nowrap [&:has(input:focus-visible)_.checkbox-control]:[outline:2px_solid_var(--focus)] [&:has(input:focus-visible)_.checkbox-control]:outline-offset-[3px] [&[data-disabled]]:cursor-default [&[data-disabled]]:opacity-[0.55]"
-          checked={props.vm.remember()}
-          onCheckedChange={(details) => props.vm.setRemember(details.checked === true)}
-          disabled={props.vm.configurationBusy()}
-        >
-          <Checkbox.HiddenInput />
-          <Checkbox.Control class="checkbox-control grid w-[18px] h-[18px] flex-none place-items-center border border-line rounded-[4px] bg-slate-2 text-ink text-[12px] [&[data-state=checked]]:text-accent-contrast [&[data-state=checked]]:border-accent [&[data-state=checked]]:bg-accent">
-            <Checkbox.Indicator aria-hidden="true">
-              <Icon name="check" />
-            </Checkbox.Indicator>
-          </Checkbox.Control>
-          <Checkbox.Label>Salvar neste dispositivo</Checkbox.Label>
-        </Checkbox.Root>
-        <Show when={props.vm.configurationError()}>
-          <p class="error-text text-negative m-[8px_0_12px] text-[13px]" role="alert">
-            {props.vm.configurationError()}
-          </p>
-        </Show>
-        <Show when={saved()}>
-          <p role="status" class="mt-4 text-[13px] text-positive">
-            <Icon name="check" /> Acesso validado e salvo.
-          </p>
-        </Show>
-        <button
-          class={buttonStyles({ class: "mt-5" })}
-          type="submit"
-          disabled={props.vm.configurationBusy()}
-        >
-          {props.vm.configurationBusy() ? "Validando acesso..." : "Validar e salvar"}
-        </button>
-      </form>
-      <details class="mt-5 rounded-panel border border-line p-5 text-[13px] text-muted">
-        <summary class="cursor-pointer font-medium text-ink">Onde encontro meu token?</summary>
-        <ol class="my-4 list-decimal space-y-2 pl-5">
-          <li>Entre na sua conta TMDB e abra as configurações da API.</li>
-          <li>
-            Copie o <strong class="text-ink">API Read Access Token</strong>, diferente da API key.
-          </li>
-          <li>Cole no campo acima e clique em Validar e salvar.</li>
-        </ol>
-        <Show
-          when={isTauri()}
-          fallback={
-            <a
-              class="inline-flex min-h-9 items-center gap-2 text-accent-strong"
-              href="https://www.themoviedb.org/settings/api"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Abrir configurações TMDB <Icon name="external" />
-            </a>
-          }
-        >
-          <button
-            class="flex min-h-9 items-center gap-2 text-accent-strong"
-            type="button"
-            onClick={() => void openTmdbSettings()}
-          >
-            Abrir configurações TMDB <Icon name="external" />
-          </button>
-        </Show>
-      </details>
-      <Show when={props.vm.status()?.configured}>
-        <div class="mt-8 border-t border-slate-6 pt-5">
-          <h3 class="text-[14px]">Desconectar catálogo</h3>
-          <p class="mt-1 text-[12px] text-muted">
-            Remove o acesso salvo ao TMDB. Você precisará de um token para explorar o catálogo
-            novamente.
-          </p>
+      <Card.Root class="tmdb-card overflow-hidden" variant="soft">
+        <Card.Header class="tmdb-provider">
+          <div class="flex min-w-0 items-center gap-3.5">
+            <span class="tmdb-provider-mark" aria-hidden="true">
+              <Icon name="database" />
+            </span>
+            <div class="min-w-0">
+              <Card.Title as="h3">The Movie Database</Card.Title>
+              <Card.Description>Seu catálogo, conectado ao TMDB.</Card.Description>
+            </div>
+          </div>
+          <Card.Actions>
+            <Badge tone={configured() ? "success" : "neutral"} rounded role="status">
+              <span
+                class={`size-1.5 rounded-full ${configured() ? "bg-positive" : "bg-slate-9"}`}
+              />
+              {configured() ? "Conectado" : "Não conectado"}
+            </Badge>
+          </Card.Actions>
+        </Card.Header>
+
+        <Card.Content class="tmdb-content">
+          <Show when={props.vm.configurationError()}>
+            <Callout.Root tone="danger" class="mb-5" role="alert">
+              <Callout.Content>
+                <Callout.Title>Não foi possível concluir</Callout.Title>
+                <Callout.Description>{props.vm.configurationError()}</Callout.Description>
+              </Callout.Content>
+            </Callout.Root>
+          </Show>
+          <Show when={feedback() === "removed"}>
+            <Callout.Root tone="neutral" class="mb-5" role="status">
+              <Callout.Content>
+                <Callout.Title>TMDB desconectado</Callout.Title>
+                <Callout.Description>
+                  Você pode conectar novamente quando quiser.
+                </Callout.Description>
+              </Callout.Content>
+            </Callout.Root>
+          </Show>
+
           <Show
-            when={confirmRemoval()}
+            when={showForm()}
             fallback={
-              <button
-                class="mt-3 min-h-10 text-[13px] text-negative"
-                type="button"
-                onClick={() => setConfirmRemoval(true)}
-              >
-                Remover configuração
-              </button>
+              <div>
+                <div class="tmdb-connected-summary">
+                  <span class="tmdb-connected-icon" aria-hidden="true">
+                    <Icon name="check" />
+                  </span>
+                  <div>
+                    <h3 ref={connectedHeading} tabindex="-1" class="outline-none">
+                      Tudo pronto para explorar.
+                    </h3>
+                    <p class="mt-1 text-sm leading-relaxed text-muted">
+                      O Popcorn já pode buscar os detalhes dos seus filmes e séries.
+                    </p>
+                  </div>
+                </div>
+                <dl class="tmdb-connection-details">
+                  <div>
+                    <dt>Integração</dt>
+                    <dd>TMDB</dd>
+                  </div>
+                  <div>
+                    <dt>Acesso</dt>
+                    <dd>
+                      {props.vm.status()?.remembered
+                        ? "Salvo neste dispositivo"
+                        : "Somente nesta sessão"}
+                    </dd>
+                  </div>
+                </dl>
+                <Show when={feedback() === "saved"}>
+                  <p class="mt-5 flex items-center gap-2 text-sm text-positive" role="status">
+                    <Icon name="check" /> Conexão validada com sucesso.
+                  </p>
+                </Show>
+                <div class="mt-6 border-t border-line pt-6">
+                  <Show
+                    when={confirmRemoval()}
+                    fallback={
+                      <div class="flex flex-wrap items-center justify-between gap-3">
+                        <Button
+                          ref={updateButton}
+                          variant="outline"
+                          tone="neutral"
+                          onClick={editToken}
+                        >
+                          Atualizar token
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          tone="danger"
+                          onClick={() => setConfirmRemoval(true)}
+                        >
+                          Desconectar
+                        </Button>
+                      </div>
+                    }
+                  >
+                    <Callout.Root tone="warning">
+                      <Callout.Content>
+                        <Callout.Title>Desconectar o TMDB?</Callout.Title>
+                        <Callout.Description>
+                          O acesso salvo será removido. Para consultar o catálogo, você precisará
+                          conectar novamente.
+                        </Callout.Description>
+                        <Callout.Actions>
+                          <Button
+                            tone="danger"
+                            loading={props.vm.configurationBusy()}
+                            onClick={() => void disconnect()}
+                          >
+                            {props.vm.configurationBusy() ? "Desconectando…" : "Sim, desconectar"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            tone="neutral"
+                            disabled={props.vm.configurationBusy()}
+                            onClick={() => {
+                              setConfirmRemoval(false);
+                              queueMicrotask(() => updateButton?.focus());
+                            }}
+                          >
+                            Manter conexão
+                          </Button>
+                        </Callout.Actions>
+                      </Callout.Content>
+                    </Callout.Root>
+                  </Show>
+                </div>
+              </div>
             }
           >
-            <div class="mt-4 flex flex-wrap gap-3">
-              <button
-                class={buttonStyles({ variant: "secondary", tone: "danger" })}
-                type="button"
-                disabled={props.vm.configurationBusy()}
-                onClick={() => {
-                  setSaved(false);
-                  void props.vm.clearConfiguration().then((removed) => {
-                    if (removed) {
-                      setConfirmRemoval(false);
-                      props.onRemoved();
+            <div class="tmdb-connect-layout">
+              <form
+                class="setup-form min-w-0"
+                noValidate
+                onSubmit={(event) => void handleSubmit(event)}
+              >
+                <div class="mb-4">
+                  <h3>{configured() ? "Atualizar seu acesso" : "Conecte sua conta"}</h3>
+                  <p class="mt-1 text-sm leading-relaxed text-muted">
+                    {configured()
+                      ? "Cole um novo token para substituir o acesso atual."
+                      : "Cole o token de leitura da sua conta para começar."}
+                  </p>
+                </div>
+                <Field.Root
+                  required
+                  invalid={invalid()}
+                  disabled={props.vm.configurationBusy()}
+                  size="md"
+                >
+                  <Field.Label>Token de leitura</Field.Label>
+                  <Input
+                    ref={tokenInput}
+                    name="tmdb-token"
+                    type="password"
+                    value={token.value}
+                    placeholder="Cole seu token do TMDB"
+                    autocomplete="off"
+                    spellcheck={false}
+                    onInput={(event) => {
+                      token.setValue(event.currentTarget.value);
+                      setFeedback(undefined);
+                    }}
+                    onBlur={() => token.markTouched(true)}
+                  />
+                  <Show
+                    when={invalid()}
+                    fallback={
+                      <Field.Description>
+                        Use o API Read Access Token, disponível na sua conta TMDB.
+                      </Field.Description>
                     }
-                  });
-                }}
-              >
-                {props.vm.configurationBusy() ? "Removendo…" : "Confirmar remoção"}
-              </button>
-              <button
-                class={buttonStyles({ variant: "secondary" })}
-                type="button"
-                disabled={props.vm.configurationBusy()}
-                onClick={() => setConfirmRemoval(false)}
-              >
-                Cancelar
-              </button>
+                  >
+                    <Field.ErrorText>Cole seu token de leitura para continuar.</Field.ErrorText>
+                  </Show>
+                </Field.Root>
+                <div class="my-4">
+                  <Checkbox.Root
+                    tone="primary"
+                    checked={props.vm.remember()}
+                    onCheckedChange={({ checked }) => props.vm.setRemember(checked === true)}
+                    disabled={props.vm.configurationBusy()}
+                    aria-describedby="tmdb-remember-description"
+                  >
+                    <Checkbox.Control />
+                    <Checkbox.Label>Lembrar neste dispositivo</Checkbox.Label>
+                  </Checkbox.Root>
+                  <p
+                    id="tmdb-remember-description"
+                    class="mt-1 pl-[26px] text-xs leading-relaxed text-muted"
+                  >
+                    Se desmarcado, o acesso vale somente para esta sessão.
+                  </p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                  <Button
+                    type="submit"
+                    loading={props.vm.configurationBusy()}
+                    startIcon={<Icon name="external" />}
+                  >
+                    {props.vm.configurationBusy()
+                      ? "Verificando token…"
+                      : configured()
+                        ? "Salvar novo token"
+                        : "Conectar ao TMDB"}
+                  </Button>
+                  <Show when={configured()}>
+                    <Button
+                      variant="ghost"
+                      tone="neutral"
+                      disabled={props.vm.configurationBusy()}
+                      onClick={() => {
+                        resetToken();
+                        setEditing(false);
+                        queueMicrotask(() => updateButton?.focus());
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </Show>
+                </div>
+                <p class="mt-2 text-xs leading-relaxed text-muted">
+                  O acesso é verificado antes de ser salvo.
+                </p>
+              </form>
+              <aside class="tmdb-guide" aria-labelledby="tmdb-guide-title">
+                <h4 id="tmdb-guide-title" class="text-sm font-medium text-ink">
+                  Ainda não tem o token?
+                </h4>
+                <ol class="tmdb-guide-steps">
+                  <li>
+                    <span>1</span>
+                    <p>Entre na sua conta TMDB e abra as configurações da API.</p>
+                  </li>
+                  <li>
+                    <span>2</span>
+                    <p>
+                      Copie o <strong>API Read Access Token</strong>.
+                    </p>
+                  </li>
+                  <li>
+                    <span>3</span>
+                    <p>Cole aqui e conecte. É só fazer isso uma vez se escolher lembrar.</p>
+                  </li>
+                </ol>
+                <Show
+                  when={isTauri()}
+                  fallback={
+                    <a
+                      class="tmdb-external-link"
+                      href="https://www.themoviedb.org/settings/api"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Abrir o TMDB <Icon name="external" />
+                    </a>
+                  }
+                >
+                  <Button variant="link" size="sm" onClick={() => void openTmdbSettings()}>
+                    Abrir o TMDB <Icon name="external" />
+                  </Button>
+                </Show>
+              </aside>
             </div>
           </Show>
-        </div>
-      </Show>
+        </Card.Content>
+      </Card.Root>
+      <p class="mt-5 flex items-start gap-2 text-xs leading-relaxed text-muted">
+        <Icon name="shield" class="mt-0.5 shrink-0 text-sm" />
+        Seu token conecta o catálogo. Seus arquivos e seu histórico continuam no Popcorn.
+      </p>
     </section>
   );
 }

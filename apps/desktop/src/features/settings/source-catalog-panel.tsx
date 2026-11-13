@@ -1,6 +1,8 @@
-// Personal source catalog export and preview with explicit merge or replacement.
-import { Show } from "solid-js";
-import { buttonStyles } from "../../shared/ui/styles";
+import { Button } from "@egcs/newui/actions";
+import { Badge, Card } from "@egcs/newui/content";
+import { Callout } from "@egcs/newui/feedback";
+import { Checkbox, Field, FileInput, Input, RadioGroup, Textarea } from "@egcs/newui/forms";
+import { createSignal, Show } from "solid-js";
 import type { SourceCatalogViewModel } from "./source-catalog.viewmodel";
 
 export function SourceCatalogPanel(props: {
@@ -9,188 +11,207 @@ export function SourceCatalogPanel(props: {
   readonly onImported: () => void;
 }) {
   const vm = props.vm;
-  function pickFile(event: Event) {
-    const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    input.value = "";
-    if (file) void vm.importFile(file);
-  }
+  const [fileError, setFileError] = createSignal("");
   async function apply() {
     if (await vm.importCatalog()) props.onImported();
   }
-  const inputClass =
-    "mt-2 w-full rounded-control border border-line bg-canvas-deep px-3 py-2 text-sm";
   return (
-    <section aria-label="Meu catálogo de fontes" aria-busy={vm.busy()}>
-      <h2 class="text-2xl font-medium tracking-tight">Meu catálogo</h2>
-      <p class="mt-2 text-sm text-muted">
-        Leve suas fontes e associações a filmes e episódios para outro Popcorn ou compartilhe com
-        alguém.
-      </p>
-      <div class="mt-6 space-y-5 rounded-panel border border-line bg-slate-2 p-6">
-        <h3>Exportar catálogo</h3>
-        <label class="block text-sm" for="source-catalog-name">
-          Nome do catálogo
-          <input
-            id="source-catalog-name"
-            class={inputClass}
-            value={vm.name()}
-            maxlength={200}
-            disabled={vm.busy()}
-            onInput={(event) => vm.setName(event.currentTarget.value)}
-          />
-        </label>
-        <label class="block text-sm" for="source-catalog-description">
-          Descrição (opcional)
-          <textarea
-            id="source-catalog-description"
-            class={inputClass}
-            value={vm.description()}
-            maxlength={2000}
-            disabled={vm.busy()}
-            onInput={(event) => vm.setDescription(event.currentTarget.value)}
-          />
-        </label>
-        <p class="text-xs text-muted">
-          Inclui todas as fontes ativas. Histórico, credenciais e arquivos baixados ficam neste
-          dispositivo.
+    <section class="grid gap-4" aria-label="Meu catálogo de fontes" aria-busy={vm.busy()}>
+      <div>
+        <h2 class="text-xl font-medium">Minhas fontes</h2>
+        <p class="mt-1 text-sm text-muted">
+          Exporte sua coleção ou traga um catálogo de outro Popcorn.
         </p>
-        <button
-          type="button"
-          class={buttonStyles({ variant: "secondary" })}
-          disabled={vm.busy() || !vm.name().trim()}
-          onClick={() => void vm.exportCatalog()}
-        >
-          Exportar catálogo atual
-        </button>
       </div>
-      <div class="mt-6 space-y-5 rounded-panel border border-line bg-slate-2 p-6">
-        <h3>Importar catálogo</h3>
-        <p class="text-sm text-muted">
-          Escolha um arquivo .popcatalog de até 32 MB. Você revisará as mudanças antes de importar.
-        </p>
-        <label class="block text-sm" for="source-catalog-file">
-          Arquivo do catálogo
-          <input
-            id="source-catalog-file"
-            class={inputClass}
-            type="file"
-            accept=".popcatalog,.json,application/json"
-            disabled={vm.busy()}
-            onChange={pickFile}
-          />
-        </label>
-        <Show when={vm.preview()}>
-          {(preview) => (
-            <div class="space-y-4 border-t border-line pt-5">
-              <h4 class="font-medium">{preview().name}</h4>
-              <p class="text-sm">
-                {preview().movies} filmes · {preview().series} séries · {preview().sources} fontes ·{" "}
-                {preview().bindings} associações
-              </p>
-              <p class="text-sm text-muted">
-                {preview().sources - preview().existingSources - preview().reactivatedSources}{" "}
-                fontes novas; {preview().existingSources} já existem; {preview().reactivatedSources}{" "}
-                fontes removidas serão reativadas.
-              </p>
-              <fieldset disabled={vm.busy()} class="space-y-3">
-                <legend class="mb-3 text-sm font-medium">Como importar?</legend>
-                <label class="flex items-start gap-3 text-sm">
-                  <input
-                    type="radio"
-                    name="catalog-mode"
-                    checked={!vm.replace()}
-                    onChange={() => vm.setReplace(false)}
-                  />
-                  <span>
-                    Mesclar com meu catálogo
-                    <span class="mt-1 block text-xs text-muted">
-                      Adiciona fontes e associações, preservando as atuais.
-                    </span>
-                  </span>
-                </label>
-                <label class="flex items-start gap-3 text-sm">
-                  <input
-                    type="radio"
-                    name="catalog-mode"
-                    checked={vm.replace()}
-                    onChange={() => vm.setReplace(true)}
-                  />
-                  <span>
-                    Substituir meu catálogo
-                    <span class="mt-1 block text-xs text-muted">
-                      Usa somente as fontes e associações deste arquivo.
-                    </span>
-                  </span>
-                </label>
-              </fieldset>
-              <Show when={vm.replace()}>
-                <div class="space-y-3 rounded-control border border-line p-4 text-sm">
-                  <p>
-                    Substituir suas {preview().localSources} fontes pelas {preview().sources} fontes
-                    deste catálogo?
-                  </p>
-                  <p class="text-xs text-muted">
-                    Histórico, credenciais e arquivos baixados serão preservados. Você pode exportar
-                    o catálogo atual antes de continuar.
-                  </p>
-                  <Show when={preview().sources === 0}>
-                    <p>Este catálogo está vazio. Todas as associações atuais serão removidas.</p>
-                  </Show>
-                  <label class="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={vm.confirmed()}
-                      disabled={vm.busy()}
-                      onChange={(event) => vm.setConfirmed(event.currentTarget.checked)}
-                    />
-                    Confirmo a substituição do meu catálogo de fontes.
-                  </label>
-                </div>
-                <Show when={props.playbackActive}>
-                  <p role="status" class="text-sm text-muted">
-                    Encerre a reprodução para substituir o catálogo.
-                  </p>
-                </Show>
-              </Show>
-              <div class="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  class={buttonStyles()}
-                  disabled={
-                    vm.busy() || (vm.replace() && (!vm.confirmed() || props.playbackActive))
-                  }
-                  onClick={() => void apply()}
-                >
-                  {vm.replace() ? "Substituir catálogo" : "Mesclar catálogo"}
-                </button>
-                <button
-                  type="button"
-                  class={buttonStyles({ variant: "secondary" })}
-                  disabled={vm.busy()}
-                  onClick={vm.cancel}
-                >
-                  Cancelar
-                </button>
-              </div>
+      <Card.Root variant="soft">
+        <Card.Header>
+          <Card.Title as="h3">Leve seu catálogo com você</Card.Title>
+          <Card.Description class="app-card-description">
+            Fontes e associações a filmes e episódios, em um único arquivo.
+          </Card.Description>
+        </Card.Header>
+        <Card.Content>
+          <div class="grid gap-4">
+            <Field.Root disabled={vm.busy()}>
+              <Field.Label>Nome do catálogo</Field.Label>
+              <Input
+                name="source-catalog-name"
+                value={vm.name()}
+                maxlength={200}
+                onInput={(e) => vm.setName(e.currentTarget.value)}
+              />
+            </Field.Root>
+            <Field.Root disabled={vm.busy()}>
+              <Field.Label>
+                Descrição <span class="text-muted">(opcional)</span>
+              </Field.Label>
+              <Textarea
+                name="source-catalog-description"
+                rows={2}
+                maxlength={2000}
+                value={vm.description()}
+                onInput={(e) => vm.setDescription(e.currentTarget.value)}
+              />
+            </Field.Root>
+            <p class="text-xs leading-relaxed text-muted">
+              Histórico, credenciais e arquivos baixados ficam neste dispositivo.
+            </p>
+            <div>
+              <Button
+                variant="outline"
+                tone="neutral"
+                disabled={vm.busy() || !vm.name().trim()}
+                onClick={() => void vm.exportCatalog()}
+              >
+                Exportar catálogo
+              </Button>
             </div>
-          )}
-        </Show>
-      </div>
+          </div>
+        </Card.Content>
+      </Card.Root>
+      <Card.Root variant="soft">
+        <Card.Header>
+          <Card.Title as="h3">Importar uma coleção</Card.Title>
+          <Card.Description class="app-card-description">
+            Escolha um .popcatalog ou .json de até 32 MB. Revise antes de aplicar.
+          </Card.Description>
+        </Card.Header>
+        <Card.Content>
+          <div class="grid gap-4">
+            <FileInput.Root
+              acceptedFiles={[]}
+              disabled={vm.busy()}
+              variant="compact"
+              accept={{ "application/json": [".popcatalog", ".json"] }}
+              onFileAccept={({ files }) => {
+                setFileError("");
+                if (files[0]) void vm.importFile(files[0]);
+              }}
+              onFileReject={() => setFileError("Escolha um arquivo .popcatalog ou .json.")}
+            >
+              <FileInput.Label class="app-control-label">Arquivo do catálogo</FileInput.Label>
+              <FileInput.Control>
+                <FileInput.Trigger>Escolher arquivo</FileInput.Trigger>
+                <FileInput.ValueText placeholder="Nenhum arquivo escolhido" />
+              </FileInput.Control>
+            </FileInput.Root>
+            <Show when={fileError()}>
+              <p role="alert" class="text-sm text-negative">
+                {fileError()}
+              </p>
+            </Show>
+            <Show when={vm.preview()}>
+              {(preview) => (
+                <div class="grid gap-4 border-t border-line pt-4">
+                  <h4 class="font-medium">{preview().name}</h4>
+                  <div class="flex flex-wrap gap-2">
+                    <Badge>{preview().movies} filmes</Badge>
+                    <Badge>{preview().series} séries</Badge>
+                    <Badge>{preview().sources} fontes</Badge>
+                  </div>
+                  <p class="text-xs leading-relaxed text-muted">
+                    {preview().bindings} associações ·{" "}
+                    {preview().sources - preview().existingSources - preview().reactivatedSources}{" "}
+                    fontes novas · {preview().existingSources} existentes ·{" "}
+                    {preview().reactivatedSources} reativadas
+                  </p>
+                  <RadioGroup.Root
+                    name="catalog-mode"
+                    disabled={vm.busy()}
+                    value={vm.replace() ? "replace" : "merge"}
+                    onValueChange={({ value }) => vm.setReplace(value === "replace")}
+                  >
+                    <RadioGroup.Label>Como importar?</RadioGroup.Label>
+                    <RadioGroup.Item value="merge">
+                      <RadioGroup.ItemControl />
+                      <RadioGroup.ItemText>
+                        Mesclar com meu catálogo
+                        <span class="mt-1 block text-xs text-muted">
+                          Adiciona novas fontes e preserva as atuais.
+                        </span>
+                      </RadioGroup.ItemText>
+                    </RadioGroup.Item>
+                    <RadioGroup.Item value="replace">
+                      <RadioGroup.ItemControl />
+                      <RadioGroup.ItemText>
+                        Substituir meu catálogo
+                        <span class="mt-1 block text-xs text-muted">
+                          Usa somente as fontes e associações deste arquivo.
+                        </span>
+                      </RadioGroup.ItemText>
+                    </RadioGroup.Item>
+                  </RadioGroup.Root>
+                  <Show when={vm.replace()}>
+                    <Callout.Root tone="warning">
+                      <Callout.Content>
+                        <Callout.Title>
+                          Substituir {preview().localSources} fontes por {preview().sources}?
+                        </Callout.Title>
+                        <Callout.Description>
+                          Histórico, credenciais e arquivos baixados serão preservados. Você pode
+                          exportar o catálogo atual antes de continuar.
+                        </Callout.Description>
+                        <Show when={preview().sources === 0}>
+                          <p class="my-2 text-sm">
+                            O arquivo está vazio. Todas as associações atuais serão removidas.
+                          </p>
+                        </Show>
+                        <div class="mt-3">
+                          <Checkbox.Root
+                            checked={vm.confirmed()}
+                            disabled={vm.busy()}
+                            onCheckedChange={({ checked }) => vm.setConfirmed(checked === true)}
+                          >
+                            <Checkbox.Control />
+                            <Checkbox.Label>
+                              Confirmo a substituição do meu catálogo.
+                            </Checkbox.Label>
+                          </Checkbox.Root>
+                        </div>
+                      </Callout.Content>
+                    </Callout.Root>
+                    <Show when={vm.replace() && props.playbackActive}>
+                      <p role="status" class="text-sm text-muted">
+                        Encerre a reprodução para substituir o catálogo.
+                      </p>
+                    </Show>
+                  </Show>
+                  <div class="flex flex-wrap gap-2">
+                    <Button
+                      loading={vm.busy()}
+                      disabled={vm.replace() && (!vm.confirmed() || props.playbackActive)}
+                      onClick={() => void apply()}
+                    >
+                      {vm.replace() ? "Substituir catálogo" : "Mesclar catálogo"}
+                    </Button>
+                    <Button variant="ghost" tone="neutral" disabled={vm.busy()} onClick={vm.cancel}>
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Show>
+          </div>
+        </Card.Content>
+      </Card.Root>
       <Show when={vm.busy()}>
-        <p role="status" class="mt-4 text-sm text-muted">
+        <p role="status" class="text-sm text-muted">
           Processando catálogo…
         </p>
       </Show>
       <Show when={vm.error()}>
-        <p role="alert" class="mt-4 text-sm text-negative">
-          {vm.error()}
-        </p>
+        <Callout.Root tone="danger" role="alert">
+          <Callout.Content>
+            <Callout.Description>{vm.error()}</Callout.Description>
+          </Callout.Content>
+        </Callout.Root>
       </Show>
       <Show when={vm.message()}>
-        <p role="status" class="mt-4 text-sm text-positive">
-          {vm.message()}
-        </p>
+        <Callout.Root tone="success" role="status">
+          <Callout.Content>
+            <Callout.Description>{vm.message()}</Callout.Description>
+          </Callout.Content>
+        </Callout.Root>
       </Show>
     </section>
   );

@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
@@ -12,5 +13,11 @@ export default defineConfig({
   },
   build: {
     target: "es2022",
+    rollupOptions: {
+      input: {
+        app: fileURLToPath(new URL("./index.html", import.meta.url)),
+        launcher: fileURLToPath(new URL("./launcher.html", import.meta.url)),
+      },
+    },
   },
 });

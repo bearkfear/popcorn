@@ -1,4 +1,7 @@
-@import "tailwindcss";
+/* New UI supplies the single shared Preflight reset. Keep app utilities separate. */
+@import "@egcs/newui/styles.css";
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
 @import "@radix-ui/colors/slate-dark.css";
 @import "@radix-ui/colors/tomato-dark.css";
 @import "@radix-ui/colors/green-dark.css";
@@ -148,4 +151,28 @@
   --negative: var(--tomato-11);
   --negative-bg: var(--tomato-3);
   --focus: var(--blue-11);
+}
+
+/* Public New UI tokens: preserve the Popcorn palette and typography. */
+:root {
+  --nui-font-sans: var(--font-ui);
+  --nui-background: var(--canvas-deep);
+  --nui-surface: var(--surface);
+  --nui-foreground: var(--ink);
+  --nui-muted-foreground: var(--muted);
+  --nui-border: var(--line);
+  --nui-focus-ring: var(--focus);
+  --nui-primary-1: var(--tomato-1);
+  --nui-primary-2: var(--tomato-2);
+  --nui-primary-3: var(--tomato-3);
+  --nui-primary-4: var(--tomato-4);
+  --nui-primary-5: var(--tomato-5);
+  --nui-primary-6: var(--tomato-6);
+  --nui-primary-7: var(--tomato-7);
+  --nui-primary-8: var(--tomato-8);
+  --nui-primary-9: var(--tomato-9);
+  --nui-primary-10: var(--tomato-10);
+  --nui-primary-11: var(--tomato-11);
+  --nui-primary-12: var(--tomato-12);
+  --nui-on-primary: var(--accent-contrast);
 }

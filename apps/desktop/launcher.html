@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Controles do launcher Popcorn para ambientes sem bandeja do sistema."
+    />
+    <title>Popcorn - Controles</title>
+  </head>
+  <body>
+    <main>
+      <div class="brand" aria-hidden="true">P</div>
+      <div class="heading">
+        <h1>Popcorn está rodando</h1>
+        <p>
+          O WSL não oferece uma bandeja compatível. Minimize para mantê-lo rodando ou feche para
+          encerrá-lo.
+        </p>
+      </div>
+
+      <div class="actions" aria-label="Controles do Popcorn">
+        <button type="button" data-command="launcher_open">Abrir Popcorn</button>
+        <button type="button" data-command="launcher_network">Acessar pela TV</button>
+        <button type="button" data-command="launcher_downloads">Abrir pasta de vídeos</button>
+        <button class="danger" type="button" data-command="launcher_quit">Encerrar Popcorn</button>
+      </div>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </main>
+    <script type="module" src="/src/launcher.ts"></script>
+  </body>
+</html>

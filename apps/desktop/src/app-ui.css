@@ -1,0 +1,105 @@
+/* Popcorn owns composition and density; New UI owns the controls. */
+.app-control-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.catalog-controls {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--slate-2);
+}
+
+.catalog-search-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.catalog-genre {
+  width: 220px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.catalog-controls .nui-field,
+.settings-page .nui-field {
+  gap: 4px;
+}
+
+.settings-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.settings-layout {
+  background: transparent;
+}
+
+.sources-dialog.nui-dialog-content {
+  max-width: 760px;
+}
+
+.sources-dialog .nui-dialog-body {
+  padding: 16px;
+}
+
+.detail-panel .episode-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.detail-panel .episode-list > li {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--canvas-deep);
+}
+
+.detail-panel .episode-list .artwork-wide {
+  max-height: 150px;
+}
+
+@media (max-width: 600px) {
+  .catalog-search-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .catalog-genre {
+    width: 100%;
+  }
+
+  .catalog-controls {
+    padding: 12px;
+  }
+}
+
+.app-card-description {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.app-navbar {
+  position: sticky;
+  top: 0;
+}
+
+@media (min-width: 768px) {
+  .app-navbar-content {
+    justify-content: flex-end;
+  }
+}

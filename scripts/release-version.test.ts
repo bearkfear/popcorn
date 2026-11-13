@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { assertNewer, nextVersion, parseVersion, replaceVersion } from "./release-version";
+import { assertNewer, nextVersion, nextVersionFromTags, parseVersion, replaceVersion } from "./release-version";
 
 describe("release versions", () => {
   test("migrates the existing release and increments same-day revisions", () => {
@@ -16,6 +16,15 @@ describe("release versions", () => {
     expect(nextVersion("2026.10.1799", new Date(2026, 9, 18))).toBe("2026.10.1801");
     expect(nextVersion("2026.12.3199", new Date(2027, 0, 1))).toBe("2027.1.101");
     expect(() => assertNewer("2026.10.18", "2026.10.1702")).toThrow();
+  });
+
+  test("uses the latest release tag and ignores unrelated tags", () => {
+    const today = new Date(2026, 9, 17, 12);
+    expect(nextVersionFromTags(
+      "2026.10.1601",
+      ["vpreview", "v2026.10.1701", "v2026.10.1702"],
+      today,
+    )).toBe("2026.10.1703");
   });
 
   test("rejects invalid dates, zero revisions, exhaustion and clock rollback", () => {
@@ -36,7 +45,7 @@ describe("release versions", () => {
   });
 });
 
-test("CLI synchronizes all six files and rejects inconsistent inputs without writing", async () => {
+test("CLI applies versions only in CI and rejects inconsistent inputs without writing", async () => {
   const root = resolve(import.meta.dir, "..");
   const fixture = await mkdtemp(join(tmpdir(), "popcorn-release-"));
   const files = ["Cargo.toml", "Cargo.lock", "bun.lock", "apps/desktop/package.json",
@@ -50,20 +59,26 @@ test("CLI synchronizes all six files and rejects inconsistent inputs without wri
     for (const path of files) {
       const source = await readFile(join(fixture, path), "utf8");
       const count = path === "Cargo.lock" ? 4 : path === "bun.lock" ? 2 : 1;
-      await writeFile(join(fixture, path), replaceVersion(source, config.version, "2026.10.17", count));
+      await writeFile(join(fixture, path), replaceVersion(source, config.version, "2026.10.1601", count));
     }
     expect(Bun.spawnSync(["git", "init", "--quiet", fixture]).exitCode).toBe(0);
-    const run = (...args: string[]) => Bun.spawnSync([process.execPath, "scripts/release.ts", ...args], { cwd: fixture });
+    const run = (args: string[], ci = false) => Bun.spawnSync(
+      [process.execPath, "scripts/release.ts", ...args],
+      {
+        cwd: fixture,
+        env: { ...process.env, GITHUB_ACTIONS: ci ? "true" : "false" },
+      },
+    );
     const original = await readFile(join(fixture, "Cargo.toml"), "utf8");
-    expect(run("2026.10.1702", "--dry-run").exitCode).toBe(0);
+    expect(run(["--apply", "2026.10.1602"]).exitCode).toBe(1);
     expect(await readFile(join(fixture, "Cargo.toml"), "utf8")).toBe(original);
-    expect(run("2026.10.1702").exitCode).toBe(0);
-    expect(run("--check", "--tag", "v2026.10.1702").exitCode).toBe(0);
-    expect(run("--check", "--tag", "v2026.10.17").exitCode).toBe(1);
-    expect(run("2026.10.17").exitCode).toBe(1);
+    expect(run(["--apply", "2026.10.1602"], true).exitCode).toBe(0);
+    expect(run(["--check", "2026.10.1602"]).exitCode).toBe(0);
+    expect(run(["--check", "2026.10.1601"]).exitCode).toBe(1);
+    expect(run(["--apply", "2026.10.1601"], true).exitCode).toBe(1);
     const prepared = await Promise.all(files.map((path) => readFile(join(fixture, path), "utf8")));
-    await writeFile(join(fixture, "packages/sdk/package.json"), '{"version":"2026.10.17"}\n');
-    expect(run("2026.10.1703").exitCode).toBe(1);
+    await writeFile(join(fixture, "packages/sdk/package.json"), '{"version":"2026.10.1601"}\n');
+    expect(run(["--apply", "2026.10.1603"], true).exitCode).toBe(1);
     for (const [index, path] of files.entries()) {
       const expected = prepared[index];
       if (expected === undefined) throw new Error(`Missing fixture: ${path}`);

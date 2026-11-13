@@ -2,6 +2,6 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-window",
   "description": "Only local application windows can use desktop IPC.",
-  "windows": ["main"],
+  "windows": ["main", "launcher"],
   "permissions": ["core:default"]
 }

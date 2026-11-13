@@ -47,7 +47,7 @@ pub(super) async fn authorize(
     }
     let public = access.browser.is_some()
         && (matches!(*request.method(), Method::GET | Method::HEAD)
-            && (request.uri().path() == "/" || request.uri().path().starts_with("/assets/"))
+            && public_browser_document(request.uri().path())
             || request.method() == Method::POST
                 && matches!(request.uri().path(), "/browser/session" | "/browser/pair"));
     let authorization = if public {
@@ -61,6 +61,25 @@ pub(super) async fn authorize(
     };
     add_cors(&mut response, origin);
     Ok(response)
+}
+
+fn public_browser_document(path: &str) -> bool {
+    if matches!(
+        path,
+        "/" | "/movies" | "/shows" | "/library" | "/settings" | "/player"
+    ) || path.starts_with("/assets/")
+    {
+        return true;
+    }
+    let Some(route) = path.strip_prefix("/title/") else {
+        return false;
+    };
+    let Some((media, id)) = route.split_once('/') else {
+        return false;
+    };
+    matches!(media, "movie" | "tv")
+        && !id.is_empty()
+        && id.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 fn authorize_token(access: &AccessPolicy, headers: &HeaderMap) -> Result<(), StatusCode> {
@@ -128,6 +147,10 @@ fn add_cors(response: &mut Response, origin: Option<HeaderValue>) {
             .headers_mut()
             .insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, origin);
         response.headers_mut().insert(
+            header::ACCESS_CONTROL_ALLOW_CREDENTIALS,
+            HeaderValue::from_static("true"),
+        );
+        response.headers_mut().insert(
             header::ACCESS_CONTROL_EXPOSE_HEADERS,
             HeaderValue::from_static(
                 "connect-protocol-version,connect-content-encoding,connect-accept-encoding,grpc-status,grpc-message,grpc-status-details-bin",
@@ -135,7 +158,6 @@ fn add_cors(response: &mut Response, origin: Option<HeaderValue>) {
         );
     }
 }
-
 impl AccessPolicy {
     pub(crate) fn validate_origin(
         &self,
@@ -167,8 +189,11 @@ impl AccessPolicy {
     }
 
     fn accepts_origin(&self, headers: &HeaderMap, origin: &HeaderValue) -> bool {
+        if self.origin.as_deref().map(str::as_bytes) == Some(origin.as_bytes()) {
+            return true;
+        }
         if self.browser.is_none() {
-            return self.origin.as_deref().map(str::as_bytes) == Some(origin.as_bytes());
+            return false;
         }
         headers
             .get(header::HOST)

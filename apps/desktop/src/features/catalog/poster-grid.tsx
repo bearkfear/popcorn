@@ -1,5 +1,6 @@
-import { Pagination } from "@ark-ui/solid/pagination";
-import { buttonStyles } from "../../shared/ui/styles";
+import { Button } from "@egcs/newui/actions";
+import { Empty, PageLoading } from "@egcs/newui/feedback";
+import { Pagination } from "@egcs/newui/navigation";
 // UI component for displaying the catalog poster grid, status states, and pagination.
 
 import { CatalogCategory, MediaType, type Title } from "@popcorn/sdk";
@@ -39,7 +40,7 @@ export function PosterGrid(props: PosterGridProps) {
 
   return (
     <>
-      <div class="collection-header mt-8 mb-5 flex flex-wrap items-baseline justify-between gap-3">
+      <div class="collection-header mt-5 mb-4 flex flex-wrap items-baseline justify-between gap-3">
         <h2
           ref={headingElement}
           tabindex="-1"
@@ -47,7 +48,7 @@ export function PosterGrid(props: PosterGridProps) {
         >
           {heading()}
         </h2>
-        <Show when={vm.totalPages() > 0}>
+        <Show when={vm.totalPages() > 0 && vm.titles().length > 0}>
           <span
             class="flex shrink-0 items-center gap-2 text-xs text-muted"
             role="status"
@@ -80,52 +81,73 @@ export function PosterGrid(props: PosterGridProps) {
       >
         <Show when={vm.catalogError()}>
           <div
-            class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5 error-message bg-negative-bg [&_h3]:text-negative"
+            class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.nui-button]:mt-5 error-message bg-negative-bg [&_h3]:text-negative"
             role="alert"
           >
             <h3>Consulta indisponível</h3>
             <p>{vm.catalogError()}</p>
-            <button
-              type="button"
-              class={buttonStyles({ variant: "secondary" })}
-              disabled={vm.catalogBusy()}
-              onClick={vm.retryCatalog}
-            >
+            <Button type="button" variant="outline" tone="neutral" onClick={vm.retryCatalog}>
               Tentar novamente
-            </button>
+            </Button>
           </div>
         </Show>
 
-        <Show when={vm.catalogBusy() && !vm.catalogLoaded()}>
-          <p class="loading-message p-[12px_16px] text-muted text-[13px]" role="status">
-            Consultando títulos...
-          </p>
+        <Show when={vm.catalogBusy() && vm.titles().length === 0}>
+          <PageLoading
+            layout="section"
+            label={vm.mediaType() === MediaType.MOVIE ? "Carregando filmes" : "Carregando séries"}
+            description="Consultando os títulos disponíveis no catálogo."
+          />
         </Show>
 
-        <Show when={vm.catalogLoaded() && vm.titles().length === 0 && !vm.catalogError()}>
-          <div class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5">
-            <h3>
-              {vm.query() ? "Nenhum resultado para esta busca" : "Nenhum título nesta coleção"}
-            </h3>
-            <p>A consulta terminou sem títulos. Experimente outra busca, gênero ou coleção.</p>
-            <button
-              type="button"
-              class={buttonStyles({ variant: "secondary" })}
-              onClick={() => vm.changeCategory(CatalogCategory.POPULAR, 0)}
-            >
-              Voltar aos populares
-            </button>
-          </div>
+        <Show
+          when={
+            vm.catalogLoaded() &&
+            !vm.catalogBusy() &&
+            vm.titles().length === 0 &&
+            !vm.catalogError()
+          }
+        >
+          <Empty.Root
+            layout="section"
+            class="min-h-[320px] rounded-panel border border-dashed border-line bg-slate-2"
+          >
+            <Empty.Icon>
+              <Icon name="search" />
+            </Empty.Icon>
+            <Empty.Content>
+              <Empty.Title>
+                {vm.query()
+                  ? vm.mediaType() === MediaType.MOVIE
+                    ? "Nenhum filme encontrado"
+                    : "Nenhuma série encontrada"
+                  : "Nenhum título nesta coleção"}
+              </Empty.Title>
+              <Empty.Description>
+                {vm.query()
+                  ? "Tente buscar por outro título ou confira a escrita."
+                  : "Experimente outro gênero ou uma coleção diferente."}
+              </Empty.Description>
+            </Empty.Content>
+            <Empty.Actions>
+              <Button
+                type="button"
+                onClick={() => vm.changeCategory(CatalogCategory.POPULAR, 0)}
+              >
+                Voltar aos populares
+              </Button>
+            </Empty.Actions>
+          </Empty.Root>
         </Show>
 
         <Show when={!vm.catalogLoaded() && !vm.catalogBusy() && !vm.catalogError()}>
-          <div class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.button]:mt-5">
+          <div class="state-message p-[40px_32px] [&_h2]:mb-2 [&_h3]:mb-2 [&_p]:max-w-[54ch] [&_p]:text-muted [&_.nui-button]:mt-5">
             <h3>Catálogo ainda não consultado</h3>
             <p>Conecte o serviço local para carregar os títulos.</p>
           </div>
         </Show>
 
-        <ul class="poster-grid m-0 grid list-none grid-cols-[repeat(auto-fill,_minmax(180px,_1fr))] gap-x-5 gap-y-7 p-0 [&_li]:min-w-0 max-[820px]:grid-cols-[repeat(auto-fill,_minmax(138px,_1fr))] max-[560px]:grid-cols-2 max-[560px]:gap-x-3 max-[560px]:gap-y-5">
+        <ul class="poster-grid m-0 grid list-none grid-cols-[repeat(auto-fill,_minmax(180px,_1fr))] gap-x-4 gap-y-5 p-0 [&_li]:min-w-0 max-[820px]:grid-cols-[repeat(auto-fill,_minmax(138px,_1fr))] max-[560px]:grid-cols-2 max-[560px]:gap-x-3 max-[560px]:gap-y-5">
           <For each={vm.titles()}>
             {(title) => (
               <li>
@@ -155,67 +177,34 @@ export function PosterGrid(props: PosterGridProps) {
           </For>
         </ul>
 
-        <Show when={vm.totalPages() > 1}>
+        <Show when={vm.totalPages() > 1 && vm.titles().length > 0}>
           {/* The API returns a page count, so each item represents one API page. */}
-          <Pagination.Root
-            class="pagination mt-10 flex items-center justify-center gap-1 border-t border-slate-6 pt-6"
-            count={vm.totalPages()}
-            pageSize={1}
-            page={vm.page() || 1}
-            siblingCount={0}
-            onPageChange={({ page }) => changePage(page)}
-            translations={{
-              rootLabel: "Paginação do catálogo",
-              prevTriggerLabel: "Página anterior",
-              nextTriggerLabel: "Próxima página",
-              itemLabel: ({ page, totalPages }) => `Página ${page} de ${totalPages}`,
-            }}
-          >
-            <Pagination.PrevTrigger
-              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-[13px] text-muted transition-colors hover:bg-slate-4 hover:text-ink max-[560px]:size-9 max-[560px]:min-h-9 max-[560px]:p-0"
-              disabled={vm.catalogBusy() || vm.page() <= 1}
+          <fieldset disabled={vm.catalogBusy()}>
+            <Pagination.Root
+              class="pagination mt-6 flex flex-wrap items-center justify-center gap-1 border-t border-line pt-4"
+              count={vm.totalPages()}
+              pageSize={1}
+              page={vm.page() || 1}
+              siblingCount={0}
+              onPageChange={({ page }) => changePage(page)}
+              translations={{
+                rootLabel: "Paginação do catálogo",
+                prevTriggerLabel: "Página anterior",
+                nextTriggerLabel: "Próxima página",
+                itemLabel: ({ page, totalPages }) => `Página ${page} de ${totalPages}`,
+              }}
             >
-              <Icon name="caret-down" class="size-4 rotate-90" />
-              <span class="max-[560px]:hidden">Anterior</span>
-            </Pagination.PrevTrigger>
-            <Pagination.Context>
-              {(pagination) => (
-                <For each={pagination().pages}>
-                  {(page, index) => (
-                    <Show
-                      when={page.type === "page" && page}
-                      keyed
-                      fallback={
-                        <Pagination.Ellipsis
-                          index={index()}
-                          class="grid size-9 place-items-center text-xs text-muted"
-                        >
-                          …
-                        </Pagination.Ellipsis>
-                      }
-                    >
-                      {(item) => (
-                        <Pagination.Item
-                          {...item}
-                          disabled={vm.catalogBusy()}
-                          class="grid size-10 place-items-center rounded-lg border border-transparent text-[13px] text-muted tabular-nums transition-colors hover:bg-slate-4 hover:text-ink data-[selected]:border-slate-7 data-[selected]:bg-slate-4 data-[selected]:font-semibold data-[selected]:text-ink max-[560px]:size-9"
-                        >
-                          {item.value}
-                        </Pagination.Item>
-                      )}
-                    </Show>
-                  )}
-                </For>
-              )}
-            </Pagination.Context>
-            <Pagination.NextTrigger
-              class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-[13px] text-muted transition-colors hover:bg-slate-4 hover:text-ink max-[560px]:size-9 max-[560px]:min-h-9 max-[560px]:p-0"
-              disabled={vm.catalogBusy() || vm.page() >= vm.totalPages()}
-            >
-              <span class="max-[560px]:hidden">Próxima</span>
-              <Icon name="caret-down" class="size-4 -rotate-90" />
-            </Pagination.NextTrigger>
-          </Pagination.Root>
+              <Pagination.PrevTrigger disabled={vm.catalogBusy() || vm.page() <= 1}>
+                <Icon name="caret-down" class="size-4 rotate-90" />
+                <span class="max-[560px]:hidden">Anterior</span>
+              </Pagination.PrevTrigger>
+              <Pagination.Items />
+              <Pagination.NextTrigger disabled={vm.catalogBusy() || vm.page() >= vm.totalPages()}>
+                <span class="max-[560px]:hidden">Próxima</span>
+                <Icon name="caret-down" class="size-4 -rotate-90" />
+              </Pagination.NextTrigger>
+            </Pagination.Root>
+          </fieldset>
         </Show>
       </section>
     </>
